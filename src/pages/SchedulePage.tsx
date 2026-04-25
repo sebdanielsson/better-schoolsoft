@@ -7,7 +7,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 /** Convert a bitmask of ISO week numbers stored as a 64-bit int to a list of week numbers (1–53). */
 function bitmaskToWeeks(bitmask: number): number[] {
   const weeks: number[] = [];
-  for (let i = 0; i < 54; i++) {
+  for (let i = 0; i < 53; i++) {
     if (bitmask & (1 << i)) weeks.push(i + 1);
   }
   return weeks;
