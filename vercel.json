@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/schoolsoft/:path*",
+      "destination": "https://sms.schoolsoft.se/:path*"
+    }
+  ]
+}

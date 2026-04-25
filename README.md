@@ -50,3 +50,4 @@ For example, if your URL is `https://sms.schoolsoft.se/nacka/jsp/…`, enter `na
 
 The dev server proxies all `/schoolsoft/*` requests to `https://sms.schoolsoft.se` to avoid CORS issues during development. The proxy is configured in `vite.config.ts`.
 
+For Vercel deployments, `vercel.json` rewrites `/schoolsoft/*` to `https://sms.schoolsoft.se/*` so the same API path works in production.
