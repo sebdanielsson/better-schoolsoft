@@ -43,17 +43,20 @@ export interface CalendarEvent {
   eventTypeInfo?: string;
 }
 
-/** Step 1 of auth: exchange credentials for an app key (logintype=4). */
+/** Step 1 of auth: exchange credentials for an app key (logintype=4).
+ * usertype: '0' = Staff, '1' = Student, '2' = Guardian
+ */
 export async function fetchAppKey(
   school: string,
   username: string,
   password: string,
+  usertype: '0' | '1' | '2' = '2',
 ): Promise<AppKeyResponse> {
   const body = new URLSearchParams({
     identification: username,
     verification: password,
     logintype: '4',
-    usertype: '1',
+    usertype,
   });
   const res = await fetch(`${BASE}/${school}/rest/app/login`, {
     method: 'POST',

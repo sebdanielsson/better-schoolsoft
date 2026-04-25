@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [school, setSchool] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [usertype, setUsertype] = useState<'0' | '1' | '2'>('2');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +18,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login(school.trim().toLowerCase(), username.trim(), password);
+      await login(school.trim().toLowerCase(), username.trim(), password, usertype);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -43,6 +44,17 @@ export default function LoginPage() {
             required
             autoComplete="organization"
           />
+
+          <label htmlFor="usertype">Login as</label>
+          <select
+            id="usertype"
+            value={usertype}
+            onChange={(e) => { setUsertype(e.target.value as '0' | '1' | '2'); }}
+          >
+            <option value="2">Guardian</option>
+            <option value="1">Student</option>
+            <option value="0">Staff</option>
+          </select>
 
           <label htmlFor="username">Username</label>
           <input

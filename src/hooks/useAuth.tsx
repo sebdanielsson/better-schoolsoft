@@ -27,7 +27,7 @@ interface Session {
 interface AuthContextValue {
   session: Session | null;
   isAuthenticated: boolean;
-  login: (school: string, username: string, password: string) => Promise<void>;
+  login: (school: string, username: string, password: string, usertype?: '0' | '1' | '2') => Promise<void>;
   logout: () => void;
   getToken: () => Promise<string>;
 }
@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   const login = useCallback(
-    async (school: string, username: string, password: string) => {
-      const appKeyResp: AppKeyResponse = await fetchAppKey(school, username, password);
+    async (school: string, username: string, password: string, usertype: '0' | '1' | '2' = '2') => {
+      const appKeyResp: AppKeyResponse = await fetchAppKey(school, username, password, usertype);
       const tokenResp: TokenResponse = await fetchToken(school, appKeyResp.appKey);
       setSession({
         school,
