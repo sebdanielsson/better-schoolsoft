@@ -16,7 +16,7 @@ export default function DashboardPage() {
   return (
     <HeroDataProvider>
       <div className="dashboard">
-        <main className="dashboard-content">
+        <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-7">
           <HeroCard />
           {!isHome && (
             <Link to="/" className="back-to-home">
