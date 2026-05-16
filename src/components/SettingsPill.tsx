@@ -51,21 +51,30 @@ export default function SettingsPill() {
   }, [open]);
 
   return (
-    <div className="settings-pill-root">
+    <>
       <button
         ref={buttonRef}
         type="button"
-        className="settings-pill"
+        className={
+          "flex items-center justify-center gap-1 rounded-full border-0 cursor-pointer font-[inherit] font-medium text-white transition-colors backdrop-blur-[4px] " +
+          "pl-[0.4rem] pr-[0.55rem] py-[0.15rem] text-[11px] basis-[calc(50%-0.2rem)] grow-0 shrink-0 sm:gap-[0.4rem] sm:pl-[0.6rem] sm:pr-[0.7rem] sm:py-1 sm:text-xs sm:basis-auto " +
+          (open ? "bg-white/30 " : "bg-white/15 hover:bg-white/30 ")
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => {
           setOpen((v) => !v);
         }}
       >
-        <span aria-hidden="true" className="settings-pill-icon">
+        <span
+          aria-hidden="true"
+          className="inline-flex items-center justify-center leading-none w-[1.2rem] h-[1.2rem] text-[1.05rem] sm:w-[1.4rem] sm:h-[1.4rem] sm:text-[1.25rem]"
+        >
           ⚙
         </span>
-        <span className="settings-pill-label">Settings</span>
+        <span className="inline-flex items-center justify-center leading-none h-[1.2rem] sm:h-[1.4rem]">
+          Settings
+        </span>
       </button>
       {open &&
         anchor &&
@@ -107,6 +116,6 @@ export default function SettingsPill() {
           </div>,
           document.body,
         )}
-    </div>
+    </>
   );
 }
