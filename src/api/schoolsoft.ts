@@ -5,16 +5,8 @@ const APP_HEADERS = {
   appos: "android",
 } as const;
 
-/* ---------- Login (legacy app API — logintype=4) ---------- */
-
-export interface AppKeyResponse {
-  appKey: string;
-  orgs: Array<{ orgId: number; orgName: string }>;
-  name: string;
-  pictureUrl?: string;
-  userId?: number;
-  type?: number;
-}
+/* ---------- Legacy app token (used by the older REST endpoints below;
+ * issued during OAuth-bootstrapped sessions via fetchToken). ---------- */
 
 export interface TokenResponse {
   token: string;
@@ -30,27 +22,6 @@ const USER_LABEL: Record<UserType, string> = {
 
 export function userTypeLabel(t: UserType): string {
   return USER_LABEL[t];
-}
-
-export async function fetchAppKey(
-  school: string,
-  username: string,
-  password: string,
-  usertype: UserType = "2",
-): Promise<AppKeyResponse> {
-  const body = new URLSearchParams({
-    identification: username,
-    verification: password,
-    logintype: "4",
-    usertype,
-  });
-  const res = await fetch(`${BASE}/${school}/rest/app/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-  if (!res.ok) throw new Error(`Login failed (${res.status})`);
-  return res.json() as Promise<AppKeyResponse>;
 }
 
 export async function fetchToken(school: string, appKey: string): Promise<TokenResponse> {
