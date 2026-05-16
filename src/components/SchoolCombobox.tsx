@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { SchoolOption } from "../api/schoolsoft.ts";
+import { cn } from "../lib/utils.ts";
 
 interface Props {
   id?: string;
@@ -99,7 +100,7 @@ export default function SchoolCombobox({
   }
 
   return (
-    <div className="school-combobox" ref={rootRef}>
+    <div className="relative" ref={rootRef}>
       <input
         id={id}
         ref={inputRef}
@@ -126,10 +127,10 @@ export default function SchoolCombobox({
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
+        className="w-full pl-[0.9rem] pr-[2.2rem] py-[0.7rem] border border-slate-200 rounded-lg text-base bg-white font-[inherit] transition-[border-color,box-shadow] duration-150 focus:outline-none focus:border-blue-600 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
       />
       <button
         type="button"
-        className="school-combobox-toggle"
         aria-label={open ? "Close school list" : "Open school list"}
         tabIndex={-1}
         onMouseDown={(e) => {
@@ -138,6 +139,7 @@ export default function SchoolCombobox({
           setOpen((v) => !v);
           inputRef.current?.focus();
         }}
+        className="absolute top-1/2 right-[0.55rem] -translate-y-1/2 inline-flex items-center justify-center size-6 border-0 bg-transparent text-slate-500 cursor-pointer p-0 rounded-md hover:text-slate-900 hover:bg-slate-50"
       >
         <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
           <path d="M5 7l5 6 5-6" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -145,13 +147,20 @@ export default function SchoolCombobox({
       </button>
 
       {open && (
-        <ul className="school-combobox-list" id={listboxId} role="listbox" ref={listRef}>
-          {loading && <li className="school-combobox-empty">Loading schools…</li>}
+        <ul
+          className="absolute top-[calc(100%+4px)] left-0 right-0 max-h-[260px] overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg list-none m-0 p-1 z-50"
+          id={listboxId}
+          role="listbox"
+          ref={listRef}
+        >
+          {loading && (
+            <li className="px-[0.7rem] py-[0.7rem] text-slate-500 text-sm">Loading schools…</li>
+          )}
           {!loading && error && (
-            <li className="school-combobox-empty school-combobox-error">{error}</li>
+            <li className="px-[0.7rem] py-[0.7rem] text-red-500 text-sm">{error}</li>
           )}
           {!loading && !error && filtered.length === 0 && (
-            <li className="school-combobox-empty">
+            <li className="px-[0.7rem] py-[0.7rem] text-slate-500 text-sm">
               No schools match — you can still submit a custom slug.
             </li>
           )}
@@ -164,7 +173,10 @@ export default function SchoolCombobox({
                 role="option"
                 aria-selected={i === activeIdx}
                 data-idx={i}
-                className={`school-combobox-option ${i === activeIdx ? "is-active" : ""}`}
+                className={cn(
+                  "px-[0.7rem] py-[0.55rem] rounded-md cursor-pointer flex flex-col gap-[0.15rem]",
+                  i === activeIdx ? "bg-blue-50" : "hover:bg-blue-50",
+                )}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   commit(o);
@@ -173,11 +185,15 @@ export default function SchoolCombobox({
                   setActiveIdx(i);
                 }}
               >
-                <div className="school-combobox-primary">{o.primaryName}</div>
-                <div className="school-combobox-meta">
-                  <code className="school-combobox-slug">{o.slug}</code>
+                <div className="text-[0.92rem] font-medium text-slate-900 leading-[1.25]">
+                  {o.primaryName}
+                </div>
+                <div className="flex items-center flex-wrap text-[0.78rem] text-slate-500 leading-[1.3]">
+                  <code className="bg-slate-50 rounded px-[0.35rem] py-[0.05rem] text-[0.74rem] text-slate-900 font-mono">
+                    {o.slug}
+                  </code>
                   {o.subNames.length > 0 && (
-                    <span className="school-combobox-subnames">
+                    <span className="ml-[0.1rem]">
                       {" · "}
                       {o.subNames.length <= 3
                         ? o.subNames.join(", ")

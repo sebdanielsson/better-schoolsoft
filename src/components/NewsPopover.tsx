@@ -1,6 +1,6 @@
-import { type ReactNode, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode } from "react";
 import Avatar from "./Avatar.tsx";
+import { Dialog, DialogContent } from "./ui/dialog.tsx";
 
 /** Decode HTML entities (&eacute;, &bull;, &ndash;, &amp; …) using a throwaway textarea. */
 function decodeEntities(s: string): string {
@@ -17,7 +17,13 @@ function renderDescription(raw: string): ReactNode {
   const parts = decoded.split(URL_RE);
   return parts.map((p, i) =>
     URL_RE.test(p) ? (
-      <a key={i} href={p} target="_blank" rel="noreferrer">
+      <a
+        key={i}
+        href={p}
+        target="_blank"
+        rel="noreferrer"
+        className="text-blue-600 underline underline-offset-2 hover:text-blue-700"
+      >
         {p}
       </a>
     ) : (
@@ -57,89 +63,62 @@ interface Props {
 }
 
 export default function NewsPopover({ open, data, onClose }: Props) {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [open, onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    panelRef.current?.focus();
-  }, [open]);
-
-  if (!open || !data) return null;
+  if (!data) return null;
 
   const catColor = categoryColor(data.categoryLabel);
 
-  return createPortal(
-    <div
-      className="news-popover-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="news-popover-title"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
       }}
     >
-      <div className="news-popover-panel" ref={panelRef} tabIndex={-1}>
-        <button type="button" className="news-popover-close" aria-label="Close" onClick={onClose}>
-          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
-            <path
-              d="M5 5l10 10M15 5L5 15"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-
-        <div className="news-popover-header">
+      <DialogContent
+        className="p-0 gap-0 rounded-2xl bg-white text-slate-900 max-w-[680px] sm:max-w-[680px] max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden"
+        aria-labelledby="news-popover-title"
+      >
+        <div className="flex items-start gap-[0.85rem] pt-6 pr-[3.25rem] pb-[1.1rem] pl-7 border-b border-slate-200 shrink-0">
           {data.authorName && (
             <Avatar name={data.authorName} picture={data.authorPicture ?? null} size={44} />
           )}
-          <div className="news-popover-header-text">
-            <div className="news-popover-meta">
-              {data.authorName && <span className="news-popover-author">{data.authorName}</span>}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center flex-wrap gap-[0.45rem] text-[0.8rem] text-slate-500 leading-[1.3] mb-[0.4rem]">
+              {data.authorName && (
+                <span className="font-semibold text-slate-900">{data.authorName}</span>
+              )}
               {data.categoryLabel && (
                 <span
-                  className="news-popover-category"
+                  className="px-[0.55rem] py-[0.1rem] rounded-full text-[0.72rem] font-semibold tracking-[0.01em]"
                   style={{ background: `${catColor}1f`, color: catColor }}
                 >
                   {data.categoryLabel}
                 </span>
               )}
-              {data.dateLabel && <span className="news-popover-date">· {data.dateLabel}</span>}
+              {data.dateLabel && <span className="whitespace-nowrap">· {data.dateLabel}</span>}
               {data.hasAttachment && (
-                <span className="news-popover-attach" aria-label="Has attachment">
+                <span className="text-[0.85rem]" aria-label="Has attachment">
                   📎
                 </span>
               )}
             </div>
-            <h2 id="news-popover-title" className="news-popover-title">
+            <h2
+              id="news-popover-title"
+              className="text-[1.4rem] font-bold leading-[1.3] tracking-[-0.01em] m-0 text-slate-900 break-words"
+            >
               {data.title.trim()}
             </h2>
           </div>
         </div>
 
         {data.description && data.description.trim() !== "" ? (
-          <div className="news-popover-prose">{renderDescription(data.description)}</div>
+          <div className="text-[0.98rem] leading-[1.65] text-slate-900 whitespace-pre-wrap break-words px-7 pt-5 pb-7 overflow-y-auto flex-1 min-h-0">
+            {renderDescription(data.description)}
+          </div>
         ) : (
-          <div className="news-popover-empty">No body text.</div>
+          <div className="p-7 text-slate-500 text-sm italic text-center">No body text.</div>
         )}
-      </div>
-    </div>,
-    document.body,
+      </DialogContent>
+    </Dialog>
   );
 }
