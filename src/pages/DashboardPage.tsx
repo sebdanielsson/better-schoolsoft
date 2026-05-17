@@ -6,6 +6,7 @@ import CalendarPage from "./CalendarPage.tsx";
 import NewsPage from "./NewsPage.tsx";
 import MessagesPage from "./MessagesPage.tsx";
 import ProfilePage from "./ProfilePage.tsx";
+import StaffPage from "./StaffPage.tsx";
 import HeroCard from "../components/HeroCard.tsx";
 import { HeroDataProvider } from "../hooks/useHeroData.tsx";
 
@@ -33,6 +34,7 @@ export default function DashboardPage() {
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/staff" element={<StaffPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

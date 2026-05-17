@@ -280,10 +280,18 @@ export default function HomePage() {
       accessToken: string | null,
       legacyToken: string,
     ): Promise<LunchWeek[]> {
-      const week = isoWeek(new Date());
+      const now = new Date();
+      /* From Saturday onward, fetch next week's menu instead — the current week
+       * is over and the user is planning for what's coming. */
+      const targetWeek = isoDay(now) >= 6 ? isoWeek(now) + 1 : isoWeek(now);
       if (accessToken) {
         try {
-          const days = await fetchEvaLunchWeek(session!.school, accessToken, session!.orgId, week);
+          const days = await fetchEvaLunchWeek(
+            session!.school,
+            accessToken,
+            session!.orgId,
+            targetWeek,
+          );
           const wk = evaLunchToWeek(days);
           if (wk) return [wk];
         } catch {
@@ -393,10 +401,15 @@ export default function HomePage() {
     return { fallbackCurrent: current, fallbackNext: next };
   }, [todayLessons, today]);
 
-  /* This week's lunch. */
+  /* On Sat/Sun the lunch card pivots to next week's menu and features Monday
+   * as the upcoming day, since the current week is effectively done. */
+  const isWeekend = todayDayIdx >= 6;
+  const lunchWeekToShow = isWeekend ? todayWeek + 1 : todayWeek;
+  const featuredDayIdx = isWeekend ? 1 : todayDayIdx;
+
   const thisWeekLunch = useMemo(
-    () => lunchWeeks.find((w) => w.week === todayWeek) ?? lunchWeeks[0] ?? null,
-    [lunchWeeks, todayWeek],
+    () => lunchWeeks.find((w) => w.week === lunchWeekToShow) ?? lunchWeeks[0] ?? null,
+    [lunchWeeks, lunchWeekToShow],
   );
   const LUNCH_DAY_KEYS: Array<keyof LunchWeek> = [
     "sunday",
@@ -407,8 +420,8 @@ export default function HomePage() {
     "friday",
     "saturday",
   ];
-  const todayLunchText = thisWeekLunch
-    ? (thisWeekLunch[LUNCH_DAY_KEYS[todayDayIdx % 7] ?? "monday"] as string)
+  const featuredLunchText = thisWeekLunch
+    ? (thisWeekLunch[LUNCH_DAY_KEYS[featuredDayIdx % 7] ?? "monday"] as string)
     : "";
 
   /* Next 5 upcoming events from legacy calendar list. */
@@ -510,9 +523,9 @@ export default function HomePage() {
         {/* Lunch */}
         <Card title="Lunch" accent="warm" linkTo="/lunch" linkLabel="All weeks →">
           <div className={cardSubtitleClass}>
-            {todayDayIdx >= 1 && todayDayIdx <= 5
-              ? `Today · ${DAY_NAMES_FULL[todayDayIdx]}`
-              : "This weekend"}
+            {isWeekend
+              ? `Next ${DAY_NAMES_FULL[featuredDayIdx]} · Week ${lunchWeekToShow}`
+              : `Today · ${DAY_NAMES_FULL[todayDayIdx]}`}
           </div>
           <div className={lunchTodayClass}>
             {loading ? (
@@ -520,13 +533,11 @@ export default function HomePage() {
                 <Skeleton className="h-4 w-3/4 rounded-sm" />
                 <Skeleton className="h-4 w-2/3 rounded-sm mt-2" />
               </div>
-            ) : todayDayIdx >= 1 && todayDayIdx <= 5 && todayLunchText ? (
-              <pre className={lunchTextClass}>{todayLunchText}</pre>
+            ) : featuredLunchText ? (
+              <pre className={lunchTextClass}>{featuredLunchText}</pre>
             ) : (
               <pre className={cn(lunchTextClass, lunchTextEmptyClass)}>
-                {todayDayIdx >= 1 && todayDayIdx <= 5
-                  ? "No lunch published for today."
-                  : "The cafeteria is closed."}
+                {isWeekend ? "Next week's menu isn't published yet." : "No lunch published for today."}
               </pre>
             )}
           </div>
@@ -534,11 +545,11 @@ export default function HomePage() {
             {(["monday", "tuesday", "wednesday", "thursday", "friday"] as const).map((k, i) => {
               const day = i + 1;
               const text = thisWeekLunch ? (thisWeekLunch[k] as string) || "" : "";
-              const isToday = day === todayDayIdx;
+              const isFeatured = day === featuredDayIdx;
               const main = firstLine(text).replace(/^Veckans (lunch|vegetariska)\s*[·:-]?\s*/i, "");
               return (
-                <li key={k} className={cn(lunchWeekRowClass, isToday && lunchWeekRowTodayClass)}>
-                  <span className={cn(lunchWeekDayClass, isToday && lunchWeekDayTodayClass)}>
+                <li key={k} className={cn(lunchWeekRowClass, isFeatured && lunchWeekRowTodayClass)}>
+                  <span className={cn(lunchWeekDayClass, isFeatured && lunchWeekDayTodayClass)}>
                     {DAY_NAMES_FULL[day]?.slice(0, 3)}
                   </span>
                   <span className={lunchWeekMealClass}>
