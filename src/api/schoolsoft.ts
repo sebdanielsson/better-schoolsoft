@@ -725,6 +725,482 @@ export function fetchEvaStaffDetail(
   );
 }
 
+/* ---------- Holistic assessment (uses session cookies, not Bearer auth) ----------
+ *
+ * The /rest-api/parent/holistic_assessment/rows endpoint is served from the
+ * SchoolSoft React webview rather than Eva, so it authenticates via JSESSIONID +
+ * hash cookies. Those cookies are set by hitting /eva-apps/auth/login/parent
+ * with the Eva JWT in a `token:` header — that endpoint 303s with a Set-Cookie
+ * payload. Our proxy rewrites Path attributes so the browser sends the cookies
+ * back on subsequent /schoolsoft/... requests.
+ */
+
+export interface HolisticAssessmentRow {
+  title: string;
+  subTitle: string;
+  color: string;
+  subjectWarning: boolean;
+  updatedAt: string;
+  friendlyUpdatedAt: string;
+  holisticAssessmentId: number;
+  published: boolean;
+  read: boolean;
+}
+
+/** Cache of schools we've already exchanged an Eva JWT for cookies on. The
+ *  cookies live on the browser; this just avoids re-running the bootstrap. */
+const bootstrappedSchools = new Set<string>();
+
+/** Trade the Eva JWT for JSESSIONID + hash cookies on the SchoolSoft React
+ *  webview's session. Cheap, idempotent on the client (we deduplicate per
+ *  school), and required before any /rest-api/* call. */
+export async function bootstrapSchoolsoftSession(
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): Promise<void> {
+  if (bootstrappedSchools.has(school)) return;
+  const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
+    method: "GET",
+    credentials: "include",
+    redirect: "manual",
+    headers: {
+      token: evaToken,
+      userId: String(userId),
+      orgId: String(orgId),
+      childInFocus: String(studentId),
+      userOS: "android",
+      language: "sw",
+    },
+  });
+  /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
+   * Cookies are applied regardless. Any non-redirect status that isn't 2xx
+   * means the bootstrap failed and we shouldn't mark the school as ready. */
+  if (res.type !== "opaqueredirect" && !res.ok) {
+    throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
+  }
+  bootstrappedSchools.add(school);
+}
+
+export async function fetchHolisticAssessments(
+  school: string,
+): Promise<HolisticAssessmentRow[]> {
+  return cookieGet<HolisticAssessmentRow[]>(
+    `${BASE}/${school}/rest-api/parent/holistic_assessment/rows`,
+  );
+}
+
+export interface HolisticAssessmentDetail {
+  id: number;
+  activityName: string;
+  groupName: string;
+  studentName: string;
+  studentId: number;
+  publishDate: string;
+  publishStatus: string;
+}
+
+export interface HolisticAssessmentSubjectWarning {
+  active: boolean;
+  comment: string;
+  createdAt: string;
+  holisticAssessmentId: number;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  published: boolean;
+  publishedAt: string;
+}
+
+/** Guardian acknowledgement state for a subject warning. `hasConfirmed` is the
+ *  source of truth for whether to show the "I confirm" button — the warning's
+ *  own `active` field tracks whether the warning itself is published, not the
+ *  guardian's read-receipt. */
+export interface HolisticAssessmentConfirmStatus {
+  hasConfirmed: boolean;
+  confirmedAt: string;
+  name: string;
+}
+
+export interface HolisticAssessmentKnowledgeDevelopment {
+  value: string;
+  supportMeasures: string;
+  updatedByInfo: string;
+}
+
+/** Section enums the /sections/published endpoint can return. The list drives
+ *  which panels the detail UI tries to render. */
+export type HolisticAssessmentSection =
+  | "ATTENDANCE"
+  | "FORMATIVE_COMMENT"
+  | "KNOWLEDGE_DEVELOPMENT"
+  | "SUBJECT_WARNING";
+
+export function fetchHolisticAssessmentDetail(
+  school: string,
+  id: number,
+): Promise<HolisticAssessmentDetail> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/holistic_assessment/${id}`);
+}
+
+export function fetchHolisticAssessmentSubjectWarning(
+  school: string,
+  id: number,
+): Promise<HolisticAssessmentSubjectWarning | null> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning`,
+  );
+}
+
+export function fetchHolisticAssessmentConfirmStatus(
+  school: string,
+  id: number,
+): Promise<HolisticAssessmentConfirmStatus | null> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning/confirm`,
+  );
+}
+
+export function fetchHolisticAssessmentKnowledgeDevelopment(
+  school: string,
+  id: number,
+): Promise<HolisticAssessmentKnowledgeDevelopment | null> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/knowledge_development/view`,
+  );
+}
+
+export function fetchHolisticAssessmentSections(
+  school: string,
+  id: number,
+): Promise<HolisticAssessmentSection[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/sections/published`,
+  );
+}
+
+/** Mark a subject warning as acknowledged by the guardian. GET on the same URL
+ *  reads the current confirmation state; POST flips it to confirmed. */
+export async function confirmHolisticAssessmentSubjectWarning(
+  school: string,
+  id: number,
+): Promise<void> {
+  const res = await fetch(
+    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning/confirm`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!res.ok) throw new Error(`Subject warning confirm failed (${res.status})`);
+}
+
+/* ---------- Subject-room assignments (Planning/Schedule "PS" module) ----------
+ *
+ * Same cookie-auth flow as the holistic assessment endpoints — call
+ * `bootstrapSchoolsoftSession` first, then GET with credentials.
+ */
+
+export type AssignmentSubmissionStatus =
+  | "NOT_SUBMITTED"
+  | "SUBMITTED"
+  | "EXPIRED_NOT_SUBMITTED"
+  | "EXPIRED_SUBMITTED";
+
+export type AssignmentResultStatus = "NOT_REPORTED" | "REPORTED";
+
+export interface AssignmentRow {
+  activityId: number;
+  id: number;
+  read: boolean;
+  resultReportStatus: AssignmentResultStatus | string;
+  sortDate: string;
+  subTitle: string;
+  submissionStatus: AssignmentSubmissionStatus | string;
+  title: string;
+}
+
+export function fetchAssignmentsThisWeek(
+  school: string,
+  week: number,
+  year: number,
+): Promise<AssignmentRow[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/assignments/start-page?week=${week}&year=${year}`,
+  );
+}
+
+export interface AssignmentView {
+  id: number;
+  title: string;
+  type: string;
+  subTitle: string;
+  subjectNames: string;
+  description: string;
+  publishDate: string;
+  integrationType: string | null;
+  contents: unknown[];
+}
+
+export type AssignmentSectionType =
+  | "SUBMISSION"
+  | "RESULTREPORT"
+  | "MATERIAL"
+  | string;
+
+export interface AssignmentSection {
+  id: number;
+  type: AssignmentSectionType;
+}
+
+export interface AssignmentSubmission {
+  allowLateHandIn: boolean;
+  closeDate: string;
+  description: string | null;
+  expireDate: string;
+  groupHandIn: boolean;
+  handInType: "PHYSICAL" | "DIGITAL" | string;
+  plagiarismCheck: boolean;
+  submissionStatus: {
+    groupSubmissionId: number;
+    studentSubmissionId: number;
+    submitted: boolean;
+  };
+}
+
+export interface AssignmentAssessment {
+  review: string;
+  studentComment: string;
+  teacherComment: string;
+  assessedCriteriaTabs: unknown[];
+  assessmentPartialMoments: unknown[];
+}
+
+export interface ConnectedPlanning {
+  id: number;
+  title: string;
+  subTitle: string;
+  planningId: number | null;
+  read: boolean;
+  sortDate: string | null;
+}
+
+export function fetchAssignmentView(school: string, id: number): Promise<AssignmentView> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/view`);
+}
+
+export function fetchAssignmentSections(
+  school: string,
+  id: number,
+): Promise<AssignmentSection[]> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/sections`);
+}
+
+export function fetchAssignmentConnectedPlannings(
+  school: string,
+  id: number,
+): Promise<ConnectedPlanning[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/assignments/${id}/connected_plannings`,
+  );
+}
+
+export function fetchAssignmentSubmission(
+  school: string,
+  submissionSectionId: number,
+): Promise<AssignmentSubmission> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/submission/${submissionSectionId}?groupwork_id=0`,
+  );
+}
+
+export function fetchAssignmentAssessment(
+  school: string,
+  assignmentId: number,
+): Promise<AssignmentAssessment> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/assignment/${assignmentId}/assessment`,
+  );
+}
+
+/* ---------- Plannings ---------- */
+
+export interface PlanningRow {
+  activityId: number;
+  id: number;
+  planningId: number;
+  read: boolean;
+  subTitle: string;
+  title: string;
+}
+
+export interface PlanningView {
+  title: string;
+  subjectNames: string;
+  contents: unknown[];
+}
+
+export interface PlanningPartTab {
+  id: number;
+  order: number;
+  title: string;
+}
+
+export interface PlanningPartView {
+  title: string;
+  subtitle: string;
+  description: string;
+  publishDate: string;
+}
+
+export interface ConnectedAssignment {
+  id: number;
+  title: string;
+  subTitle: string;
+  planningId: number | null;
+  read: boolean;
+  sortDate: string | null;
+}
+
+export function fetchPlanningsThisWeek(
+  school: string,
+  week: number,
+  year: number,
+): Promise<PlanningRow[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/planning_parts/start-page?week=${week}&year=${year}`,
+  );
+}
+
+export function fetchPlanningView(
+  school: string,
+  planningId: number,
+): Promise<PlanningView> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/plannings/${planningId}/view`);
+}
+
+export function fetchPlanningTabs(
+  school: string,
+  planningId: number,
+): Promise<PlanningPartTab[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/plannings/${planningId}/planning_parts/tabs`,
+  );
+}
+
+export function fetchPlanningPartView(
+  school: string,
+  partId: number,
+): Promise<PlanningPartView> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/view`,
+  );
+}
+
+export function fetchPlanningConnectedAssignments(
+  school: string,
+  partId: number,
+): Promise<ConnectedAssignment[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/connected_assignments`,
+  );
+}
+
+/* ---------- Schedule (lessons + events) — cookie-auth ---------- */
+
+export interface StudentLessonStatus {
+  absence: number;
+  comment: string;
+  lessonId: number;
+  name: string;
+  reason: string;
+  status: number;
+  statusType: number;
+  week: number;
+}
+
+export interface ScheduleLesson {
+  allDay: boolean;
+  category: "lesson" | string;
+  dayId: number;
+  description: string;
+  editable: boolean;
+  endDate: string;
+  eventColor: string;
+  eventId: number;
+  name: string;
+  room: string;
+  roomBooking: boolean;
+  startDate: string;
+  status: number;
+  studentLessonStatus: StudentLessonStatus | null;
+  teacher: string;
+  teachingGroup: string;
+}
+
+export function fetchScheduleLessons(
+  school: string,
+  week: number,
+): Promise<ScheduleLesson[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/calendar/lessons/week/${week}`,
+  );
+}
+
+/* ---------- Material file metadata (used by assignment detail) ---------- */
+
+export interface MaterialFile {
+  fileId: number;
+  fileName: string;
+}
+
+/** Despite the `/file` suffix, this endpoint returns JSON metadata about the
+ *  file(s) attached to a material (name + id), not the binary itself. */
+export function fetchMaterialFiles(
+  school: string,
+  materialId: number,
+): Promise<MaterialFile[]> {
+  return cookieGet(
+    `${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`,
+  );
+}
+
+/* ---------- Feature parameters (gates PS-module features) ---------- */
+
+export interface SchoolsoftParameters {
+  useFunctionPS: boolean;
+  /* Other fields exist (scheduleStart, scheduleEnd, useGuardian, …); only the
+   * gates we currently consume are typed. The endpoint returns more. */
+}
+
+const parametersCache = new Map<string, SchoolsoftParameters>();
+
+/** Fetch /rest-api/parameters once per school + per session-load and cache the
+ *  result. Bootstraps the cookie session if needed so callers don't have to
+ *  thread it through. */
+export async function getSchoolsoftParameters(
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): Promise<SchoolsoftParameters> {
+  const cached = parametersCache.get(school);
+  if (cached) return cached;
+  await bootstrapSchoolsoftSession(school, evaToken, userId, orgId, studentId);
+  const params = await cookieGet<SchoolsoftParameters>(
+    `${BASE}/${school}/rest-api/parameters`,
+  );
+  parametersCache.set(school, params);
+  return params;
+}
+
+async function cookieGet<T>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status}) ${url}`);
+  const text = await res.text();
+  if (!text) return null as T;
+  return JSON.parse(text) as T;
+}
+
 /* ---------- School list ---------- */
 
 export interface SchoolListEntry {
@@ -808,6 +1284,15 @@ export function isoWeek(d: Date = new Date()): number {
   date.setUTCDate(date.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+/** ISO week-numbering year for a Date — usually equal to the calendar year,
+ *  but differs in early Jan / late Dec when an ISO week straddles years. */
+export function isoWeekYear(d: Date = new Date()): number {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  return date.getUTCFullYear();
 }
 
 /** ISO day-of-week (Mon=1 … Sun=7). */
