@@ -32,6 +32,14 @@ export default function SettingsPill() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[200px] rounded-lg">
         <DropdownMenuItem asChild>
+          <Link to="/staff" className="cursor-pointer">
+            <span aria-hidden="true" className="text-muted-foreground">
+              ✱
+            </span>
+            Staff directory
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link to="/profile" className="cursor-pointer">
             <span aria-hidden="true" className="text-muted-foreground">
               ⚙
