@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import {
   fetchLunch,
@@ -7,6 +8,7 @@ import {
   isoWeek,
   type LunchWeek,
 } from "../api/schoolsoft.ts";
+import { cn } from "../lib/utils.ts";
 
 const DAY_KEYS: Array<keyof LunchWeek> = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -63,27 +65,59 @@ export default function LunchPage() {
 
   const sortedWeeks = [...weeks].sort((a, b) => a.week - b.week);
 
-  if (loading) return <div className="loading">Loading lunch menu…</div>;
-  if (error) return <div className="error-message">{error}</div>;
-  if (!sortedWeeks.length) return <div className="empty-state">No lunch menus available.</div>;
+  if (loading)
+    return (
+      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">
+        Loading lunch menu…
+      </div>
+    );
+  if (error)
+    return (
+      <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        {error}
+      </div>
+    );
+  if (!sortedWeeks.length)
+    return (
+      <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+        No lunch menus available.
+      </div>
+    );
 
   return (
-    <div className="lunch-page">
-      <div className="page-header">
-        <h2>Lunch menu</h2>
-        <span className="page-subtitle">
+    <div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">Lunch menu</h2>
+        <span className="text-[0.85rem] text-slate-500">
           {sortedWeeks.length} week{sortedWeeks.length === 1 ? "" : "s"} published
         </span>
       </div>
 
-      <div className="lunch-weeks">
+      <div className="flex flex-col gap-4">
         {sortedWeeks.map((week) => (
-          <details key={week.week} className="lunch-week" open={week.week === currentWeek}>
-            <summary className="lunch-week-header">
+          <details
+            key={week.week}
+            className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[var(--shadow-sm)]"
+            open={week.week === currentWeek}
+          >
+            <summary
+              className={cn(
+                "flex cursor-pointer list-none items-center gap-[0.65rem] bg-white px-5 py-[0.9rem] font-semibold transition-colors hover:bg-slate-50 [&::-webkit-details-marker]:hidden",
+                "group-open:border-b group-open:border-slate-200",
+              )}
+            >
+              <ChevronRight
+                aria-hidden="true"
+                className="h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform duration-150 group-open:rotate-90"
+              />
               <span>Week {week.week}</span>
-              {week.week === currentWeek && <span className="current-badge">current</span>}
+              {week.week === currentWeek && (
+                <span className="inline-block ml-2 px-[0.6em] py-[0.15em] bg-blue-600 text-white rounded-full text-[0.7rem] font-semibold align-middle tracking-[0.02em]">
+                  current
+                </span>
+              )}
               {week.dates?.[0] && (
-                <span className="lunch-week-dates">
+                <span className="ml-auto text-[0.78rem] font-normal text-slate-500">
                   {new Date(week.dates[0]).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -93,16 +127,25 @@ export default function LunchPage() {
                 </span>
               )}
             </summary>
-            <div className="lunch-days">
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-5">
               {DAY_KEYS.map((key, i) => {
                 const menu = (week[key] as string) || "";
                 return (
                   <div
                     key={key as string}
-                    className={`lunch-day ${!menu ? "lunch-day--empty" : ""}`}
+                    className="border-r border-slate-200 px-[1.1rem] py-4 last:border-r-0"
                   >
-                    <div className="lunch-day-name">{DAY_LABELS[i]}</div>
-                    <div className="lunch-menu">{menu || "No menu"}</div>
+                    <div className="mb-2 text-[0.72rem] font-bold uppercase tracking-[0.05em] text-slate-500">
+                      {DAY_LABELS[i]}
+                    </div>
+                    <div
+                      className={cn(
+                        "whitespace-pre-wrap text-[0.9rem] leading-[1.5]",
+                        !menu && "text-[0.85rem] italic text-slate-500",
+                      )}
+                    >
+                      {menu || "No menu"}
+                    </div>
                   </div>
                 );
               })}
