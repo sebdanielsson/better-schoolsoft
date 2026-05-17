@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
+  bootstrapSchoolsoftSession,
   fetchLessons,
-  fetchLunch,
   fetchCalendar,
   fetchNotices,
-  fetchEvaLunchWeek,
   fetchEvaLunchDay,
   fetchEvaCurrentLesson,
   fetchEvaNextLesson,
   fetchEvaNews,
   fetchEvaNextCalendarEvent,
-  evaLunchToWeek,
+  fetchScheduleLessons,
   bitmaskToWeeks,
   formatLessonTime,
   isoDay,
@@ -25,9 +25,13 @@ import {
   type EvaLessonTile,
   type EvaNewsItem,
   type Lesson,
-  type LunchWeek,
+  type ScheduleLesson,
 } from "../api/schoolsoft.ts";
+import AssignmentsCard from "../components/AssignmentsCard.tsx";
+import LunchCard from "../components/LunchCard.tsx";
+import PlanningsCard from "../components/PlanningsCard.tsx";
 import Avatar from "../components/Avatar.tsx";
+import { expandSubjectCode } from "../lib/subject-codes.ts";
 import NewsPopover, { type NewsPopoverData } from "../components/NewsPopover.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
@@ -98,9 +102,44 @@ function relativeDay(ms: number): string {
   return formatDate(ms);
 }
 
-function firstLine(s: string): string {
-  const i = s.indexOf("\n");
-  return i === -1 ? s : s.slice(0, i);
+/* ---------- Day-nav helpers for the combined schedule card ---------- */
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(d.getDate() + n);
+  return r;
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function sameLocalDate(a: Date, b: Date): boolean {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
+/** The school day a card should land on by default — today during school
+ *  hours, otherwise the next Mon–Fri. */
+function activeSchoolDayFor(now: Date): Date {
+  const idx = isoDay(now);
+  if (idx <= 5 && now.getHours() < 17) return startOfDay(now);
+  return nextSchoolDayDate(now);
+}
+
+/** Next Mon–Fri after the given date (Fri→Mon, Sat→Mon, Sun→Mon). */
+function nextSchoolDayDate(d: Date): Date {
+  const idx = isoDay(d);
+  if (idx >= 5) return addDays(startOfDay(d), 8 - idx);
+  return addDays(startOfDay(d), 1);
+}
+
+/** Previous Mon–Fri before the given date (Mon→Fri, Sat→Fri, Sun→Fri). */
+function prevSchoolDayDate(d: Date): Date {
+  const idx = isoDay(d);
+  if (idx === 1) return addDays(startOfDay(d), -3);
+  if (idx === 6) return addDays(startOfDay(d), -1);
+  if (idx === 7) return addDays(startOfDay(d), -2);
+  return addDays(startOfDay(d), -1);
 }
 
 interface EvaData {
@@ -132,7 +171,6 @@ const cardHeaderClass = "flex items-baseline justify-between px-5 pt-4 pb-1";
 const cardHeaderTitleClass = "text-base font-bold tracking-[-0.01em]";
 const cardLinkClass = "text-xs font-medium text-slate-500 transition-colors hover:text-blue-600";
 const cardBodyClass = "flex-1 px-5 pb-5 pt-2";
-const cardSubtitleClass = "mb-2.5 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500";
 const cardEmptyClass = "py-4 text-sm text-slate-500";
 const cardLoadingClass = "py-4 text-sm text-slate-500";
 
@@ -152,19 +190,6 @@ const lessonRowSubjectClass =
   "overflow-hidden text-ellipsis whitespace-nowrap text-[0.92rem] font-semibold";
 const lessonRowMetaClass =
   "mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[0.78rem] text-slate-500";
-
-const lunchTodayClass = "mb-4";
-const lunchTextClass =
-  "min-h-[calc(1.4em*2+1.5rem)] whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-[1.4]";
-const lunchTextEmptyClass = "italic text-slate-500";
-const lunchTextSkeletonClass = "flex flex-col";
-const lunchWeekListClass = "flex list-none flex-col gap-1";
-const lunchWeekRowClass =
-  "grid grid-cols-[44px_1fr] items-baseline gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2";
-const lunchWeekRowTodayClass = "!border-amber-500 !bg-amber-50";
-const lunchWeekDayClass = "text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500";
-const lunchWeekDayTodayClass = "!text-amber-700";
-const lunchWeekMealClass = "min-w-0 break-words text-[0.85rem] leading-[1.35]";
 
 const eventListClass = "flex list-none flex-col gap-1.5";
 const eventRowClass =
@@ -205,7 +230,7 @@ export default function HomePage() {
   const { parentUserId, child } = useHeroData();
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [lunchWeeks, setLunchWeeks] = useState<LunchWeek[]>([]);
+  const [scheduleLessons, setScheduleLessons] = useState<ScheduleLesson[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [news, setNews] = useState<CalendarEvent[]>([]);
   const [eva, setEva] = useState<EvaData>(emptyEva);
@@ -276,35 +301,6 @@ export default function HomePage() {
       };
     }
 
-    async function loadLunch(
-      accessToken: string | null,
-      legacyToken: string,
-    ): Promise<LunchWeek[]> {
-      const now = new Date();
-      /* From Saturday onward, fetch next week's menu instead — the current week
-       * is over and the user is planning for what's coming. */
-      const targetWeek = isoDay(now) >= 6 ? isoWeek(now) + 1 : isoWeek(now);
-      if (accessToken) {
-        try {
-          const days = await fetchEvaLunchWeek(
-            session!.school,
-            accessToken,
-            session!.orgId,
-            targetWeek,
-          );
-          const wk = evaLunchToWeek(days);
-          if (wk) return [wk];
-        } catch {
-          /* fall through */
-        }
-      }
-      try {
-        return await fetchLunch(session!.school, legacyToken, session!.orgId);
-      } catch {
-        return [];
-      }
-    }
-
     async function loadLegacyLists(legacyToken: string) {
       const [lessonsResp, eventsResp, newsResp] = await Promise.allSettled([
         fetchLessons(session!.school, legacyToken, session!.orgId),
@@ -327,15 +323,13 @@ export default function HomePage() {
       const evaDataP = evaToken
         ? loadEva(evaToken).catch(() => emptyEva)
         : Promise.resolve(emptyEva);
-      const lunchP = loadLunch(evaToken, legacyToken);
       const lists = legacyToken ? loadLegacyLists(legacyToken) : Promise.resolve();
 
-      const [evaData, lunchData] = await Promise.all([evaDataP, lunchP]);
+      const evaData = await evaDataP;
       if (cancelled) return;
       /* News arrives via its own parallel fetch — preserve whatever's already there
        * so the slower bundle doesn't clobber the news we already painted. */
       setEva((prev) => ({ ...evaData, news: prev.news.length ? prev.news : evaData.news }));
-      setLunchWeeks(lunchData);
       await lists;
     }
 
@@ -352,35 +346,77 @@ export default function HomePage() {
     };
   }, [session, getToken, getEvaToken, todayDayIdx, parentUserId, child]);
 
-  /* Today's lessons (only on weekdays). */
+  /* Fetch this + next week from the rest-api schedule endpoint. This is what
+   * IES Uppsala (and likely other schools) actually populate; the legacy
+   * /api/lessons/student/... endpoint returns empty for those tenants. */
+  useEffect(() => {
+    if (!session || !parentUserId || !child) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getEvaToken();
+        if (!token) return;
+        const orgId = child.schools[0]?.orgId ?? session.orgId;
+        await bootstrapSchoolsoftSession(
+          session.school,
+          token,
+          parentUserId,
+          orgId,
+          child.studentId,
+        );
+        const week = isoWeek(new Date());
+        const [thisWeek, nextWeek] = await Promise.all([
+          fetchScheduleLessons(session.school, week).catch(() => [] as ScheduleLesson[]),
+          fetchScheduleLessons(session.school, week + 1).catch(() => [] as ScheduleLesson[]),
+        ]);
+        if (cancelled) return;
+        setScheduleLessons([...thisWeek, ...nextWeek]);
+      } catch {
+        /* swallow — legacy lessons remain as fallback */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, getEvaToken, parentUserId, child]);
+
+  /* The "active" school day — today if it's a weekday before 17:00,
+   * otherwise the next Mon–Fri. Used as the initial value for the day toggle
+   * and as the target for the "Today" reset button. */
+  const activeSchoolDay = useMemo(() => activeSchoolDayFor(today), [today]);
+
+  const [selectedDay, setSelectedDay] = useState<Date>(activeSchoolDay);
+
+  /* Lessons for whichever day the user is viewing — prefer the rest-api
+   * schedule, fall back to the legacy week-bitmask list. */
+  const lessonsForSelectedDay = useMemo(() => {
+    const fromSchedule = scheduleLessonsForDate(scheduleLessons, selectedDay);
+    if (fromSchedule.length > 0) return fromSchedule;
+    const wk = isoWeek(selectedDay);
+    const dayIdx = isoDay(selectedDay);
+    if (dayIdx > 5) return [];
+    return lessons
+      .filter((l) => l.weeks && bitmaskToWeeks(l.weeks).includes(wk))
+      .filter((l) => lessonDayIndex(l.startTime) === dayIdx)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [lessons, scheduleLessons, selectedDay]);
+
+  /* Today's lessons feed the "Now / Next up" tile fallback even when the user
+   * has navigated away to another day — the tile only renders for today, but
+   * the computation depends on the actual current time vs today's schedule. */
   const todayLessons = useMemo(() => {
     if (todayDayIdx > 5) return [];
+    const fromSchedule = scheduleLessonsForDate(scheduleLessons, today);
+    if (fromSchedule.length > 0) return fromSchedule;
     return lessons
       .filter((l) => l.weeks && bitmaskToWeeks(l.weeks).includes(todayWeek))
       .filter((l) => lessonDayIndex(l.startTime) === todayDayIdx)
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [lessons, todayWeek, todayDayIdx]);
+  }, [lessons, scheduleLessons, today, todayWeek, todayDayIdx]);
 
-  /* Next school day (skips weekend). */
-  const { nextDayIdx, nextDayWeek, nextDayIsTomorrow } = useMemo(() => {
-    let idx = todayDayIdx;
-    let week = todayWeek;
-    let dayOffset = 1;
-    while (dayOffset <= 4) {
-      idx = idx === 7 ? 1 : idx + 1;
-      if (idx === 1 && dayOffset > 1) week = todayWeek + 1;
-      if (idx >= 1 && idx <= 5) break;
-      dayOffset++;
-    }
-    return { nextDayIdx: idx, nextDayWeek: week, nextDayIsTomorrow: dayOffset === 1 };
-  }, [todayDayIdx, todayWeek]);
-
-  const nextDayLessons = useMemo(() => {
-    return lessons
-      .filter((l) => l.weeks && bitmaskToWeeks(l.weeks).includes(nextDayWeek))
-      .filter((l) => lessonDayIndex(l.startTime) === nextDayIdx)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [lessons, nextDayWeek, nextDayIdx]);
+  const isSelectedToday = sameLocalDate(selectedDay, today);
+  const isSelectedActive = sameLocalDate(selectedDay, activeSchoolDay);
+  const selectedSubtitle = `${DAY_NAMES_FULL[isoDay(selectedDay)]}, ${selectedDay.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 
   /* Find the current / next lesson today from the legacy list (used as fallback when Eva tile is empty). */
   const { fallbackCurrent, fallbackNext } = useMemo(() => {
@@ -401,29 +437,6 @@ export default function HomePage() {
     return { fallbackCurrent: current, fallbackNext: next };
   }, [todayLessons, today]);
 
-  /* On Sat/Sun the lunch card pivots to next week's menu and features Monday
-   * as the upcoming day, since the current week is effectively done. */
-  const isWeekend = todayDayIdx >= 6;
-  const lunchWeekToShow = isWeekend ? todayWeek + 1 : todayWeek;
-  const featuredDayIdx = isWeekend ? 1 : todayDayIdx;
-
-  const thisWeekLunch = useMemo(
-    () => lunchWeeks.find((w) => w.week === lunchWeekToShow) ?? lunchWeeks[0] ?? null,
-    [lunchWeeks, lunchWeekToShow],
-  );
-  const LUNCH_DAY_KEYS: Array<keyof LunchWeek> = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-  const featuredLunchText = thisWeekLunch
-    ? (thisWeekLunch[LUNCH_DAY_KEYS[featuredDayIdx % 7] ?? "monday"] as string)
-    : "";
-
   /* Next 5 upcoming events from legacy calendar list. */
   const upcoming = useMemo(
     () => [...events].sort((a, b) => a.eventStart - b.eventStart).slice(0, 5),
@@ -439,8 +452,13 @@ export default function HomePage() {
 
   const evaCurrent = eva.currentLesson ?? null;
   const evaNext = eva.nextLesson ?? null;
-  const showCurrent: EvaLessonTile | null = evaCurrent ?? legacyToTile(fallbackCurrent);
-  const showNext: EvaLessonTile | null = evaNext ?? legacyToTile(fallbackNext);
+  /* Prefer the schedule-derived tile whenever the Eva endpoint comes back
+   * without a usable subject name (which happens on IES and likely other
+   * schools that don't populate Eva's lesson catalog). The Eva tile alone
+   * would render "Lesson" — the schedule has the real name (e.g. "Mentor
+   * Time"). When both are populated, Eva still wins for its richer fields. */
+  const showCurrent: EvaLessonTile | null = mergeTile(evaCurrent, legacyToTile(fallbackCurrent));
+  const showNext: EvaLessonTile | null = mergeTile(evaNext, legacyToTile(fallbackNext));
 
   return (
     <div className={homePageClass}>
@@ -451,142 +469,104 @@ export default function HomePage() {
       )}
 
       <div className={dashGridClass}>
-        {/* Now / Next */}
-        <Card
-          title={todayDayIdx > 5 ? "Next school day" : "Today at school"}
-          accent="primary"
-          linkTo="/schedule"
-          linkLabel="Full schedule →"
-        >
-          {loading ? (
-            <div className={cardLoadingClass}>Loading…</div>
-          ) : todayDayIdx > 5 ? (
-            nextDayLessons.length ? (
-              <>
-                <div className={cardSubtitleClass}>
-                  {DAY_NAMES_FULL[nextDayIdx]} · Week {nextDayWeek}
-                </div>
-                <ul className={lessonListClass}>
-                  {nextDayLessons.slice(0, 8).map((l) => (
-                    <LessonRow key={l.id} lesson={l} />
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <Empty>No lessons next school day.</Empty>
-            )
-          ) : showCurrent || showNext || todayLessons.length ? (
-            <>
-              {showCurrent && (
-                <div className={nowBlockClass}>
-                  <div className={nowLabelClass}>Now</div>
-                  <div className={nowTitleClass}>
-                    {showCurrent.subjectName ?? showCurrent.groupName ?? "Lesson"}
-                  </div>
-                  <div className={nowMetaClass}>
-                    {showCurrent.startTime && formatLessonTime(showCurrent.startTime)}
-                    {showCurrent.endTime && `–${formatLessonTime(showCurrent.endTime)}`}
-                    {showCurrent.location && ` · ${showCurrent.location}`}
-                    {showCurrent.teacherName && ` · ${showCurrent.teacherName}`}
-                  </div>
-                </div>
-              )}
-              {showNext && !showCurrent && (
-                <div className={nowBlockClass}>
-                  <div className={nowLabelClass}>Next up</div>
-                  <div className={nowTitleClass}>
-                    {showNext.subjectName ?? showNext.groupName ?? "Lesson"}
-                  </div>
-                  <div className={nowMetaClass}>
-                    {showNext.startTime && formatLessonTime(showNext.startTime)}
-                    {showNext.endTime && `–${formatLessonTime(showNext.endTime)}`}
-                    {showNext.location && ` · ${showNext.location}`}
-                  </div>
-                </div>
-              )}
-              {todayLessons.length > 0 && (
-                <ul className={lessonListClass}>
-                  {todayLessons.map((l) => (
-                    <LessonRow key={l.id} lesson={l} highlight={showCurrent?.lessonId === l.id} />
-                  ))}
-                </ul>
-              )}
-              {todayLessons.length === 0 && !showCurrent && !showNext && (
-                <Empty>No more lessons today.</Empty>
-              )}
-            </>
-          ) : (
-            <Empty>No lessons today — enjoy!</Empty>
-          )}
-        </Card>
-
-        {/* Lunch */}
-        <Card title="Lunch" accent="warm" linkTo="/lunch" linkLabel="All weeks →">
-          <div className={cardSubtitleClass}>
-            {isWeekend
-              ? `Next ${DAY_NAMES_FULL[featuredDayIdx]} · Week ${lunchWeekToShow}`
-              : `Today · ${DAY_NAMES_FULL[todayDayIdx]}`}
-          </div>
-          <div className={lunchTodayClass}>
-            {loading ? (
-              <div className={cn(lunchTextClass, lunchTextSkeletonClass)} aria-hidden="true">
-                <Skeleton className="h-4 w-3/4 rounded-sm" />
-                <Skeleton className="h-4 w-2/3 rounded-sm mt-2" />
+        {/* Combined schedule card — toggle between days with prev/next */}
+        <section className={cn(cardClass, accentClasses.primary, "md:col-span-6")}>
+          <header className={cardHeaderClass}>
+            <h3 className={cardHeaderTitleClass}>Schedule</h3>
+            <Link className={cardLinkClass} to="/schedule">
+              Full schedule →
+            </Link>
+          </header>
+          <div className={cardBodyClass}>
+            <div className="flex items-center justify-between gap-3 mb-2.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+                {selectedSubtitle}
+              </span>
+              <div className="flex items-center gap-1">
+                {!isSelectedActive && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDay(activeSchoolDay)}
+                    className="mr-1 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay((d) => prevSchoolDayDate(d))}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Previous day"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay((d) => nextSchoolDayDate(d))}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  aria-label="Next day"
+                >
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
-            ) : featuredLunchText ? (
-              <pre className={lunchTextClass}>{featuredLunchText}</pre>
-            ) : (
-              <pre className={cn(lunchTextClass, lunchTextEmptyClass)}>
-                {isWeekend ? "Next week's menu isn't published yet." : "No lunch published for today."}
-              </pre>
-            )}
-          </div>
-          <ul className={lunchWeekListClass}>
-            {(["monday", "tuesday", "wednesday", "thursday", "friday"] as const).map((k, i) => {
-              const day = i + 1;
-              const text = thisWeekLunch ? (thisWeekLunch[k] as string) || "" : "";
-              const isFeatured = day === featuredDayIdx;
-              const main = firstLine(text).replace(/^Veckans (lunch|vegetariska)\s*[·:-]?\s*/i, "");
-              return (
-                <li key={k} className={cn(lunchWeekRowClass, isFeatured && lunchWeekRowTodayClass)}>
-                  <span className={cn(lunchWeekDayClass, isFeatured && lunchWeekDayTodayClass)}>
-                    {DAY_NAMES_FULL[day]?.slice(0, 3)}
-                  </span>
-                  <span className={lunchWeekMealClass}>
-                    {loading ? <Skeleton className="h-3.5 w-2/3 rounded-sm" /> : main || "—"}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-
-        {/* Tomorrow / Next school day */}
-        {todayDayIdx <= 5 && (
-          <Card
-            title={nextDayIsTomorrow ? "Tomorrow" : DAY_NAMES_FULL[nextDayIdx]}
-            accent="cool"
-            linkTo="/schedule"
-            linkLabel="View week →"
-          >
+            </div>
             {loading ? (
               <div className={cardLoadingClass}>Loading…</div>
-            ) : nextDayLessons.length === 0 ? (
-              <Empty>No lessons scheduled.</Empty>
             ) : (
               <>
-                <div className={cardSubtitleClass}>
-                  {DAY_NAMES_FULL[nextDayIdx]} · Week {nextDayWeek}
-                </div>
-                <ul className={lessonListClass}>
-                  {nextDayLessons.slice(0, 8).map((l) => (
-                    <LessonRow key={l.id} lesson={l} />
-                  ))}
-                </ul>
+                {isSelectedToday && showCurrent && (
+                  <div className={nowBlockClass}>
+                    <div className={nowLabelClass}>Now</div>
+                    <div className={nowTitleClass}>
+                      {showCurrent.subjectName ?? showCurrent.groupName ?? "Lesson"}
+                    </div>
+                    <div className={nowMetaClass}>
+                      {showCurrent.startTime && formatLessonTime(showCurrent.startTime)}
+                      {showCurrent.endTime && `–${formatLessonTime(showCurrent.endTime)}`}
+                      {showCurrent.location && ` · ${showCurrent.location}`}
+                      {showCurrent.teacherName && ` · ${showCurrent.teacherName}`}
+                    </div>
+                  </div>
+                )}
+                {isSelectedToday && showNext && !showCurrent && (
+                  <div className={nowBlockClass}>
+                    <div className={nowLabelClass}>Next up</div>
+                    <div className={nowTitleClass}>
+                      {showNext.subjectName ?? showNext.groupName ?? "Lesson"}
+                    </div>
+                    <div className={nowMetaClass}>
+                      {showNext.startTime && formatLessonTime(showNext.startTime)}
+                      {showNext.endTime && `–${formatLessonTime(showNext.endTime)}`}
+                      {showNext.location && ` · ${showNext.location}`}
+                    </div>
+                  </div>
+                )}
+                {lessonsForSelectedDay.length > 0 ? (
+                  <ul className={lessonListClass}>
+                    {lessonsForSelectedDay.map((l) => (
+                      <LessonRow
+                        key={l.id}
+                        lesson={l}
+                        highlight={isSelectedToday && showCurrent?.lessonId === l.id}
+                      />
+                    ))}
+                  </ul>
+                ) : !isSelectedToday || (!showCurrent && !showNext) ? (
+                  <Empty>No lessons scheduled.</Empty>
+                ) : null}
               </>
             )}
-          </Card>
-        )}
+          </div>
+        </section>
+
+        {/* Lunch */}
+        <LunchCard />
+
+        {/* Assignments this week */}
+        <AssignmentsCard />
+
+        {/* Plannings this week */}
+        <PlanningsCard />
 
         {/* Upcoming events */}
         <Card
@@ -773,6 +753,58 @@ export default function HomePage() {
   );
 }
 
+
+/** Map a `ScheduleLesson` from the rest-api schedule onto the legacy `Lesson`
+ *  shape so the existing `LessonRow` keeps working unchanged.
+ *  - Standard Skolverket subject codes ("Ma", "SO", …) expanded to long names.
+ *  - Teacher fields come back as "A,B" without a space — normalize so the row
+ *    reads "A, B" cleanly. */
+function scheduleLessonsForDate(
+  scheduleLessons: ScheduleLesson[],
+  date: Date,
+): Lesson[] {
+  return scheduleLessons
+    .filter((l) => l.category === "lesson")
+    .filter((l) => sameLocalDate(new Date(l.startDate), date))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .map((l) => {
+      const name = expandSubjectCode(l.name);
+      const teacher = l.teacher ? l.teacher.replace(/,\s*/g, ", ") : undefined;
+      return {
+        id: l.eventId,
+        subjectId: l.eventId,
+        /* LessonRow / formatLessonTime expects "YYYY-MM-DD HH:MM:SS.0". */
+        startTime: `${l.startDate.replace("T", " ")}:00.0`,
+        endTime: `${l.endDate.replace("T", " ")}:00.0`,
+        groupName: name,
+        subjectName: name,
+        teacherName: teacher,
+        location: l.room || undefined,
+        weeks: 0,
+      };
+    });
+}
+
+/** Combine an Eva lesson tile with the schedule-derived fallback. Eva wins
+ *  field-by-field, but missing subject info on its side falls back to the
+ *  schedule. If Eva has nothing, return the fallback verbatim. */
+function mergeTile(
+  eva: EvaLessonTile | null,
+  fallback: EvaLessonTile | null,
+): EvaLessonTile | null {
+  if (!eva) return fallback;
+  if (!fallback) return eva;
+  return {
+    ...eva,
+    subjectName: eva.subjectName ?? fallback.subjectName,
+    groupName: eva.groupName ?? fallback.groupName,
+    teacherName: eva.teacherName ?? fallback.teacherName,
+    location: eva.location ?? fallback.location,
+    startTime: eva.startTime ?? fallback.startTime,
+    endTime: eva.endTime ?? fallback.endTime,
+  };
+}
+
 function legacyToTile(l: Lesson | null): EvaLessonTile | null {
   if (!l) return null;
   return {
@@ -828,6 +860,24 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean }) {
+  const subject = lesson.groupName ?? lesson.subjectName ?? `Subject ${lesson.subjectId}`;
+  if (subject === "Break") {
+    /* Half-height row for short between-lesson breaks. */
+    return (
+      <li className="grid grid-cols-[58px_1fr] items-center gap-3 rounded-md border border-slate-100 bg-slate-50/60 px-2.5 py-1 text-slate-500">
+        <div className="text-center text-[0.72rem] font-medium leading-[1.1] tabular-nums">
+          {formatLessonTime(lesson.startTime)}
+          {lesson.endTime && (
+            <>
+              <span aria-hidden="true">–</span>
+              {formatLessonTime(lesson.endTime)}
+            </>
+          )}
+        </div>
+        <div className="text-[0.78rem] italic">Break</div>
+      </li>
+    );
+  }
   return (
     <li className={cn(lessonRowClass, highlight && lessonRowHighlightClass)}>
       <div className={lessonRowTimeClass}>
@@ -840,9 +890,7 @@ function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean 
         )}
       </div>
       <div className={lessonRowBodyClass}>
-        <div className={lessonRowSubjectClass}>
-          {lesson.groupName ?? lesson.subjectName ?? `Subject ${lesson.subjectId}`}
-        </div>
+        <div className={lessonRowSubjectClass}>{subject}</div>
         <div className={lessonRowMetaClass}>
           {lesson.location}
           {lesson.location && lesson.teacherName && " · "}

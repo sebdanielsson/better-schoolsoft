@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/schoolsoft/:path*",
-      "destination": "https://sms.schoolsoft.se/:path*"
+      "destination": "/api/schoolsoft/:path*"
     },
     {
       "source": "/(.*)",
