@@ -3,6 +3,7 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import {
   fetchLessons,
   fetchEvaLessonsWeek,
+  fetchEvaParent,
   bitmaskToWeeks,
   formatLessonTime,
   isoDay,
@@ -277,7 +278,6 @@ async function getStudentId(
   const cache = (globalThis as unknown as { __bss_student?: number | null }).__bss_student;
   if (typeof cache === "number") return cache;
 
-  const { fetchEvaParent } = await import("../api/schoolsoft.ts");
   try {
     const parent = await fetchEvaParent(session.school, accessToken);
     const studentId = parent.children[0]?.studentId ?? null;
