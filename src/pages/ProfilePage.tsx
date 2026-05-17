@@ -11,11 +11,41 @@ import {
   type EvaParentProfile,
   type EvaProfilePermissions,
 } from "../api/schoolsoft.ts";
+import { cn } from "../lib/utils.ts";
 
 interface Banner {
   kind: "success" | "error";
   text: string;
 }
+
+/* Reused throughout the page — one card per section. */
+const cardClass = "bg-white border border-slate-200 rounded-lg shadow-sm px-6 py-5";
+const cardHeaderClass = "flex items-center justify-between mb-3";
+const cardHeadingClass = "text-[1.05rem] font-bold tracking-[-0.01em]";
+
+/* Form helpers. Labels stack their span (uppercase caption) above the input. */
+const formClass = "flex flex-col gap-3";
+const formRowClass = "flex gap-3 flex-wrap";
+const formActionsClass = "flex gap-2 mt-1";
+const formLabelClass = "flex flex-col gap-[0.3rem] flex-1";
+const formCaptionClass = "text-[0.78rem] font-semibold text-slate-500 uppercase tracking-[0.02em]";
+const formInputClass =
+  "px-3 py-[0.55rem] border border-slate-200 rounded-md text-[0.95rem] font-[inherit] bg-white focus:outline-none focus:border-blue-600 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]";
+
+/* Buttons. Primary "inline" is the small variant used inside form actions. */
+const btnPrimaryInlineClass =
+  "bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer border-0";
+const btnSecondaryClass =
+  "bg-white border border-slate-200 text-slate-900 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer";
+
+/* Read-only value displays and helper text. */
+const valueClass = "text-base text-slate-900 leading-[1.55]";
+const hintClass = "mt-[0.65rem] text-[0.8rem] text-slate-500";
+
+/* Description list grid used for Contact + Identity sections. */
+const dlClass = "grid grid-cols-[max-content_1fr] gap-y-[0.4rem] gap-x-5 text-[0.92rem]";
+const dtClass = "font-semibold text-slate-500 text-[0.78rem] tracking-[0.02em] uppercase pt-1";
+const ddClass = "text-slate-900 flex items-center gap-2 flex-wrap";
 
 export default function ProfilePage() {
   const { session, getEvaToken } = useAuth();
@@ -228,43 +258,43 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) return <div className="loading">Loading profile…</div>;
+  if (loading)
+    return (
+      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading profile…</div>
+    );
   if (!profile) {
     return (
-      <div className="profile-page">
-        <div className="page-header">
-          <h2>Profile settings</h2>
+      <div className="flex flex-col gap-4 max-w-[720px] mx-auto">
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+          <h2 className="text-2xl font-bold tracking-tight">Profile settings</h2>
         </div>
-        {banner && <div className={`banner banner-${banner.kind}`}>{banner.text}</div>}
+        {banner && <BannerView banner={banner} />}
       </div>
     );
   }
 
   const fullName = `${profile.fName} ${profile.lName}`.trim();
   const ssn = profile.socialNumber ?? "";
+  const notPublish = !!profile.notPublish;
 
   return (
-    <div className="profile-page">
-      <div className="page-header">
-        <h2>Profile settings</h2>
-        <span className="page-subtitle">{session?.orgName}</span>
+    <div className="flex flex-col gap-4 max-w-[720px] mx-auto">
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">Profile settings</h2>
+        <span className="text-[0.85rem] text-slate-500">{session?.orgName}</span>
       </div>
 
-      {banner && (
-        <div className={`banner banner-${banner.kind}`} role="status">
-          {banner.text}
-        </div>
-      )}
+      {banner && <BannerView banner={banner} role="status" />}
 
       {/* Name section */}
-      <section className="profile-card">
-        <div className="profile-card-header">
-          <h3>Name</h3>
+      <section className={cardClass}>
+        <div className={cardHeaderClass}>
+          <h3 className={cardHeadingClass}>Name</h3>
           {permissions?.allowNameChange &&
             (editingName ? null : (
               <button
                 type="button"
-                className="btn-secondary"
+                className={btnSecondaryClass}
                 onClick={() => {
                   setEditingName(true);
                   setBanner(null);
@@ -275,12 +305,13 @@ export default function ProfilePage() {
             ))}
         </div>
         {editingName ? (
-          <form onSubmit={saveName} className="profile-form">
-            <div className="profile-form-row">
-              <label>
-                <span>First name</span>
+          <form onSubmit={saveName} className={formClass}>
+            <div className={formRowClass}>
+              <label className={formLabelClass}>
+                <span className={formCaptionClass}>First name</span>
                 <input
                   type="text"
+                  className={formInputClass}
                   value={fName}
                   onChange={(e) => {
                     setFName(e.target.value);
@@ -288,10 +319,11 @@ export default function ProfilePage() {
                   required
                 />
               </label>
-              <label>
-                <span>Last name</span>
+              <label className={formLabelClass}>
+                <span className={formCaptionClass}>Last name</span>
                 <input
                   type="text"
+                  className={formInputClass}
                   value={lName}
                   onChange={(e) => {
                     setLName(e.target.value);
@@ -300,13 +332,13 @@ export default function ProfilePage() {
                 />
               </label>
             </div>
-            <div className="profile-form-actions">
-              <button type="submit" className="btn-primary inline" disabled={savingName}>
+            <div className={formActionsClass}>
+              <button type="submit" className={btnPrimaryInlineClass} disabled={savingName}>
                 {savingName ? "Saving…" : "Save"}
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={btnSecondaryClass}
                 disabled={savingName}
                 onClick={() => {
                   setEditingName(false);
@@ -319,22 +351,22 @@ export default function ProfilePage() {
             </div>
           </form>
         ) : (
-          <div className="profile-value">{fullName}</div>
+          <div className={valueClass}>{fullName}</div>
         )}
         {!permissions?.allowNameChange && (
-          <div className="profile-hint">Your school doesn't allow name changes via the app.</div>
+          <div className={hintClass}>Your school doesn't allow name changes via the app.</div>
         )}
       </section>
 
       {/* Address section */}
-      <section className="profile-card">
-        <div className="profile-card-header">
-          <h3>Address</h3>
+      <section className={cardClass}>
+        <div className={cardHeaderClass}>
+          <h3 className={cardHeadingClass}>Address</h3>
           {permissions?.allowAddressChange &&
             (editingAddress ? null : (
               <button
                 type="button"
-                className="btn-secondary"
+                className={btnSecondaryClass}
                 onClick={() => {
                   setEditingAddress(true);
                   setBanner(null);
@@ -345,42 +377,46 @@ export default function ProfilePage() {
             ))}
         </div>
         {editingAddress ? (
-          <form onSubmit={saveAddress} className="profile-form">
-            <label>
-              <span>Address line 1</span>
+          <form onSubmit={saveAddress} className={formClass}>
+            <label className={formLabelClass}>
+              <span className={formCaptionClass}>Address line 1</span>
               <input
                 type="text"
+                className={formInputClass}
                 value={address1}
                 onChange={(e) => {
                   setAddress1(e.target.value);
                 }}
               />
             </label>
-            <label>
-              <span>Address line 2</span>
+            <label className={formLabelClass}>
+              <span className={formCaptionClass}>Address line 2</span>
               <input
                 type="text"
+                className={formInputClass}
                 value={address2}
                 onChange={(e) => {
                   setAddress2(e.target.value);
                 }}
               />
             </label>
-            <div className="profile-form-row">
-              <label style={{ maxWidth: "140px" }}>
-                <span>Postal code</span>
+            <div className={formRowClass}>
+              <label className={cn(formLabelClass, "max-w-[140px]")}>
+                <span className={formCaptionClass}>Postal code</span>
                 <input
                   type="text"
+                  className={formInputClass}
                   value={poCode}
                   onChange={(e) => {
                     setPoCode(e.target.value);
                   }}
                 />
               </label>
-              <label>
-                <span>City</span>
+              <label className={formLabelClass}>
+                <span className={formCaptionClass}>City</span>
                 <input
                   type="text"
+                  className={formInputClass}
                   value={city}
                   onChange={(e) => {
                     setCity(e.target.value);
@@ -388,13 +424,13 @@ export default function ProfilePage() {
                 />
               </label>
             </div>
-            <div className="profile-form-actions">
-              <button type="submit" className="btn-primary inline" disabled={savingAddress}>
+            <div className={formActionsClass}>
+              <button type="submit" className={btnPrimaryInlineClass} disabled={savingAddress}>
                 {savingAddress ? "Saving…" : "Save"}
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={btnSecondaryClass}
                 disabled={savingAddress}
                 onClick={() => {
                   setEditingAddress(false);
@@ -409,25 +445,25 @@ export default function ProfilePage() {
             </div>
           </form>
         ) : (
-          <div className="profile-value">
+          <div className={valueClass}>
             {[profile.address1, profile.address2].filter(Boolean).join(", ") || "—"}
             <br />
             {[profile.poCode, profile.city].filter(Boolean).join(" ") || ""}
           </div>
         )}
         {!permissions?.allowAddressChange && (
-          <div className="profile-hint">Your school doesn't allow address changes via the app.</div>
+          <div className={hintClass}>Your school doesn't allow address changes via the app.</div>
         )}
       </section>
 
       {/* Contact section */}
-      <section className="profile-card">
-        <div className="profile-card-header">
-          <h3>Contact</h3>
+      <section className={cardClass}>
+        <div className={cardHeaderClass}>
+          <h3 className={cardHeadingClass}>Contact</h3>
           {!editingContact && (
             <button
               type="button"
-              className="btn-secondary"
+              className={btnSecondaryClass}
               onClick={() => {
                 setEditingContact(true);
                 setBanner(null);
@@ -438,42 +474,46 @@ export default function ProfilePage() {
           )}
         </div>
         {editingContact ? (
-          <form onSubmit={saveContact} className="profile-form">
-            <label>
-              <span>Email</span>
+          <form onSubmit={saveContact} className={formClass}>
+            <label className={formLabelClass}>
+              <span className={formCaptionClass}>Email</span>
               <input
                 type="email"
+                className={formInputClass}
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
                 }}
               />
             </label>
-            <div className="profile-form-row">
-              <label>
-                <span>Mobile</span>
+            <div className={formRowClass}>
+              <label className={formLabelClass}>
+                <span className={formCaptionClass}>Mobile</span>
                 <input
                   type="tel"
+                  className={formInputClass}
                   value={mobile}
                   onChange={(e) => {
                     setMobile(e.target.value);
                   }}
                 />
               </label>
-              <label>
-                <span>Home phone</span>
+              <label className={formLabelClass}>
+                <span className={formCaptionClass}>Home phone</span>
                 <input
                   type="tel"
+                  className={formInputClass}
                   value={homePhone}
                   onChange={(e) => {
                     setHomePhone(e.target.value);
                   }}
                 />
               </label>
-              <label>
-                <span>Work phone</span>
+              <label className={formLabelClass}>
+                <span className={formCaptionClass}>Work phone</span>
                 <input
                   type="tel"
+                  className={formInputClass}
                   value={workPhone}
                   onChange={(e) => {
                     setWorkPhone(e.target.value);
@@ -481,23 +521,24 @@ export default function ProfilePage() {
                 />
               </label>
             </div>
-            <label>
-              <span>Other contact info</span>
+            <label className={formLabelClass}>
+              <span className={formCaptionClass}>Other contact info</span>
               <input
                 type="text"
+                className={formInputClass}
                 value={contactInfo}
                 onChange={(e) => {
                   setContactInfo(e.target.value);
                 }}
               />
             </label>
-            <div className="profile-form-actions">
-              <button type="submit" className="btn-primary inline" disabled={savingContact}>
+            <div className={formActionsClass}>
+              <button type="submit" className={btnPrimaryInlineClass} disabled={savingContact}>
                 {savingContact ? "Saving…" : "Save"}
               </button>
               <button
                 type="button"
-                className="btn-secondary"
+                className={btnSecondaryClass}
                 disabled={savingContact}
                 onClick={() => {
                   setEditingContact(false);
@@ -513,27 +554,27 @@ export default function ProfilePage() {
             </div>
           </form>
         ) : (
-          <dl className="profile-dl">
-            <dt>Email</dt>
-            <dd>{profile.email || "—"}</dd>
-            <dt>Mobile</dt>
-            <dd>{profile.mobile || "—"}</dd>
+          <dl className={dlClass}>
+            <dt className={dtClass}>Email</dt>
+            <dd className={ddClass}>{profile.email || "—"}</dd>
+            <dt className={dtClass}>Mobile</dt>
+            <dd className={ddClass}>{profile.mobile || "—"}</dd>
             {profile.homePhone && (
               <>
-                <dt>Home phone</dt>
-                <dd>{profile.homePhone}</dd>
+                <dt className={dtClass}>Home phone</dt>
+                <dd className={ddClass}>{profile.homePhone}</dd>
               </>
             )}
             {profile.workPhone && (
               <>
-                <dt>Work phone</dt>
-                <dd>{profile.workPhone}</dd>
+                <dt className={dtClass}>Work phone</dt>
+                <dd className={ddClass}>{profile.workPhone}</dd>
               </>
             )}
             {profile.contactInfo && (
               <>
-                <dt>Other contact info</dt>
-                <dd>{profile.contactInfo}</dd>
+                <dt className={dtClass}>Other contact info</dt>
+                <dd className={ddClass}>{profile.contactInfo}</dd>
               </>
             )}
           </dl>
@@ -541,19 +582,21 @@ export default function ProfilePage() {
       </section>
 
       {/* Identity (read-only SSN) */}
-      <section className="profile-card">
-        <div className="profile-card-header">
-          <h3>Identity</h3>
+      <section className={cardClass}>
+        <div className={cardHeaderClass}>
+          <h3 className={cardHeadingClass}>Identity</h3>
         </div>
-        <dl className="profile-dl">
-          <dt>Social security number</dt>
-          <dd>
+        <dl className={dlClass}>
+          <dt className={dtClass}>Social security number</dt>
+          <dd className={ddClass}>
             {ssn ? (
               <>
-                <span className="profile-ssn">{revealSsn ? ssn : "•••••• – ••••"}</span>
+                <span className="font-mono text-[0.9rem] tracking-[0.05em] bg-slate-50 px-2 py-[0.15em] rounded">
+                  {revealSsn ? ssn : "•••••• – ••••"}
+                </span>
                 <button
                   type="button"
-                  className="btn-link inline-link"
+                  className="text-blue-600 text-xs underline-offset-2 hover:underline cursor-pointer bg-transparent border-0 px-2 py-[0.15rem]"
                   onClick={() => {
                     setRevealSsn((v) => !v);
                   }}
@@ -566,43 +609,69 @@ export default function ProfilePage() {
             )}
           </dd>
         </dl>
-        <div className="profile-hint">
+        <div className={hintClass}>
           Your social security number is never shown to other students or guardians, regardless of
           the privacy setting below.
         </div>
       </section>
 
       {/* Privacy / hide profile */}
-      <section className="profile-card">
-        <div className="profile-card-header">
-          <h3>Privacy</h3>
+      <section className={cardClass}>
+        <div className={cardHeaderClass}>
+          <h3 className={cardHeadingClass}>Privacy</h3>
         </div>
-        <div className="profile-toggle-row">
-          <div className="profile-toggle-info">
-            <div className="profile-toggle-label">Hide my profile</div>
-            <div className="profile-toggle-help">
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-[0.95rem] mb-[0.2rem]">Hide my profile</div>
+            <div className="text-[0.82rem] text-slate-500 leading-[1.5]">
               When on, students and other guardians at your child's schools can't see your user
               account or contact details. School staff and administrators can still see you.
             </div>
           </div>
           <label
-            className={`switch ${savingNotPublish ? "is-saving" : ""}`}
+            className="relative inline-block w-12 h-7 shrink-0 cursor-pointer"
             aria-label="Hide my profile"
           >
             <input
               type="checkbox"
-              checked={!!profile.notPublish}
+              className="peer absolute inset-0 m-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+              checked={notPublish}
               disabled={savingNotPublish}
               onChange={(e) => {
                 void toggleHideProfile(e.target.checked);
               }}
             />
-            <span className="switch-track">
-              <span className="switch-thumb" />
+            <span
+              className={cn(
+                "absolute inset-0 rounded-full transition-colors duration-[0.18s]",
+                "bg-slate-300 peer-checked:bg-blue-600",
+                "peer-focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.25)]",
+                savingNotPublish && "opacity-60",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-[3px] left-[3px] w-[22px] h-[22px] rounded-full bg-white",
+                  "shadow-[0_2px_4px_rgba(15,23,42,0.18)] transition-transform duration-[0.18s]",
+                  notPublish && "translate-x-[20px]",
+                )}
+              />
             </span>
           </label>
         </div>
       </section>
+    </div>
+  );
+}
+
+function BannerView({ banner, role }: { banner: Banner; role?: "status" }) {
+  const tone =
+    banner.kind === "success"
+      ? "bg-green-50 border-green-200 text-green-800"
+      : "bg-red-50 border-red-200 text-red-800";
+  return (
+    <div role={role} className={cn("px-4 py-[0.7rem] rounded-lg text-sm border", tone)}>
+      {banner.text}
     </div>
   );
 }

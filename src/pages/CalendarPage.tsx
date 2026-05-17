@@ -145,23 +145,30 @@ export default function CalendarPage() {
     return Array.from(map.entries());
   }, [events]);
 
-  if (loading) return <div className="loading">Loading calendar…</div>;
+  if (loading)
+    return (
+      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading calendar…</div>
+    );
 
   return (
-    <div className="calendar-page">
-      <div className="page-header">
-        <h2>Calendar</h2>
-        <span className="page-subtitle">
+    <div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">Calendar</h2>
+        <span className="text-[0.85rem] text-slate-500">
           {events.length} event{events.length === 1 ? "" : "s"}
           {source === "eva" && events.length > 0 && " · next upcoming"}
           {source === "legacy" && " · next 60 days"}
         </span>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
       {events.length === 0 ? (
-        <div className="empty-state">
+        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
           <p>
             {source === "eva"
               ? "No upcoming events. SchoolSoft's modern API only exposes the next calendar event as a tile — the full list isn't available as JSON."
@@ -169,24 +176,37 @@ export default function CalendarPage() {
           </p>
         </div>
       ) : (
-        <div className="calendar-groups">
+        <div className="flex flex-col gap-6">
           {grouped.map(([key, dayEvents]) => (
-            <div key={key} className="calendar-group">
-              <div className="calendar-group-heading">{formatDateHeading(dayEvents[0]!.start)}</div>
-              <ul className="event-list">
+            <div key={key}>
+              <div className="mb-[0.65rem] text-[0.82rem] font-bold uppercase tracking-[0.05em] text-slate-500">
+                {formatDateHeading(dayEvents[0]!.start)}
+              </div>
+              <ul className="flex list-none flex-col gap-[0.65rem]">
                 {dayEvents.map((event) => (
-                  <li key={event.id} className="event-card">
-                    <div className="event-time-block">
-                      <div className="event-time-from">{formatTime(event.start)}</div>
+                  <li
+                    key={event.id}
+                    className="grid grid-cols-[80px_1fr] gap-4 rounded-lg border border-slate-200 bg-white px-[1.1rem] py-4 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow)]"
+                  >
+                    <div className="-mr-1 border-r border-dashed border-slate-200 pr-4 pt-0.5 text-center">
+                      <div className="text-[0.95rem] font-bold text-blue-600">
+                        {formatTime(event.start)}
+                      </div>
                       {event.end != null && (
-                        <div className="event-time-to">{formatTime(event.end)}</div>
+                        <div className="mt-1 text-[0.75rem] text-slate-500">
+                          {formatTime(event.end)}
+                        </div>
                       )}
                     </div>
-                    <div className="event-body">
-                      <div className="event-title">{event.title}</div>
-                      {event.typeInfo && <div className="event-meta">{event.typeInfo}</div>}
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 text-base font-semibold">{event.title}</div>
+                      {event.typeInfo && (
+                        <div className="text-[0.82rem] text-slate-500">{event.typeInfo}</div>
+                      )}
                       {event.description && (
-                        <div className="event-description">{event.description}</div>
+                        <div className="mt-1.5 text-[0.88rem] leading-snug text-slate-900">
+                          {event.description}
+                        </div>
                       )}
                     </div>
                   </li>
