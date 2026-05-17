@@ -24,7 +24,17 @@ export default async function handler(request: Request): Promise<Response> {
     headers,
     redirect: "manual",
   };
-  if (request.method !== "GET" && request.method !== "HEAD") {
+  /* Only attach a body for methods that actually have one. Several of our
+   * POSTs (the OAuth code/refresh exchange, subject-warning confirm) carry
+   * everything in the query string and send no body — passing `body` +
+   * `duplex: "half"` for those crashes the Edge runtime with a 500. */
+  const contentLength = request.headers.get("content-length");
+  const hasBody =
+    request.method !== "GET" &&
+    request.method !== "HEAD" &&
+    contentLength !== null &&
+    contentLength !== "0";
+  if (hasBody) {
     init.body = request.body;
     // @ts-expect-error — duplex is required by Edge runtime for streaming bodies
     init.duplex = "half";
