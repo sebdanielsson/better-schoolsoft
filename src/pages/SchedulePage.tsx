@@ -11,6 +11,7 @@ import {
   type EvaLessonTile,
   type Lesson,
 } from "../api/schoolsoft.ts";
+import { cn } from "../lib/utils.ts";
 
 const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
   { idx: 1, label: "Monday" },
@@ -139,15 +140,18 @@ export default function SchedulePage() {
     return map;
   }, [rows]);
 
-  if (loading) return <div className="loading">Loading schedule…</div>;
+  if (loading)
+    return (
+      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading schedule…</div>
+    );
 
   return (
-    <div className="schedule-page">
-      <div className="page-header">
-        <h2>Schedule</h2>
-        <div className="week-nav">
+    <div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">Schedule</h2>
+        <div className="flex items-center gap-2">
           <button
-            className="btn-icon"
+            className="cursor-pointer rounded-md border border-slate-200 bg-transparent px-2.5 py-0.5 text-[1.1rem] text-slate-900 transition-colors hover:border-blue-600 hover:bg-blue-100"
             onClick={() => {
               setSelectedWeek((w) => Math.max(1, w - 1));
             }}
@@ -155,12 +159,16 @@ export default function SchedulePage() {
           >
             ‹
           </button>
-          <span className="week-label">
+          <span className="min-w-[7rem] text-center text-[0.95rem] font-semibold">
             Week {selectedWeek}
-            {selectedWeek === currentWeek && <span className="current-badge">current</span>}
+            {selectedWeek === currentWeek && (
+              <span className="inline-block ml-2 px-[0.6em] py-[0.15em] bg-blue-600 text-white rounded-full text-[0.7rem] font-semibold align-middle tracking-[0.02em]">
+                current
+              </span>
+            )}
           </span>
           <button
-            className="btn-icon"
+            className="cursor-pointer rounded-md border border-slate-200 bg-transparent px-2.5 py-0.5 text-[1.1rem] text-slate-900 transition-colors hover:border-blue-600 hover:bg-blue-100"
             onClick={() => {
               setSelectedWeek((w) => Math.min(53, w + 1));
             }}
@@ -171,19 +179,23 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
       {source === "empty" ? (
-        <div className="empty-state">
+        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
           <p>
             <strong>Full schedule not available as JSON.</strong>
           </p>
-          <p style={{ marginTop: "0.75rem" }}>
+          <p className="mt-3">
             SchoolSoft's iOS app embeds the schedule as a webview rather than fetching JSON, and no
             equivalent endpoint exists. The current and next lesson tiles on the home page do work —
             those are exposed via Eva.
           </p>
-          <p style={{ marginTop: "0.75rem" }}>
+          <p className="mt-3">
             You can{" "}
             <a
               href={`https://sms.schoolsoft.se/${session!.school}/jsp/student/right_student_schedule.jsp`}
@@ -196,28 +208,54 @@ export default function SchedulePage() {
           </p>
         </div>
       ) : (
-        <div className="schedule-grid">
+        <div className="grid grid-cols-1 gap-[0.85rem] md:grid-cols-3 lg:grid-cols-5">
           {ORDERED_DAYS.map(({ idx, label }) => {
             const dayLessons = byDay[idx] ?? [];
             const isToday = selectedWeek === currentWeek && idx === todayIdx;
             return (
-              <div key={idx} className={`day-column ${isToday ? "is-today" : ""}`}>
-                <div className="day-name">
+              <div
+                key={idx}
+                className={cn(
+                  "flex flex-col gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3",
+                  isToday && "border-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.08)]",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex items-center justify-between border-b-2 border-blue-600 pb-2 text-[0.8rem] font-bold uppercase tracking-[0.05em] text-slate-500",
+                    isToday && "text-blue-600",
+                  )}
+                >
                   {label}
-                  {isToday && <span className="current-badge">today</span>}
+                  {isToday && (
+                    <span className="inline-block ml-2 px-[0.6em] py-[0.15em] bg-blue-600 text-white rounded-full text-[0.7rem] font-semibold align-middle tracking-[0.02em]">
+                      today
+                    </span>
+                  )}
                 </div>
                 {dayLessons.length === 0 ? (
-                  <div className="no-lessons">Free</div>
+                  <div className="py-2 text-[0.8rem] italic text-slate-500">Free</div>
                 ) : (
                   dayLessons.map((row) => (
-                    <div key={row.id} className="lesson-card">
-                      <div className="lesson-time">
+                    <div
+                      key={row.id}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-[0.85rem] py-[0.7rem] transition-all hover:-translate-y-px hover:border-slate-300 hover:shadow-[var(--shadow)]"
+                    >
+                      <div className="mb-1 text-[0.75rem] font-bold text-blue-600">
                         {formatLessonTime(row.startTime)}
                         {row.endTime && `–${formatLessonTime(row.endTime)}`}
                       </div>
-                      <div className="lesson-subject">{row.subject}</div>
-                      {row.location && <div className="lesson-room">📍 {row.location}</div>}
-                      {row.teacher && <div className="lesson-teacher">👤 {row.teacher}</div>}
+                      <div className="text-[0.92rem] font-semibold leading-tight">
+                        {row.subject}
+                      </div>
+                      {row.location && (
+                        <div className="mt-0.5 text-[0.78rem] text-slate-500">
+                          📍 {row.location}
+                        </div>
+                      )}
+                      {row.teacher && (
+                        <div className="mt-0.5 text-[0.78rem] text-slate-500">👤 {row.teacher}</div>
+                      )}
                     </div>
                   ))
                 )}

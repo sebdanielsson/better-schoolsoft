@@ -15,11 +15,14 @@ export default function DashboardPage() {
 
   return (
     <HeroDataProvider>
-      <div className="dashboard">
+      <div className="flex flex-col min-h-dvh">
         <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-7">
           <HeroCard />
           {!isHome && (
-            <Link to="/" className="back-to-home">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-[0.4rem] mb-4 px-[0.85rem] py-[0.4rem] bg-white border border-slate-200 rounded-full text-slate-500 text-[0.85rem] font-medium no-underline transition-colors hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600"
+            >
               <span aria-hidden="true">←</span> Home
             </Link>
           )}

@@ -76,24 +76,34 @@ export default function OAuthCallbackPage() {
   }, [params, navigate, session, setEvaTokens]);
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <h1>Signing you in…</h1>
+    <div
+      className="flex items-center justify-center min-h-dvh p-4"
+      style={{
+        background:
+          "radial-gradient(circle at 20% 0%, #e0e7ff 0%, transparent 50%), radial-gradient(circle at 100% 100%, #dbeafe 0%, transparent 50%), #f5f7fb",
+      }}
+    >
+      <div className="bg-white py-10 px-8 rounded-[18px] shadow-[var(--shadow-lg)] w-full max-w-[420px]">
+        <h1 className="text-[1.85rem] font-bold mb-1 tracking-[-0.02em]">Signing you in…</h1>
         {error ? (
           <>
-            <p className="error-message">{error}</p>
+            <p className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm mb-4">
+              {error}
+            </p>
             <button
               type="button"
-              className="btn-primary"
               onClick={() => {
                 void navigate("/login");
               }}
+              className="block w-full py-[0.8rem] px-4 bg-blue-600 text-white border-0 rounded-lg text-base font-semibold cursor-pointer transition-[background] duration-150 hover:bg-blue-700 active:translate-y-px"
             >
               Back to sign in
             </button>
           </>
         ) : (
-          <p className="login-subtitle">Exchanging the SchoolSoft code for your session…</p>
+          <p className="text-slate-500 text-[0.9rem]">
+            Exchanging the SchoolSoft code for your session…
+          </p>
         )}
       </div>
     </div>
