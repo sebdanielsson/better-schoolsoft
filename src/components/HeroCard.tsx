@@ -186,6 +186,12 @@ export default function HeroCard() {
           />
           <CounterPill label="Subject rooms" value={badges.subjectrooms ?? 0} loading={loading} />
           <CounterPill label="Bookings" value={badges.bookings ?? 0} loading={loading} />
+          <CounterPill
+            label="Assessments"
+            value={badges.holisticassessments ?? 0}
+            to="/assessments"
+            loading={loading}
+          />
           <SettingsPill />
         </div>
       )}
