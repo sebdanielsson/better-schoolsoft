@@ -11,6 +11,7 @@ import {
   isoWeekYear,
   type AssignmentRow,
 } from "../api/schoolsoft.ts";
+import AnimateHeight from "./AnimateHeight.tsx";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
 
@@ -63,7 +64,9 @@ export default function AssignmentsCard() {
   useEffect(() => {
     if (!session || !parentUserId || !child) return;
     let cancelled = false;
-    setLoading(true);
+    /* Don't reset to loading=true on week change — keep the previous week's
+     * rows visible while the refetch is in flight so navigating doesn't
+     * flicker through a skeleton state. AnimateHeight smooths the swap. */
     setError(null);
 
     (async () => {
@@ -139,47 +142,49 @@ export default function AssignmentsCard() {
         <div className="mb-2.5 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
           {range}
         </div>
-        {error && (
-          <div className="text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3 text-sm">
-            {error}
-          </div>
-        )}
-        {loading ? (
-          <SkeletonList />
-        ) : !rows || rows.length === 0 ? (
-          <div className="py-4 text-sm text-slate-500">
-            {isCurrentWeek ? "No assignments this week." : "No assignments for this week."}
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <Link
-                  to={`/assignments/${row.id}`}
-                  className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5 text-inherit no-underline transition-colors hover:border-slate-300 hover:shadow-sm"
-                >
-                  <SubmissionIcon status={row.submissionStatus} />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.92rem] font-semibold">
-                        {row.title}
-                      </span>
-                      {!row.read && (
-                        <span
-                          className="inline-block h-2 w-2 rounded-full bg-blue-600 shrink-0"
-                          aria-label="Unread"
-                        />
-                      )}
+        <AnimateHeight>
+          {error && (
+            <div className="text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3 text-sm">
+              {error}
+            </div>
+          )}
+          {loading && !rows ? (
+            <SkeletonList />
+          ) : !rows || rows.length === 0 ? (
+            <div className="py-4 text-sm text-slate-500">
+              {isCurrentWeek ? "No assignments this week." : "No assignments for this week."}
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {rows.map((row) => (
+                <li key={row.id}>
+                  <Link
+                    to={`/assignments/${row.id}`}
+                    className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5 text-inherit no-underline transition-colors hover:border-slate-300 hover:shadow-sm"
+                  >
+                    <SubmissionIcon status={row.submissionStatus} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.92rem] font-semibold">
+                          {row.title}
+                        </span>
+                        {!row.read && (
+                          <span
+                            className="inline-block h-2 w-2 rounded-full bg-blue-600 shrink-0"
+                            aria-label="Unread"
+                          />
+                        )}
+                      </div>
+                      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.78rem] text-slate-500">
+                        {row.subTitle}
+                      </div>
                     </div>
-                    <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.78rem] text-slate-500">
-                      {row.subTitle}
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </AnimateHeight>
       </div>
     </section>
   );
