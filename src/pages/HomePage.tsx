@@ -30,6 +30,7 @@ import {
 import Avatar from "../components/Avatar.tsx";
 import NewsPopover, { type NewsPopoverData } from "../components/NewsPopover.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
+import { cn } from "../lib/utils.ts";
 
 function decodeEntities(s: string): string {
   if (typeof document === "undefined") return s;
@@ -115,6 +116,86 @@ const emptyEva: EvaData = {
   news: [],
   nextEvent: null,
 };
+
+/* ===== Tailwind class constants (migrated from src/index.css home/dashboard sections) ===== */
+const accentClasses: Record<"primary" | "warm" | "cool" | "green" | "purple", string> = {
+  primary: "border-l-blue-600 bg-gradient-to-b from-blue-50 to-white to-[60px]",
+  warm: "border-l-amber-500 bg-gradient-to-b from-amber-50 to-white to-[60px]",
+  cool: "border-l-sky-500 bg-gradient-to-b from-sky-50 to-white to-[60px]",
+  green: "border-l-green-600 bg-gradient-to-b from-green-50 to-white to-[60px]",
+  purple: "border-l-violet-500 bg-gradient-to-b from-violet-50 to-white to-[60px]",
+};
+
+const cardClass =
+  "relative overflow-hidden rounded-[18px] border border-slate-200 border-l-4 shadow flex flex-col transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-lg";
+const cardHeaderClass = "flex items-baseline justify-between px-5 pt-4 pb-1";
+const cardHeaderTitleClass = "text-base font-bold tracking-[-0.01em]";
+const cardLinkClass = "text-xs font-medium text-slate-500 transition-colors hover:text-blue-600";
+const cardBodyClass = "flex-1 px-5 pb-5 pt-2";
+const cardSubtitleClass = "mb-2.5 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500";
+const cardEmptyClass = "py-4 text-sm text-slate-500";
+const cardLoadingClass = "py-4 text-sm text-slate-500";
+
+const nowBlockClass = "mb-3 rounded-md bg-blue-600 px-4 py-3.5 text-white";
+const nowLabelClass = "text-[0.7rem] font-bold uppercase tracking-[0.08em] opacity-85";
+const nowTitleClass = "mt-0.5 text-[1.05rem] font-semibold";
+const nowMetaClass = "mt-0.5 text-[0.8rem] opacity-90";
+
+const lessonListClass = "flex list-none flex-col gap-1.5";
+const lessonRowClass =
+  "grid grid-cols-[58px_1fr] items-center gap-3 rounded-md border border-slate-200 bg-white px-2.5 py-2 transition-colors hover:border-slate-300";
+const lessonRowHighlightClass = "!border-blue-600 !bg-blue-50";
+const lessonRowTimeClass = "text-center text-[0.8rem] font-semibold leading-[1.1] text-blue-600";
+const lessonRowEndClass = "text-[0.72rem] font-medium text-slate-500";
+const lessonRowBodyClass = "min-w-0";
+const lessonRowSubjectClass =
+  "overflow-hidden text-ellipsis whitespace-nowrap text-[0.92rem] font-semibold";
+const lessonRowMetaClass =
+  "mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[0.78rem] text-slate-500";
+
+const lunchTodayClass = "mb-4";
+const lunchTextClass =
+  "min-h-[calc(1.4em*2+1.5rem)] whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-[1.4]";
+const lunchTextEmptyClass = "italic text-slate-500";
+const lunchTextSkeletonClass = "flex flex-col";
+const lunchWeekListClass = "flex list-none flex-col gap-1";
+const lunchWeekRowClass =
+  "grid grid-cols-[44px_1fr] items-baseline gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2";
+const lunchWeekRowTodayClass = "!border-amber-500 !bg-amber-50";
+const lunchWeekDayClass = "text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500";
+const lunchWeekDayTodayClass = "!text-amber-700";
+const lunchWeekMealClass = "min-w-0 break-words text-[0.85rem] leading-[1.35]";
+
+const eventListClass = "flex list-none flex-col gap-1.5";
+const eventRowClass =
+  "grid grid-cols-[90px_1fr] items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5";
+const eventWhenRelClass = "text-[0.82rem] font-bold leading-[1.1] text-green-600";
+const eventWhenTimeClass = "mt-0.5 text-[0.72rem] text-slate-500";
+const eventTitleClass = "text-[0.92rem] font-semibold";
+const eventMetaClass = "mt-0.5 text-[0.78rem] text-slate-500";
+
+const newsListClass = "flex list-none flex-col gap-2.5";
+const newsItemClass =
+  "grid grid-cols-[auto_1fr] items-start gap-2.5 rounded-md border border-slate-200 bg-white px-3.5 py-3";
+const newsItemSkeletonClass = "pointer-events-none";
+const newsItemButtonClass = "min-w-0 cursor-pointer bg-transparent p-0 text-left";
+const newsBodyClass = "min-w-0";
+const newsMetaRowClass =
+  "mb-0.5 flex min-h-[1.1rem] flex-wrap items-center gap-1.5 text-[0.75rem] leading-[1.3] text-slate-500";
+const newsAuthorClass = "font-semibold text-slate-900";
+const newsCategoryClass =
+  "rounded-full px-2 py-px text-[0.7rem] font-semibold leading-[1.4] tracking-[0.01em]";
+const newsDateClass = "whitespace-nowrap";
+const newsAttachClass = "text-[0.8rem]";
+const newsTitleClass = "mb-0.5 min-h-[1.3em] text-[0.95rem] font-semibold leading-[1.3]";
+const newsDescClass =
+  "min-h-[calc(1.45em*5)] overflow-hidden whitespace-pre-line text-[0.85rem] leading-[1.45] text-slate-500 [-webkit-box-orient:vertical] [-webkit-line-clamp:5] [display:-webkit-box]";
+const newsDescSkeletonClass = "flex !flex-col justify-between !block";
+const newsSkelBarClass = "h-[0.85em] rounded-[4px] shrink-0";
+const newsSkelPillClass = "h-[calc(0.7rem*1.4+0.1rem)] rounded-full shrink-0";
+
+const homePageClass = "flex flex-col gap-6";
+const dashGridClass = "grid grid-cols-1 md:grid-cols-12 gap-5 items-start";
 
 export default function HomePage() {
   const { session, getToken, getEvaToken } = useAuth();
@@ -349,10 +430,14 @@ export default function HomePage() {
   const showNext: EvaLessonTile | null = evaNext ?? legacyToTile(fallbackNext);
 
   return (
-    <div className="home-page">
-      {error && <div className="error-message">{error}</div>}
+    <div className={homePageClass}>
+      {error && (
+        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
-      <div className="dash-grid">
+      <div className={dashGridClass}>
         {/* Now / Next */}
         <Card
           title={todayDayIdx > 5 ? "Next school day" : "Today at school"}
@@ -361,14 +446,14 @@ export default function HomePage() {
           linkLabel="Full schedule →"
         >
           {loading ? (
-            <div className="card-loading">Loading…</div>
+            <div className={cardLoadingClass}>Loading…</div>
           ) : todayDayIdx > 5 ? (
             nextDayLessons.length ? (
               <>
-                <div className="card-subtitle">
+                <div className={cardSubtitleClass}>
                   {DAY_NAMES_FULL[nextDayIdx]} · Week {nextDayWeek}
                 </div>
-                <ul className="lesson-list compact">
+                <ul className={lessonListClass}>
                   {nextDayLessons.slice(0, 8).map((l) => (
                     <LessonRow key={l.id} lesson={l} />
                   ))}
@@ -380,12 +465,12 @@ export default function HomePage() {
           ) : showCurrent || showNext || todayLessons.length ? (
             <>
               {showCurrent && (
-                <div className="now-block">
-                  <div className="now-label">Now</div>
-                  <div className="now-title">
+                <div className={nowBlockClass}>
+                  <div className={nowLabelClass}>Now</div>
+                  <div className={nowTitleClass}>
                     {showCurrent.subjectName ?? showCurrent.groupName ?? "Lesson"}
                   </div>
-                  <div className="now-meta">
+                  <div className={nowMetaClass}>
                     {showCurrent.startTime && formatLessonTime(showCurrent.startTime)}
                     {showCurrent.endTime && `–${formatLessonTime(showCurrent.endTime)}`}
                     {showCurrent.location && ` · ${showCurrent.location}`}
@@ -394,12 +479,12 @@ export default function HomePage() {
                 </div>
               )}
               {showNext && !showCurrent && (
-                <div className="now-block">
-                  <div className="now-label">Next up</div>
-                  <div className="now-title">
+                <div className={nowBlockClass}>
+                  <div className={nowLabelClass}>Next up</div>
+                  <div className={nowTitleClass}>
                     {showNext.subjectName ?? showNext.groupName ?? "Lesson"}
                   </div>
-                  <div className="now-meta">
+                  <div className={nowMetaClass}>
                     {showNext.startTime && formatLessonTime(showNext.startTime)}
                     {showNext.endTime && `–${formatLessonTime(showNext.endTime)}`}
                     {showNext.location && ` · ${showNext.location}`}
@@ -407,7 +492,7 @@ export default function HomePage() {
                 </div>
               )}
               {todayLessons.length > 0 && (
-                <ul className="lesson-list compact">
+                <ul className={lessonListClass}>
                   {todayLessons.map((l) => (
                     <LessonRow key={l.id} lesson={l} highlight={showCurrent?.lessonId === l.id} />
                   ))}
@@ -424,37 +509,39 @@ export default function HomePage() {
 
         {/* Lunch */}
         <Card title="Lunch" accent="warm" linkTo="/lunch" linkLabel="All weeks →">
-          <div className="card-subtitle">
+          <div className={cardSubtitleClass}>
             {todayDayIdx >= 1 && todayDayIdx <= 5
               ? `Today · ${DAY_NAMES_FULL[todayDayIdx]}`
               : "This weekend"}
           </div>
-          <div className="lunch-today">
+          <div className={lunchTodayClass}>
             {loading ? (
-              <div className="lunch-text lunch-text--skeleton" aria-hidden="true">
+              <div className={cn(lunchTextClass, lunchTextSkeletonClass)} aria-hidden="true">
                 <Skeleton className="h-4 w-3/4 rounded-sm" />
                 <Skeleton className="h-4 w-2/3 rounded-sm mt-2" />
               </div>
             ) : todayDayIdx >= 1 && todayDayIdx <= 5 && todayLunchText ? (
-              <pre className="lunch-text">{todayLunchText}</pre>
+              <pre className={lunchTextClass}>{todayLunchText}</pre>
             ) : (
-              <pre className="lunch-text lunch-text--empty">
+              <pre className={cn(lunchTextClass, lunchTextEmptyClass)}>
                 {todayDayIdx >= 1 && todayDayIdx <= 5
                   ? "No lunch published for today."
                   : "The cafeteria is closed."}
               </pre>
             )}
           </div>
-          <ul className="lunch-week-list">
+          <ul className={lunchWeekListClass}>
             {(["monday", "tuesday", "wednesday", "thursday", "friday"] as const).map((k, i) => {
               const day = i + 1;
               const text = thisWeekLunch ? (thisWeekLunch[k] as string) || "" : "";
               const isToday = day === todayDayIdx;
               const main = firstLine(text).replace(/^Veckans (lunch|vegetariska)\s*[·:-]?\s*/i, "");
               return (
-                <li key={k} className={`lunch-week-row ${isToday ? "is-today" : ""}`}>
-                  <span className="lunch-week-day">{DAY_NAMES_FULL[day]?.slice(0, 3)}</span>
-                  <span className="lunch-week-meal">
+                <li key={k} className={cn(lunchWeekRowClass, isToday && lunchWeekRowTodayClass)}>
+                  <span className={cn(lunchWeekDayClass, isToday && lunchWeekDayTodayClass)}>
+                    {DAY_NAMES_FULL[day]?.slice(0, 3)}
+                  </span>
+                  <span className={lunchWeekMealClass}>
                     {loading ? <Skeleton className="h-3.5 w-2/3 rounded-sm" /> : main || "—"}
                   </span>
                 </li>
@@ -472,15 +559,15 @@ export default function HomePage() {
             linkLabel="View week →"
           >
             {loading ? (
-              <div className="card-loading">Loading…</div>
+              <div className={cardLoadingClass}>Loading…</div>
             ) : nextDayLessons.length === 0 ? (
               <Empty>No lessons scheduled.</Empty>
             ) : (
               <>
-                <div className="card-subtitle">
+                <div className={cardSubtitleClass}>
                   {DAY_NAMES_FULL[nextDayIdx]} · Week {nextDayWeek}
                 </div>
-                <ul className="lesson-list compact">
+                <ul className={lessonListClass}>
                   {nextDayLessons.slice(0, 8).map((l) => (
                     <LessonRow key={l.id} lesson={l} />
                   ))}
@@ -499,38 +586,38 @@ export default function HomePage() {
           size="half"
         >
           {loading ? (
-            <div className="card-loading">Loading…</div>
+            <div className={cardLoadingClass}>Loading…</div>
           ) : upcoming.length === 0 && !eva.nextEvent ? (
             <Empty>Nothing scheduled.</Empty>
           ) : (
-            <ul className="event-list-compact">
+            <ul className={eventListClass}>
               {eva.nextEvent && (
-                <li className="event-row">
-                  <div className="event-when">
-                    <div className="event-when-rel">
+                <li className={eventRowClass}>
+                  <div>
+                    <div className={eventWhenRelClass}>
                       {relativeDay(new Date(eva.nextEvent.fromDate).getTime())}
                     </div>
-                    <div className="event-when-time">
+                    <div className={eventWhenTimeClass}>
                       {formatTime(new Date(eva.nextEvent.fromDate).getTime())}
                     </div>
                   </div>
-                  <div className="event-body">
-                    <div className="event-title">{eva.nextEvent.title}</div>
+                  <div>
+                    <div className={eventTitleClass}>{eva.nextEvent.title}</div>
                     {eva.nextEvent.eventTypeInfo && (
-                      <div className="event-meta">{eva.nextEvent.eventTypeInfo}</div>
+                      <div className={eventMetaClass}>{eva.nextEvent.eventTypeInfo}</div>
                     )}
                   </div>
                 </li>
               )}
               {upcoming.map((ev) => (
-                <li key={ev.id} className="event-row">
-                  <div className="event-when">
-                    <div className="event-when-rel">{relativeDay(ev.eventStart)}</div>
-                    <div className="event-when-time">{formatTime(ev.eventStart)}</div>
+                <li key={ev.id} className={eventRowClass}>
+                  <div>
+                    <div className={eventWhenRelClass}>{relativeDay(ev.eventStart)}</div>
+                    <div className={eventWhenTimeClass}>{formatTime(ev.eventStart)}</div>
                   </div>
-                  <div className="event-body">
-                    <div className="event-title">{ev.title}</div>
-                    {ev.eventTypeInfo && <div className="event-meta">{ev.eventTypeInfo}</div>}
+                  <div>
+                    <div className={eventTitleClass}>{ev.title}</div>
+                    {ev.eventTypeInfo && <div className={eventMetaClass}>{ev.eventTypeInfo}</div>}
                   </div>
                 </li>
               ))}
@@ -551,7 +638,7 @@ export default function HomePage() {
           ) : eva.news.length === 0 && latestLegacyNews.length === 0 ? (
             <Empty>No recent news.</Empty>
           ) : (
-            <ul className="news-list">
+            <ul className={newsListClass}>
               {eva.news.length > 0
                 ? eva.news.slice(0, 3).map((n) => {
                     const cat = n.category;
@@ -562,11 +649,11 @@ export default function HomePage() {
                     const author = n.author?.name ?? "School";
                     const preview = previewText(n.description);
                     return (
-                      <li key={n.id} className="news-item">
+                      <li key={n.id} className={newsItemClass}>
                         <Avatar name={author} picture={n.author?.picture || null} size={32} />
                         <button
                           type="button"
-                          className="news-item-button"
+                          className={newsItemButtonClass}
                           onClick={() => {
                             setOpenNews({
                               title: n.title,
@@ -583,12 +670,12 @@ export default function HomePage() {
                             });
                           }}
                         >
-                          <div className="news-body">
-                            <div className="news-meta-row">
-                              <span className="news-author">{author}</span>
+                          <div className={newsBodyClass}>
+                            <div className={newsMetaRowClass}>
+                              <span className={newsAuthorClass}>{author}</span>
                               {cat && (
                                 <span
-                                  className="news-category"
+                                  className={newsCategoryClass}
                                   style={{
                                     background: `${newsCategoryColor(cat)}1f`,
                                     color: newsCategoryColor(cat),
@@ -597,15 +684,15 @@ export default function HomePage() {
                                   {cat}
                                 </span>
                               )}
-                              <span className="news-date">{dateLabel}</span>
+                              <span className={newsDateClass}>{dateLabel}</span>
                               {n.hasAttachment && (
-                                <span className="news-attach" aria-label="Has attachment">
+                                <span className={newsAttachClass} aria-label="Has attachment">
                                   📎
                                 </span>
                               )}
                             </div>
-                            <div className="news-title">{n.title.trim()}</div>
-                            <div className="news-desc">{preview}</div>
+                            <div className={newsTitleClass}>{n.title.trim()}</div>
+                            <div className={newsDescClass}>{preview}</div>
                           </div>
                         </button>
                       </li>
@@ -618,11 +705,11 @@ export default function HomePage() {
                     });
                     const preview = previewText(n.description);
                     return (
-                      <li key={n.id} className="news-item">
+                      <li key={n.id} className={newsItemClass}>
                         <Avatar name="School" picture={null} size={32} />
                         <button
                           type="button"
-                          className="news-item-button"
+                          className={newsItemButtonClass}
                           onClick={() => {
                             setOpenNews({
                               title: n.title,
@@ -636,12 +723,12 @@ export default function HomePage() {
                             });
                           }}
                         >
-                          <div className="news-body">
-                            <div className="news-meta-row">
-                              <span className="news-author">School</span>
+                          <div className={newsBodyClass}>
+                            <div className={newsMetaRowClass}>
+                              <span className={newsAuthorClass}>School</span>
                               {n.eventTypeInfo && (
                                 <span
-                                  className="news-category"
+                                  className={newsCategoryClass}
                                   style={{
                                     background: `${newsCategoryColor(n.eventTypeInfo)}1f`,
                                     color: newsCategoryColor(n.eventTypeInfo),
@@ -650,10 +737,10 @@ export default function HomePage() {
                                   {n.eventTypeInfo}
                                 </span>
                               )}
-                              <span className="news-date">{dateLabel}</span>
+                              <span className={newsDateClass}>{dateLabel}</span>
                             </div>
-                            <div className="news-title">{n.title}</div>
-                            <div className="news-desc">{preview}</div>
+                            <div className={newsTitleClass}>{n.title}</div>
+                            <div className={newsDescClass}>{preview}</div>
                           </div>
                         </button>
                       </li>
@@ -703,43 +790,49 @@ function Card({
   size?: "third" | "half" | "wide";
   children: React.ReactNode;
 }) {
-  const sizeClass = size === "half" ? "dash-card-half" : size === "wide" ? "dash-card-wide" : "";
+  /* `dash-card` defaulted to col-span-12 mobile + col-span-6 from md (further
+   * narrowed to col-span-4 at xl in the legacy CSS). We collapse to a simpler
+   * three-tier scale that matches the dominant breakpoints: full width on
+   * mobile, 6/8/12 columns on md+. */
+  const sizeClass =
+    size === "wide" ? "md:col-span-8" : size === "half" ? "md:col-span-6" : "md:col-span-6";
+  const accentKey = accent ?? "primary";
   return (
-    <section className={`dash-card accent-${accent ?? "primary"} ${sizeClass}`}>
-      <header className="dash-card-header">
-        <h3>{title}</h3>
+    <section className={cn(cardClass, accentClasses[accentKey], sizeClass)}>
+      <header className={cardHeaderClass}>
+        <h3 className={cardHeaderTitleClass}>{title}</h3>
         {linkTo && (
-          <Link className="dash-card-link" to={linkTo}>
+          <Link className={cardLinkClass} to={linkTo}>
             {linkLabel ?? "See more →"}
           </Link>
         )}
       </header>
-      <div className="dash-card-body">{children}</div>
+      <div className={cardBodyClass}>{children}</div>
     </section>
   );
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="card-empty">{children}</div>;
+  return <div className={cardEmptyClass}>{children}</div>;
 }
 
 function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean }) {
   return (
-    <li className={`lesson-row ${highlight ? "is-now" : ""}`}>
-      <div className="lesson-row-time">
+    <li className={cn(lessonRowClass, highlight && lessonRowHighlightClass)}>
+      <div className={lessonRowTimeClass}>
         {formatLessonTime(lesson.startTime)}
         {lesson.endTime && (
           <>
             <br />
-            <span className="lesson-row-end">{formatLessonTime(lesson.endTime)}</span>
+            <span className={lessonRowEndClass}>{formatLessonTime(lesson.endTime)}</span>
           </>
         )}
       </div>
-      <div className="lesson-row-body">
-        <div className="lesson-row-subject">
+      <div className={lessonRowBodyClass}>
+        <div className={lessonRowSubjectClass}>
           {lesson.groupName ?? lesson.subjectName ?? `Subject ${lesson.subjectId}`}
         </div>
-        <div className="lesson-row-meta">
+        <div className={lessonRowMetaClass}>
           {lesson.location}
           {lesson.location && lesson.teacherName && " · "}
           {lesson.teacherName}
@@ -751,27 +844,27 @@ function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean 
 
 function NewsSkeletonList({ count }: { count: number }) {
   return (
-    <ul className="news-list" aria-hidden="true">
+    <ul className={newsListClass} aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
-        <li key={i} className="news-item news-item--skeleton">
+        <li key={i} className={cn(newsItemClass, newsItemSkeletonClass)}>
           <Skeleton className="size-8 rounded-full shrink-0" />
-          <div className="news-body">
+          <div className={newsBodyClass}>
             {/* Use the real layout classes so paddings/margins line up exactly with the
              * loaded state — skeleton bars stand in for the text but the boxes match. */}
-            <div className="news-meta-row">
-              <Skeleton className="news-skel-bar w-24" />
-              <Skeleton className="news-skel-pill w-16" />
-              <Skeleton className="news-skel-bar w-12" />
+            <div className={newsMetaRowClass}>
+              <Skeleton className={cn(newsSkelBarClass, "w-24")} />
+              <Skeleton className={cn(newsSkelPillClass, "w-16")} />
+              <Skeleton className={cn(newsSkelBarClass, "w-12")} />
             </div>
-            <div className="news-title">
-              <Skeleton className="news-skel-bar w-4/5" />
+            <div className={newsTitleClass}>
+              <Skeleton className={cn(newsSkelBarClass, "w-4/5")} />
             </div>
-            <div className="news-desc news-desc--skeleton">
-              <Skeleton className="news-skel-bar w-full" />
-              <Skeleton className="news-skel-bar w-11/12" />
-              <Skeleton className="news-skel-bar w-5/6" />
-              <Skeleton className="news-skel-bar w-full" />
-              <Skeleton className="news-skel-bar w-3/4" />
+            <div className={cn(newsDescClass, newsDescSkeletonClass)}>
+              <Skeleton className={cn(newsSkelBarClass, "w-full")} />
+              <Skeleton className={cn(newsSkelBarClass, "w-11/12")} />
+              <Skeleton className={cn(newsSkelBarClass, "w-5/6")} />
+              <Skeleton className={cn(newsSkelBarClass, "w-full")} />
+              <Skeleton className={cn(newsSkelBarClass, "w-3/4")} />
             </div>
           </div>
         </li>

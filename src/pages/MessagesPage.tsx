@@ -9,6 +9,7 @@ import {
   type EvaMessageSender,
 } from "../api/schoolsoft.ts";
 import Avatar from "../components/Avatar.tsx";
+import { cn } from "../lib/utils.ts";
 
 function senderName(s: EvaMessageSender): string {
   if (s.id === -1) return "SchoolSoft";
@@ -46,6 +47,10 @@ function formatExactDate(iso: string): string {
     hour12: false,
   });
 }
+
+/* Shared Tailwind class fragments used in multiple spots below. */
+const TRUNCATE_LINE = "overflow-hidden text-ellipsis whitespace-nowrap";
+const SECTION_LABEL = "text-xs font-bold uppercase tracking-[0.05em] text-slate-500";
 
 export default function MessagesPage() {
   const { session, getEvaToken } = useAuth();
@@ -131,101 +136,164 @@ export default function MessagesPage() {
 
   const unreadCount = useMemo(() => inbox.filter((m) => !m.isRead).length, [inbox]);
 
-  if (loading) return <div className="loading">Loading inbox…</div>;
+  if (loading)
+    return (
+      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading inbox…</div>
+    );
+
+  const hasSelection = selectedId !== null;
 
   return (
-    <div className="messages-page">
-      <div className="page-header">
-        <h2>Messages</h2>
-        <span className="page-subtitle">
+    <div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">Messages</h2>
+        <span className="text-[0.85rem] text-slate-500">
           {inbox.length} {inbox.length === 1 ? "message" : "messages"}
           {unreadCount > 0 && ` · ${unreadCount} unread`}
         </span>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
       {inbox.length === 0 ? (
-        <div className="empty-state">No messages.</div>
+        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+          No messages.
+        </div>
       ) : (
-        <div className={`messages-layout ${selectedId !== null ? "has-selection" : ""}`}>
-          <ul className="messages-list">
-            {inbox.map((m) => (
-              <li
-                key={m.id}
-                className={`messages-item ${!m.isRead ? "is-unread" : ""} ${
-                  selectedId === m.id ? "is-selected" : ""
-                }`}
-              >
-                <button
-                  type="button"
-                  className="messages-item-btn"
-                  onClick={() => {
-                    setSelectedId(m.id);
-                  }}
-                >
-                  <Avatar
-                    name={senderName(m.sender)}
-                    picture={m.sender.picture || null}
-                    size={32}
-                  />
-                  <div className="messages-item-body">
-                    <div className="messages-item-top">
-                      <span className="messages-item-sender">{senderName(m.sender)}</span>
-                      <span className="messages-item-date">{formatRelativeDate(m.date)}</span>
-                    </div>
-                    <div className="messages-item-subject">{m.subject || "(no subject)"}</div>
-                    <div className="messages-item-preview">{m.message}</div>
-                  </div>
-                  {!m.isRead && <span className="messages-item-dot" aria-label="Unread" />}
-                  {m.hasFiles && (
-                    <span className="messages-item-paperclip" aria-label="Has attachments">
-                      📎
-                    </span>
+        <div
+          data-selection={hasSelection}
+          className="grid items-start gap-4 grid-cols-1 md:grid-cols-[minmax(280px,360px)_1fr] lg:grid-cols-[minmax(280px,380px)_1fr]"
+        >
+          <ul
+            className={cn(
+              "flex flex-col gap-[0.35rem] max-h-[calc(100dvh-220px)] overflow-y-auto pr-1 list-none",
+              hasSelection && "hidden md:flex",
+            )}
+          >
+            {inbox.map((m) => {
+              const isSelected = selectedId === m.id;
+              const isUnread = !m.isRead;
+              return (
+                <li
+                  key={m.id}
+                  className={cn(
+                    "bg-white border border-slate-200 rounded-lg transition-[border-color,box-shadow] duration-[120ms]",
+                    isSelected && "border-blue-600 bg-blue-50",
+                    isUnread && "border-l-[3px] border-l-blue-600",
                   )}
-                </button>
-              </li>
-            ))}
+                >
+                  <button
+                    type="button"
+                    className="grid grid-cols-[auto_1fr_auto] gap-3 items-center w-full bg-transparent border-0 px-[0.85rem] py-[0.7rem] text-left cursor-pointer font-[inherit] text-slate-900"
+                    onClick={() => {
+                      setSelectedId(m.id);
+                    }}
+                  >
+                    <Avatar
+                      name={senderName(m.sender)}
+                      picture={m.sender.picture || null}
+                      size={32}
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-baseline justify-between gap-2 mb-[0.15rem]">
+                        <span
+                          className={cn(
+                            "text-[0.9rem] font-semibold",
+                            TRUNCATE_LINE,
+                            isUnread && "font-bold",
+                          )}
+                        >
+                          {senderName(m.sender)}
+                        </span>
+                        <span className="text-xs text-slate-500 shrink-0">
+                          {formatRelativeDate(m.date)}
+                        </span>
+                      </div>
+                      <div
+                        className={cn(
+                          "text-[0.88rem] font-medium mb-[0.1rem]",
+                          TRUNCATE_LINE,
+                          isUnread && "font-bold",
+                        )}
+                      >
+                        {m.subject || "(no subject)"}
+                      </div>
+                      <div className="text-[0.82rem] text-slate-500 overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-line-clamp:2] [line-clamp:2] [-webkit-box-orient:vertical] leading-[1.35]">
+                        {m.message}
+                      </div>
+                    </div>
+                    {isUnread && (
+                      <span
+                        className="w-[9px] h-[9px] rounded-full bg-blue-600 self-center"
+                        aria-label="Unread"
+                      />
+                    )}
+                    {m.hasFiles && (
+                      <span
+                        className="text-[0.85rem] text-slate-500 self-center"
+                        aria-label="Has attachments"
+                      >
+                        📎
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
 
-          <div className="messages-detail">
+          <div className={cn("md:sticky md:top-24", !hasSelection && "hidden md:block")}>
             {detailLoading ? (
-              <div className="card-loading">Loading message…</div>
+              <div className="py-4 text-slate-500 text-sm">Loading message…</div>
             ) : !detail ? (
-              <div className="messages-detail-empty">Select a message to read it.</div>
+              <div className="px-8 py-16 text-center text-slate-500 bg-white border border-dashed border-slate-200 rounded-lg">
+                Select a message to read it.
+              </div>
             ) : (
-              <article className="messages-detail-card">
+              <article className="bg-white border border-slate-200 rounded-lg px-7 py-6 shadow-sm">
                 <button
                   type="button"
-                  className="messages-back"
+                  className="inline-block md:hidden bg-transparent border-0 text-blue-600 text-[0.85rem] font-semibold cursor-pointer p-0 mb-3 font-[inherit]"
                   onClick={() => {
                     setSelectedId(null);
                   }}
                 >
                   ← Back to inbox
                 </button>
-                <header className="messages-detail-header">
+                <header className="flex items-center gap-[0.9rem] mb-4 pb-4 border-b border-slate-200">
                   <Avatar
                     name={senderName(detail.sender)}
                     picture={detail.sender.picture || null}
                     size={32}
                   />
-                  <div className="messages-detail-from">
-                    <div className="messages-detail-sender">{senderName(detail.sender)}</div>
-                    <div className="messages-detail-date">{formatExactDate(detail.date)}</div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-base">{senderName(detail.sender)}</div>
+                    <div className="text-[0.8rem] text-slate-500 mt-[0.15rem]">
+                      {formatExactDate(detail.date)}
+                    </div>
                   </div>
                 </header>
-                <h3 className="messages-detail-subject">{detail.subject || "(no subject)"}</h3>
-                {detail.message && <div className="messages-detail-body">{detail.message}</div>}
+                <h3 className="text-[1.2rem] font-bold tracking-[-0.01em] mb-[0.9rem]">
+                  {detail.subject || "(no subject)"}
+                </h3>
+                {detail.message && (
+                  <div className="text-[0.95rem] leading-[1.6] whitespace-pre-wrap break-words text-slate-900">
+                    {detail.message}
+                  </div>
+                )}
                 {detail.attachments.length > 0 && (
-                  <div className="messages-detail-attachments">
-                    <div className="messages-attach-label">Attachments</div>
-                    <ul className="messages-attach-list">
+                  <div className="mt-5 pt-4 border-t border-slate-200">
+                    <div className={SECTION_LABEL}>Attachments</div>
+                    <ul className="list-none mt-[0.45rem] flex flex-col gap-[0.3rem]">
                       {detail.attachments.map((a, i) => (
-                        <li key={a.id ?? i} className="messages-attach-item">
+                        <li key={a.id ?? i} className="text-[0.9rem]">
                           📎 {a.name ?? `Attachment ${i + 1}`}
                           {typeof a.size === "number" && (
-                            <span className="messages-attach-size">
+                            <span className="text-slate-500 text-[0.82rem]">
                               {" · "}
                               {(a.size / 1024).toFixed(1)} KB
                             </span>
@@ -236,8 +304,8 @@ export default function MessagesPage() {
                   </div>
                 )}
                 {detail.recipients.length > 0 && (
-                  <div className="messages-detail-recipients">
-                    <span className="messages-recipients-label">To: </span>
+                  <div className="mt-4 text-[0.85rem] text-slate-500">
+                    <span className={SECTION_LABEL}>To: </span>
                     {detail.recipients.map((r) => `${r.firstName} ${r.lastName}`.trim()).join(", ")}
                   </div>
                 )}
