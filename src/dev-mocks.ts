@@ -40,6 +40,125 @@ function lesson(
   };
 }
 
+/* Staff directory mock — grouped exactly like the real Eva endpoint. Pictures point
+ * at `teacher{id}.jpg` filenames that won't resolve in mock mode, so avatars fall
+ * back to initials (same behaviour as the news mocks). */
+/* All staff entries are fully fictional. IDs are sequential 1001+ so they can't
+ * accidentally collide with a real SchoolSoft teacher record, and email uses
+ * the RFC 2606 reserved `example.com` domain. */
+const staffGroups = [
+  {
+    type: "Lärare",
+    data: [
+      { teacherId: 1001, firstName: "Erik", lastName: "Andersson", picture: "teacher1001.jpg" },
+      { teacherId: 1002, firstName: "Sofia", lastName: "Lindberg", picture: "" },
+      { teacherId: 1003, firstName: "James", lastName: "Carter", picture: "teacher1003.jpg" },
+      { teacherId: 1004, firstName: "Maya", lastName: "Patel", picture: "teacher1004.jpg" },
+      { teacherId: 1005, firstName: "Lukas", lastName: "Müller", picture: "teacher1005.jpg" },
+      { teacherId: 1006, firstName: "Aiko", lastName: "Tanaka", picture: "teacher1006.jpg" },
+      { teacherId: 1007, firstName: "Diego", lastName: "Ramírez", picture: "teacher1007.jpg" },
+      { teacherId: 1008, firstName: "Olivia", lastName: "Brown", picture: "teacher1008.jpg" },
+      { teacherId: 1009, firstName: "Noah", lastName: "Johansson", picture: "teacher1009.jpg" },
+      { teacherId: 1010, firstName: "Priya", lastName: "Sharma", picture: "teacher1010.jpg" },
+      { teacherId: 1011, firstName: "Marco", lastName: "Bianchi", picture: "teacher1011.jpg" },
+      { teacherId: 1012, firstName: "Zara", lastName: "O'Brien", picture: "teacher1012.jpg" },
+      { teacherId: 1013, firstName: "Hiroshi", lastName: "Sato", picture: "teacher1013.jpg" },
+      { teacherId: 1014, firstName: "Camilla", lastName: "Olsen", picture: "teacher1014.jpg" },
+      { teacherId: 1015, firstName: "Tomás", lastName: "Silva", picture: "teacher1015.jpg" },
+      { teacherId: 1016, firstName: "Eva", lastName: "Novák", picture: "teacher1016.jpg" },
+    ],
+  },
+  {
+    type: "Övrig personal",
+    data: [
+      { teacherId: 1017, firstName: "Mateo", lastName: "García", picture: "teacher1017.jpg" },
+      { teacherId: 1018, firstName: "Yara", lastName: "Mansour", picture: "teacher1018.jpg" },
+      { teacherId: 1019, firstName: "Karin", lastName: "Eriksson", picture: "teacher1019.jpg" },
+    ],
+  },
+  {
+    type: "Skolledare",
+    data: [
+      { teacherId: 1020, firstName: "Helena", lastName: "Bergstrom", picture: "teacher1020.jpg" },
+      { teacherId: 1021, firstName: "Daniel", lastName: "Cohen", picture: "teacher1021.jpg" },
+      { teacherId: 1022, firstName: "Sara", lastName: "Wilson", picture: "teacher1022.jpg" },
+      { teacherId: 1023, firstName: "Henrik", lastName: "Nilsson", picture: "teacher1023.jpg" },
+      { teacherId: 1024, firstName: "Amélie", lastName: "Dubois", picture: "teacher1024.jpg" },
+      { teacherId: 1025, firstName: "Robert", lastName: "Taylor", picture: "teacher1025.jpg" },
+    ],
+  },
+  {
+    type: "Elevvårdare",
+    data: [
+      { teacherId: 1026, firstName: "Emma", lastName: "Karlsson", picture: "" },
+      { teacherId: 1027, firstName: "Liam", lastName: "O'Connor", picture: "teacher1027.jpg" },
+      { teacherId: 1028, firstName: "Mei", lastName: "Lin", picture: "teacher1028.jpg" },
+    ],
+  },
+];
+
+const staffDetails: Record<number, Record<string, unknown>> = {
+  1022: {
+    firstName: "Sara",
+    lastName: "Wilson",
+    email: "sara.wilson@example.com",
+    mobile: "0700-000001",
+    picture: "teacher1022.jpg",
+    contactInfo: "",
+    type: "Skolledare",
+    roles: ["HoY", "Mentor Yr4", "Mentor", "Activity leader"],
+  },
+  1001: {
+    firstName: "Erik",
+    lastName: "Andersson",
+    email: "erik.andersson@example.com",
+    mobile: "",
+    picture: "teacher1001.jpg",
+    contactInfo: "Reachable in the staff room weekday mornings.",
+    type: "Lärare",
+    roles: ["English Yr5", "Mentor"],
+  },
+  1020: {
+    firstName: "Helena",
+    lastName: "Bergstrom",
+    email: "helena.bergstrom@example.com",
+    mobile: "0700-000002",
+    picture: "teacher1020.jpg",
+    contactInfo: "",
+    type: "Skolledare",
+    roles: ["Principal"],
+  },
+  1004: {
+    firstName: "Maya",
+    lastName: "Patel",
+    email: "maya.patel@example.com",
+    mobile: "0700-000003",
+    picture: "teacher1004.jpg",
+    contactInfo: "Office hours: Tuesdays 14:00–16:00 in room 312.",
+    type: "Lärare",
+    roles: ["English Yr7", "English Yr8", "Mentor Yr8", "Mentor", "Class teacher"],
+  },
+};
+
+function defaultStaffDetail(teacherId: number) {
+  for (const g of staffGroups) {
+    const m = g.data.find((x) => x.teacherId === teacherId);
+    if (m) {
+      return {
+        firstName: m.firstName,
+        lastName: m.lastName,
+        email: `${m.firstName.toLowerCase().split(" ")[0]}.${m.lastName.toLowerCase().split(" ")[0]}@example.com`,
+        mobile: "",
+        picture: m.picture,
+        contactInfo: "",
+        type: g.type,
+        roles: [],
+      };
+    }
+  }
+  return { firstName: "Unknown", lastName: "", picture: "", type: "", roles: [] };
+}
+
 function buildMocks() {
   const today = new Date();
   const w = isoWeekOf(today);
@@ -366,7 +485,7 @@ export function installMocks() {
           creDate: new Date(now - 22 * day).toISOString(),
           toDate: new Date(now + 60 * day).toISOString(),
           category: "Student Care",
-          author: { id: 9840, name: "Anna Smith", picture: "teacher9840.jpg" },
+          author: { id: 1020, name: "Helena Bergstrom", picture: "teacher1020.jpg" },
           read: true,
           hasAttachment: false,
         },
@@ -377,7 +496,7 @@ export function installMocks() {
             "Kära vårdnadshavare,\n\nVi vill informera er om att vi har fått betygen för de elever som deltar i modersmålsundervisning. Dessa delas ut under denna vecka.",
           creDate: new Date(now - 30 * day).toISOString(),
           category: "Administration",
-          author: { id: 6906, name: "Bea Jones", picture: "teacher6906.jpg" },
+          author: { id: 1022, name: "Sara Wilson", picture: "teacher1022.jpg" },
           read: false,
           hasAttachment: false,
         },
@@ -387,7 +506,7 @@ export function installMocks() {
           description: "",
           creDate: new Date(now - 120 * day).toISOString(),
           category: "Info from Teachers",
-          author: { id: 8825, name: "Chris Lee", picture: "teacher8825.jpg" },
+          author: { id: 1004, name: "Maya Patel", picture: "teacher1004.jpg" },
           read: true,
           hasAttachment: true,
         },
@@ -454,10 +573,10 @@ export function installMocks() {
               "Hello Year 4 parents, I hope you all had a relaxing break. We're picking up from Chapter 5 in math this week.",
             isRead: false,
             sender: {
-              id: 8825,
-              firstName: "Chris",
-              lastName: "Lee",
-              picture: "teacher8825.jpg",
+              id: 1004,
+              firstName: "Maya",
+              lastName: "Patel",
+              picture: "teacher1004.jpg",
             },
             date: new Date(now - 6 * day).toISOString(),
             hasFiles: true,
@@ -469,10 +588,10 @@ export function installMocks() {
               "Please remember to submit the vaccination consent form by Friday. Reach out if you have any questions.",
             isRead: true,
             sender: {
-              id: 9840,
-              firstName: "Anna",
-              lastName: "Smith",
-              picture: "teacher9840.jpg",
+              id: 1020,
+              firstName: "Helena",
+              lastName: "Bergstrom",
+              picture: "teacher1020.jpg",
             },
             date: new Date(now - 14 * day).toISOString(),
             hasFiles: false,
@@ -501,12 +620,12 @@ export function installMocks() {
           id: 4180111,
           subject: "Welcome back from break!",
           message:
-            "Hello Year 4 parents,\n\nI hope you all had a relaxing break. We're picking up from Chapter 5 in math this week — students will need their textbook every day.\n\nHomework is on the usual cadence: short exercises Mon/Wed/Fri, an open-ended problem on Sundays.\n\nLet me know if you have any questions.\n\nLinda",
+            "Hello Year 4 parents,\n\nI hope you all had a relaxing break. We're picking up from Chapter 5 in math this week — students will need their textbook every day.\n\nHomework is on the usual cadence: short exercises Mon/Wed/Fri, an open-ended problem on Sundays.\n\nLet me know if you have any questions.\n\nMaya",
           sender: {
-            id: 8825,
-            firstName: "Chris",
-            lastName: "Lee",
-            picture: "teacher8825.jpg",
+            id: 1004,
+            firstName: "Maya",
+            lastName: "Patel",
+            picture: "teacher1004.jpg",
           },
           replyTo: true,
           isRead: false,
@@ -582,6 +701,17 @@ export function installMocks() {
           expires: 900,
         }),
       );
+    }
+
+    /* Eva: staff directory */
+    if (/\/eva\/api\/v1\/schools\/\d+\/staff(\?|$)/.exec(url)) {
+      return Promise.resolve(json(staffGroups));
+    }
+    /* Eva: staff detail */
+    const staffDetailMatch = url.match(/\/eva\/api\/v1\/schools\/\d+\/staff\/(\d+)(\?|$)/);
+    if (staffDetailMatch) {
+      const id = Number(staffDetailMatch[1]);
+      return Promise.resolve(json(staffDetails[id] ?? defaultStaffDetail(id)));
     }
 
     if (url.includes("/api/lessons/student/")) return Promise.resolve(json(lessons));

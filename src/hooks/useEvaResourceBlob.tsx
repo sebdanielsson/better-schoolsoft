@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./useAuth.tsx";
 import { fetchEvaResource } from "../api/schoolsoft.ts";
+import { schedule } from "../lib/fetch-scheduler.ts";
 
-/** Cache object URLs across re-mounts so we don't refetch the same image every time. */
+/** Resolved object URLs by resource filename. */
 const blobCache = new Map<string, string>();
-/** Track which resources we've already failed to fetch (so we stop retrying). */
+/** In-flight fetches by resource filename — concurrent callers share the same promise
+ *  so a 100-row staff table mounting all at once doesn't double-fetch shared pictures. */
+const inflight = new Map<string, Promise<string | null>>();
+/** Resources we've already failed to fetch — don't retry. */
 const failedCache = new Set<string>();
 
 /** Fetch an auth-gated EVA resource (e.g. an avatar picture) and return a
  *  blob URL once it's loaded. Returns null until the fetch resolves, or
- *  permanently if it fails. Sharing one module-level cache means multiple
- *  components asking for the same resource only hit the network once. */
+ *  permanently if it fails. */
 export function useEvaResourceBlob(picture: string | null | undefined): string | null {
   const { session, getEvaToken } = useAuth();
   const [src, setSrc] = useState<string | null>(() =>
@@ -35,22 +38,35 @@ export function useEvaResourceBlob(picture: string | null | undefined): string |
       setSrc(null);
       return;
     }
-    void (async () => {
-      try {
-        const token = await getEvaToken();
-        if (!token) {
+    let promise = inflight.get(picture);
+    if (!promise) {
+      promise = (async () => {
+        try {
+          const token = await getEvaToken();
+          if (!token) {
+            failedCache.add(picture);
+            return null;
+          }
+          /* Low priority: lets high-priority data fetches (staff details, etc.)
+           * drain the per-origin connection pool first before image bytes. */
+          const blob = await schedule("low", () =>
+            fetchEvaResource(session.school, token, picture),
+          );
+          const url = URL.createObjectURL(blob);
+          blobCache.set(picture, url);
+          return url;
+        } catch {
           failedCache.add(picture);
-          return;
+          return null;
+        } finally {
+          inflight.delete(picture);
         }
-        const blob = await fetchEvaResource(session.school, token, picture);
-        if (aborted.current) return;
-        const url = URL.createObjectURL(blob);
-        blobCache.set(picture, url);
-        setSrc(url);
-      } catch {
-        failedCache.add(picture);
-      }
-    })();
+      })();
+      inflight.set(picture, promise);
+    }
+    void promise.then((url) => {
+      if (!aborted.current && url) setSrc(url);
+    });
   }, [picture, session, getEvaToken]);
 
   return src;

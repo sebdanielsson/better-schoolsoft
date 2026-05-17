@@ -671,6 +671,60 @@ export function updateEvaProfileNotPublish(
   });
 }
 
+/* ---------- Staff (Eva) ---------- */
+
+export interface EvaStaffMember {
+  teacherId: number;
+  firstName: string;
+  lastName: string;
+  /** Resource filename like "teacher10689.jpg", or empty string when no picture. */
+  picture: string;
+}
+
+export interface EvaStaffGroup {
+  /** Localised group label from the API: "Lärare", "Skolledare", "Övrig personal", "Elevvårdare", … */
+  type: string;
+  data: EvaStaffMember[];
+}
+
+export interface EvaStaffDetail {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  mobile?: string;
+  picture?: string;
+  contactInfo?: string;
+  type?: string;
+  roles?: string[];
+}
+
+/** Full staff directory grouped by role (Lärare, Skolledare, …). */
+export function fetchEvaStaff(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  langId = 1,
+): Promise<EvaStaffGroup[]> {
+  return evaGet(
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/staff?langId=${langId}`,
+    accessToken,
+  );
+}
+
+/** Detail view for a single staff member (contact info + roles). */
+export function fetchEvaStaffDetail(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  teacherId: number,
+  langId = 1,
+): Promise<EvaStaffDetail> {
+  return evaGet(
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/staff/${teacherId}?langId=${langId}`,
+    accessToken,
+  );
+}
+
 /* ---------- School list ---------- */
 
 export interface SchoolListEntry {
