@@ -47,7 +47,7 @@ importers:
         version: 7.18.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       shadcn:
         specifier: ^4.7.0
-        version: 4.14.0(typescript@6.0.3)
+        version: 4.14.1(typescript@6.0.3)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -1863,8 +1863,8 @@ packages:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
 
-  baseline-browser-mapping@2.11.1:
-    resolution: {integrity: sha512-HYXq73DDpCtNzOmrFsm9eSwCvWCql0RzqjpDzXN9EadiLJ4DNat0nsZ/Bzmy+Ud12mb4/zKDY0cQ805ZzN+i0A==}
+  baseline-browser-mapping@2.11.3:
+    resolution: {integrity: sha512-sbT0Ui/CZwyAyy7icT1Gw5P1LKRlFaHwaF6tDCW5YHq2X5SeeZFphBuIagopSfwSSZq3sQcbmEL072yphxm7ew==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -2304,8 +2304,8 @@ packages:
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
-  ip-address@10.2.0:
-    resolution: {integrity: sha512-/+S6j4E9AHvW9SWMSEY9Xfy66O5PWvVEJ08O0y5JGyEKQpojb0K0GKpz/v5HJ/G0vi3D2sjGK78119oXZeE0qA==}
+  ip-address@10.3.1:
+    resolution: {integrity: sha512-1e9d3kb97NHJTIJDZW9rKqW2h6+dFa50Dy0fpPSMQp2ADje5gvKsXmdiK6dwY5t76TaTt5+P5N1Y/LoToIxP6g==}
     engines: {node: '>= 12'}
 
   ipaddr.js@1.9.1:
@@ -2865,6 +2865,10 @@ packages:
     resolution: {integrity: sha512-KBDEIpLrvpv16pp3K0Fw+UCoZfopFjjgeB+0tA/aaThfEE74kKDLrgg603YvOWJyg3+WYtyq3xYsQWsIyZlPqQ==}
     engines: {node: ^10 || ^12 || >=14}
 
+  postcss@8.5.23:
+    resolution: {integrity: sha512-g50586zr4bZmwFiTlflMu8E0bDTb5I5gertgwAKmsdUlTQIhZtunzUlD1WSzwcVWPoAVpsrA6vlfCD7oXvRwgg==}
+    engines: {node: ^10 || ^12 || >=14}
+
   powershell-utils@0.1.0:
     resolution: {integrity: sha512-dM0jVuXJPsDN6DvRpea484tCUaMiXWjuCn++HGTqUWzGDjv5tZkEZldAJ/UMlqRYGFrD/etByo4/xOuC/snX2A==}
     engines: {node: '>=20'}
@@ -3032,8 +3036,8 @@ packages:
   setprototypeof@1.2.0:
     resolution: {integrity: sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==}
 
-  shadcn@4.14.0:
-    resolution: {integrity: sha512-WSSMmB9ERauwy0SQwE0NlSfeaoBANHtzgSjAfoEsIHpRQwVkQBiiLV8Y9yAYOj9Wf3mbCIdQt3oLGzkH7NQFiQ==}
+  shadcn@4.14.1:
+    resolution: {integrity: sha512-Xb4r150oGNexMBxUnWPG1emcaUlFbhzMOJubdA+k0NTkmhgBBycFZjTz9Aw2yQbpDR6QnIZbk234N20s/s7s9A==}
     engines: {node: '>=20.18.1'}
     hasBin: true
 
@@ -3194,8 +3198,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici@7.28.0:
-    resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
+  undici@7.29.0:
+    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
     engines: {node: '>=20.18.1'}
 
   unicorn-magic@0.3.0:
@@ -3521,7 +3525,7 @@ snapshots:
       open: 8.4.2
       picomatch: 4.0.5
       systeminformation: 5.33.1
-      undici: 7.28.0
+      undici: 7.29.0
       which: 4.0.0
       yocto-spinner: 1.2.2
 
@@ -4893,7 +4897,7 @@ snapshots:
 
   balanced-match@4.0.4: {}
 
-  baseline-browser-mapping@2.11.1: {}
+  baseline-browser-mapping@2.11.3: {}
 
   body-parser@2.3.0:
     dependencies:
@@ -4919,7 +4923,7 @@ snapshots:
 
   browserslist@4.28.7:
     dependencies:
-      baseline-browser-mapping: 2.11.1
+      baseline-browser-mapping: 2.11.3
       caniuse-lite: 1.0.30001806
       electron-to-chromium: 1.5.396
       node-releases: 2.0.51
@@ -5148,7 +5152,7 @@ snapshots:
     dependencies:
       debug: 4.4.3
       express: 5.2.1
-      ip-address: 10.2.0
+      ip-address: 10.3.1
     transitivePeerDependencies:
       - supports-color
 
@@ -5319,7 +5323,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ip-address@10.2.0: {}
+  ip-address@10.3.1: {}
 
   ipaddr.js@1.9.1: {}
 
@@ -5766,6 +5770,12 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  postcss@8.5.23:
+    dependencies:
+      nanoid: 3.3.16
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
+
   powershell-utils@0.1.0: {}
 
   pretty-format@27.5.1:
@@ -5989,7 +5999,7 @@ snapshots:
 
   setprototypeof@1.2.0: {}
 
-  shadcn@4.14.0(typescript@6.0.3):
+  shadcn@4.14.1(typescript@6.0.3):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/parser': 7.29.7
@@ -6011,7 +6021,7 @@ snapshots:
       kleur: 4.1.5
       open: 11.0.0
       ora: 8.2.0
-      postcss: 8.5.22
+      postcss: 8.5.23
       postcss-selector-parser: 7.1.4
       prompts: 2.4.2
       recast: 0.23.12
@@ -6019,7 +6029,7 @@ snapshots:
       tailwind-merge: 3.6.0
       ts-morph: 26.0.0
       tsconfig-paths: 4.2.0
-      undici: 7.28.0
+      undici: 7.29.0
       validate-npm-package-name: 7.0.2
       zod: 3.25.76
       zod-to-json-schema: 3.25.2(zod@3.25.76)
@@ -6165,7 +6175,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  undici@7.28.0: {}
+  undici@7.29.0: {}
 
   unicorn-magic@0.3.0: {}
 
