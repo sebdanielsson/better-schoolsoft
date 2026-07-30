@@ -17,7 +17,7 @@ export default function SettingsPill() {
         className={
           "flex items-center justify-center gap-1 rounded-full border-0 cursor-pointer font-[inherit] font-medium text-white transition-colors backdrop-blur-[4px] " +
           "pl-[0.4rem] pr-[0.55rem] py-[0.15rem] text-[11px] basis-[calc(50%-0.2rem)] grow-0 shrink-0 sm:gap-[0.4rem] sm:pl-[0.6rem] sm:pr-[0.7rem] sm:py-1 sm:text-xs sm:basis-auto " +
-          "bg-white/15 hover:bg-white/30 data-[state=open]:bg-white/30"
+          "bg-white/15 hover:bg-white/30 data-popup-open:bg-white/30"
         }
       >
         <span
@@ -31,26 +31,22 @@ export default function SettingsPill() {
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[200px] rounded-lg">
-        <DropdownMenuItem asChild>
-          <Link to="/staff" className="cursor-pointer">
-            <span aria-hidden="true" className="text-muted-foreground">
-              ✱
-            </span>
-            Staff directory
-          </Link>
+        <DropdownMenuItem render={<Link to="/staff" className="cursor-pointer" />}>
+          <span aria-hidden="true" className="text-muted-foreground">
+            ✱
+          </span>
+          Staff directory
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/profile" className="cursor-pointer">
-            <span aria-hidden="true" className="text-muted-foreground">
-              ⚙
-            </span>
-            Profile settings
-          </Link>
+        <DropdownMenuItem render={<Link to="/profile" className="cursor-pointer" />}>
+          <span aria-hidden="true" className="text-muted-foreground">
+            ⚙
+          </span>
+          Profile settings
         </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"
           className="cursor-pointer"
-          onSelect={() => {
+          onClick={() => {
             logout();
             void navigate("/login");
           }}
