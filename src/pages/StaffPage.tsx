@@ -222,7 +222,7 @@ export default function StaffPage() {
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[0.85rem] font-medium text-slate-700 transition-colors",
               "hover:border-slate-300 hover:bg-slate-50",
-              "data-[state=open]:border-slate-300 data-[state=open]:bg-slate-50",
+              "data-popup-open:border-slate-300 data-popup-open:bg-slate-50",
               activeRoles.size > 0 && "border-blue-300 text-blue-700",
             )}
           >
@@ -267,10 +267,8 @@ export default function StaffPage() {
                   onCheckedChange={(checked) => {
                     toggleRole(role, Boolean(checked));
                   }}
-                  onSelect={(e) => {
-                    /* Keep the menu open so users can flip several roles in one go. */
-                    e.preventDefault();
-                  }}
+                  /* Keep the menu open so users can flip several roles in one go. */
+                  closeOnClick={false}
                   /* Override the shadcn defaults that uppercase + wide-track everything —
                    * role labels like "HoY" or "Mentor Yr4" carry case information we need. */
                   className="text-[0.85rem] font-normal normal-case tracking-normal"
