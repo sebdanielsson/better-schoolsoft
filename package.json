@@ -9,7 +9,7 @@
     "preview": "vp preview",
     "check": "vp check",
     "typecheck": "vp check --no-fmt --no-lint",
-    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\" \"api/**/*.test.ts\""
+    "test": "node --test \"src/**/*.test.ts\" \"api/**/*.test.ts\""
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -35,6 +35,9 @@
     "typescript": "~6.0.3",
     "vite": "catalog:",
     "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.18"
   },
   "packageManager": "pnpm@11.18.0"
 }
