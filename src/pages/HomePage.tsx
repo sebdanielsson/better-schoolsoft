@@ -352,7 +352,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!session || !parentUserId || !child) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) return;
@@ -364,10 +364,14 @@ export default function HomePage() {
           orgId,
           child.studentId,
         );
-        const week = isoWeek(new Date());
+        const now = new Date();
+        const week = isoWeek(now);
+        /* Derive the next week from a date rather than `week + 1`, which asked
+         * for week 53/54 every December instead of wrapping to week 1. */
+        const nextWeekNumber = isoWeek(new Date(now.getTime() + 7 * 86_400_000));
         const [thisWeek, nextWeek] = await Promise.all([
           fetchScheduleLessons(session.school, week).catch(() => [] as ScheduleLesson[]),
-          fetchScheduleLessons(session.school, week + 1).catch(() => [] as ScheduleLesson[]),
+          fetchScheduleLessons(session.school, nextWeekNumber).catch(() => [] as ScheduleLesson[]),
         ]);
         if (cancelled) return;
         setScheduleLessons([...thisWeek, ...nextWeek]);
@@ -753,16 +757,12 @@ export default function HomePage() {
   );
 }
 
-
 /** Map a `ScheduleLesson` from the rest-api schedule onto the legacy `Lesson`
  *  shape so the existing `LessonRow` keeps working unchanged.
  *  - Standard Skolverket subject codes ("Ma", "SO", …) expanded to long names.
  *  - Teacher fields come back as "A,B" without a space — normalize so the row
  *    reads "A, B" cleanly. */
-function scheduleLessonsForDate(
-  scheduleLessons: ScheduleLesson[],
-  date: Date,
-): Lesson[] {
+function scheduleLessonsForDate(scheduleLessons: ScheduleLesson[], date: Date): Lesson[] {
   return scheduleLessons
     .filter((l) => l.category === "lesson")
     .filter((l) => sameLocalDate(new Date(l.startDate), date))

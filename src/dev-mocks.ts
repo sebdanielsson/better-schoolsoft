@@ -723,9 +723,7 @@ export function installMocks() {
     }
     /* Calendar lessons (rest-api). Derives concrete ISO dates for the asked
      * week using the same lesson definitions the legacy endpoint serves. */
-    const calendarLessonsMatch = url.match(
-      /\/rest-api\/parent\/calendar\/lessons\/week\/(\d+)/,
-    );
+    const calendarLessonsMatch = url.match(/\/rest-api\/parent\/calendar\/lessons\/week\/(\d+)/);
     if (calendarLessonsMatch) {
       const askedWeek = Number(calendarLessonsMatch[1]);
       const today = new Date();
@@ -755,26 +753,186 @@ export function installMocks() {
         color: string;
       };
       const defs: LessonDef[] = [
-        { day: 1, start: "08:30", end: "09:20", name: "Ma", room: "Room 210", teacher: "Mr. Johansson,Ms. Lindberg", color: "#adff9e" },
-        { day: 1, start: "09:20", end: "09:30", name: "Break", room: "", teacher: "", color: "#cccccc" },
-        { day: 1, start: "09:30", end: "10:20", name: "En", room: "Room 142", teacher: "Ms. Anderson", color: "#b5d8e6" },
-        { day: 1, start: "10:20", end: "10:40", name: "Break", room: "", teacher: "", color: "#cccccc" },
-        { day: 1, start: "10:40", end: "11:30", name: "Sv", room: "Room 142", teacher: "Ms. Lindberg", color: "#91a6ed" },
-        { day: 1, start: "11:30", end: "12:30", name: "Lunch", room: "Cafeteria", teacher: "", color: "#fef3c7" },
-        { day: 1, start: "12:30", end: "13:20", name: "IDH", room: "Gym", teacher: "Mr. Berg", color: "#f7beed" },
-        { day: 2, start: "08:30", end: "09:20", name: "Science", room: "Room 305", teacher: "Dr. Karlsson", color: "#34c451" },
-        { day: 2, start: "09:30", end: "10:20", name: "Art", room: "Room 120", teacher: "Ms. Pettersson", color: "#e6b8b8" },
-        { day: 2, start: "10:40", end: "12:00", name: "Mathematics", room: "Room 210", teacher: "Mr. Johansson", color: "#adff9e" },
-        { day: 3, start: "08:30", end: "09:20", name: "English 4B", room: "Room 142", teacher: "Ms. Anderson", color: "#b5d8e6" },
-        { day: 3, start: "09:30", end: "10:20", name: "History", room: "Room 208", teacher: "Mr. Nilsson", color: "#f0ff8f" },
-        { day: 3, start: "10:40", end: "11:30", name: "Music", room: "Room 160", teacher: "Ms. Olsson", color: "#f7beed" },
-        { day: 3, start: "13:00", end: "13:50", name: "Mathematics", room: "Room 210", teacher: "Mr. Johansson", color: "#adff9e" },
-        { day: 4, start: "08:30", end: "09:20", name: "Geography", room: "Room 305", teacher: "Dr. Karlsson", color: "#34c451" },
-        { day: 4, start: "09:30", end: "10:20", name: "Swedish", room: "Room 142", teacher: "Ms. Lindberg", color: "#91a6ed" },
-        { day: 4, start: "12:30", end: "13:20", name: "Religion", room: "Room 208", teacher: "Mr. Nilsson", color: "#757575" },
-        { day: 5, start: "08:30", end: "09:20", name: "English 4B", room: "Room 142", teacher: "Ms. Anderson", color: "#b5d8e6" },
-        { day: 5, start: "09:30", end: "10:20", name: "Mathematics", room: "Room 210", teacher: "Mr. Johansson", color: "#adff9e" },
-        { day: 5, start: "10:40", end: "11:30", name: "Physical Education", room: "Gym", teacher: "Mr. Berg", color: "#f7beed" },
+        {
+          day: 1,
+          start: "08:30",
+          end: "09:20",
+          name: "Ma",
+          room: "Room 210",
+          teacher: "Mr. Johansson,Ms. Lindberg",
+          color: "#adff9e",
+        },
+        {
+          day: 1,
+          start: "09:20",
+          end: "09:30",
+          name: "Break",
+          room: "",
+          teacher: "",
+          color: "#cccccc",
+        },
+        {
+          day: 1,
+          start: "09:30",
+          end: "10:20",
+          name: "En",
+          room: "Room 142",
+          teacher: "Ms. Anderson",
+          color: "#b5d8e6",
+        },
+        {
+          day: 1,
+          start: "10:20",
+          end: "10:40",
+          name: "Break",
+          room: "",
+          teacher: "",
+          color: "#cccccc",
+        },
+        {
+          day: 1,
+          start: "10:40",
+          end: "11:30",
+          name: "Sv",
+          room: "Room 142",
+          teacher: "Ms. Lindberg",
+          color: "#91a6ed",
+        },
+        {
+          day: 1,
+          start: "11:30",
+          end: "12:30",
+          name: "Lunch",
+          room: "Cafeteria",
+          teacher: "",
+          color: "#fef3c7",
+        },
+        {
+          day: 1,
+          start: "12:30",
+          end: "13:20",
+          name: "IDH",
+          room: "Gym",
+          teacher: "Mr. Berg",
+          color: "#f7beed",
+        },
+        {
+          day: 2,
+          start: "08:30",
+          end: "09:20",
+          name: "Science",
+          room: "Room 305",
+          teacher: "Dr. Karlsson",
+          color: "#34c451",
+        },
+        {
+          day: 2,
+          start: "09:30",
+          end: "10:20",
+          name: "Art",
+          room: "Room 120",
+          teacher: "Ms. Pettersson",
+          color: "#e6b8b8",
+        },
+        {
+          day: 2,
+          start: "10:40",
+          end: "12:00",
+          name: "Mathematics",
+          room: "Room 210",
+          teacher: "Mr. Johansson",
+          color: "#adff9e",
+        },
+        {
+          day: 3,
+          start: "08:30",
+          end: "09:20",
+          name: "English 4B",
+          room: "Room 142",
+          teacher: "Ms. Anderson",
+          color: "#b5d8e6",
+        },
+        {
+          day: 3,
+          start: "09:30",
+          end: "10:20",
+          name: "History",
+          room: "Room 208",
+          teacher: "Mr. Nilsson",
+          color: "#f0ff8f",
+        },
+        {
+          day: 3,
+          start: "10:40",
+          end: "11:30",
+          name: "Music",
+          room: "Room 160",
+          teacher: "Ms. Olsson",
+          color: "#f7beed",
+        },
+        {
+          day: 3,
+          start: "13:00",
+          end: "13:50",
+          name: "Mathematics",
+          room: "Room 210",
+          teacher: "Mr. Johansson",
+          color: "#adff9e",
+        },
+        {
+          day: 4,
+          start: "08:30",
+          end: "09:20",
+          name: "Geography",
+          room: "Room 305",
+          teacher: "Dr. Karlsson",
+          color: "#34c451",
+        },
+        {
+          day: 4,
+          start: "09:30",
+          end: "10:20",
+          name: "Swedish",
+          room: "Room 142",
+          teacher: "Ms. Lindberg",
+          color: "#91a6ed",
+        },
+        {
+          day: 4,
+          start: "12:30",
+          end: "13:20",
+          name: "Religion",
+          room: "Room 208",
+          teacher: "Mr. Nilsson",
+          color: "#757575",
+        },
+        {
+          day: 5,
+          start: "08:30",
+          end: "09:20",
+          name: "English 4B",
+          room: "Room 142",
+          teacher: "Ms. Anderson",
+          color: "#b5d8e6",
+        },
+        {
+          day: 5,
+          start: "09:30",
+          end: "10:20",
+          name: "Mathematics",
+          room: "Room 210",
+          teacher: "Mr. Johansson",
+          color: "#adff9e",
+        },
+        {
+          day: 5,
+          start: "10:40",
+          end: "11:30",
+          name: "Physical Education",
+          room: "Gym",
+          teacher: "Mr. Berg",
+          color: "#f7beed",
+        },
       ];
       const body = defs.map((d, i) => ({
         allDay: false,
@@ -799,9 +957,7 @@ export function installMocks() {
     /* Material file metadata. Same `/file` URL — JSON metadata array, not the
      * binary. Maps material ids to file names matching what the upstream API
      * returns. */
-    const materialFileMatch = url.match(
-      /\/rest-api\/parent\/ps\/material\/(\d+)\/file$/,
-    );
+    const materialFileMatch = url.match(/\/rest-api\/parent\/ps\/material\/(\d+)\/file$/);
     if (materialFileMatch) {
       const id = Number(materialFileMatch[1]);
       const byId: Record<number, Array<{ fileId: number; fileName: string }>> = {
@@ -826,9 +982,7 @@ export function installMocks() {
     }
     /* Assignment detail family: view / sections / connected_plannings /
      * submission / assessment. */
-    const assignmentSubmissionMatch = url.match(
-      /\/rest-api\/parent\/ps\/submission\/(\d+)/,
-    );
+    const assignmentSubmissionMatch = url.match(/\/rest-api\/parent\/ps\/submission\/(\d+)/);
     if (assignmentSubmissionMatch) {
       return Promise.resolve(
         json({
@@ -856,19 +1010,19 @@ export function installMocks() {
         json({
           review: id === 104101 ? "Achieved the goals" : "",
           studentComment: "",
-          teacherComment:
-            id === 104101 ? "Great progress on weekly reading!" : "",
+          teacherComment: id === 104101 ? "Great progress on weekly reading!" : "",
           assessedCriteriaTabs: [],
           assessmentPartialMoments: [],
         }),
       );
     }
-    const assignmentViewMatch = url.match(
-      /\/rest-api\/parent\/ps\/assignments\/(\d+)\/view$/,
-    );
+    const assignmentViewMatch = url.match(/\/rest-api\/parent\/ps\/assignments\/(\d+)\/view$/);
     if (assignmentViewMatch) {
       const id = Number(assignmentViewMatch[1]);
-      const titles: Record<number, { title: string; sub: string; type: string; subject: string; descr: string }> = {
+      const titles: Record<
+        number,
+        { title: string; sub: string; type: string; subject: string; descr: string }
+      > = {
         104979: {
           title: "Läslogg och veckans ord till vecka 20",
           sub: "onsdag 06 maj 2026 00:00 - onsdag 13 maj 2026 00:00",
@@ -926,9 +1080,7 @@ export function installMocks() {
       return Promise.resolve(json([]));
     }
     /* Planning detail family. */
-    const planningViewMatch = url.match(
-      /\/rest-api\/parent\/ps\/plannings\/(\d+)\/view$/,
-    );
+    const planningViewMatch = url.match(/\/rest-api\/parent\/ps\/plannings\/(\d+)\/view$/);
     if (planningViewMatch) {
       return Promise.resolve(
         json({
@@ -946,9 +1098,7 @@ export function installMocks() {
         json([{ id: 82400, order: 1, title: "Y4 Chapter 6 Bråk, volym och vikt" }]),
       );
     }
-    const planningPartViewMatch = url.match(
-      /\/rest-api\/parent\/ps\/planning_parts\/(\d+)\/view$/,
-    );
+    const planningPartViewMatch = url.match(/\/rest-api\/parent\/ps\/planning_parts\/(\d+)\/view$/);
     if (planningPartViewMatch) {
       return Promise.resolve(
         json({
@@ -993,14 +1143,17 @@ export function installMocks() {
       const askedWeek = Number(planningsStartMatch[1]);
       const currentWeek = isoWeekOf(new Date());
       const delta = askedWeek - currentWeek;
-      const data: Record<number, Array<{
-        activityId: number;
-        id: number;
-        planningId: number;
-        read: boolean;
-        subTitle: string;
-        title: string;
-      }>> = {
+      const data: Record<
+        number,
+        Array<{
+          activityId: number;
+          id: number;
+          planningId: number;
+          read: boolean;
+          subTitle: string;
+          title: string;
+        }>
+      > = {
         [-1]: [
           {
             activityId: 33086,
@@ -1044,21 +1197,26 @@ export function installMocks() {
     }
     /* Schoolsoft React webview: assignments this week (start-page). Week-
      * dependent so prev/next navigation surfaces different data. */
-    const assignmentsMatch = url.match(/\/rest-api\/parent\/ps\/assignments\/start-page\?week=(\d+)&year=(\d+)/);
+    const assignmentsMatch = url.match(
+      /\/rest-api\/parent\/ps\/assignments\/start-page\?week=(\d+)&year=(\d+)/,
+    );
     if (assignmentsMatch) {
       const askedWeek = Number(assignmentsMatch[1]);
       const currentWeek = isoWeekOf(new Date());
       const delta = askedWeek - currentWeek;
-      const dataByDelta: Record<number, Array<{
-        activityId: number;
-        id: number;
-        read: boolean;
-        resultReportStatus: string;
-        sortDate: string;
-        subTitle: string;
-        submissionStatus: string;
-        title: string;
-      }>> = {
+      const dataByDelta: Record<
+        number,
+        Array<{
+          activityId: number;
+          id: number;
+          read: boolean;
+          resultReportStatus: string;
+          sortDate: string;
+          subTitle: string;
+          submissionStatus: string;
+          title: string;
+        }>
+      > = {
         [-1]: [
           {
             activityId: 49187,
@@ -1121,7 +1279,9 @@ export function installMocks() {
     /* Schoolsoft React webview: subject warning confirm.
      *  GET = read guardian acknowledgement state
      *  POST = flip it to acknowledged */
-    const confirmMatch = url.match(/\/rest-api\/parent\/holistic_assessment\/(\d+)\/subject_warning\/confirm$/);
+    const confirmMatch = url.match(
+      /\/rest-api\/parent\/holistic_assessment\/(\d+)\/subject_warning\/confirm$/,
+    );
     if (confirmMatch) {
       const id = Number(confirmMatch[1]);
       const method = (init?.method ?? "GET").toUpperCase();
@@ -1139,7 +1299,9 @@ export function installMocks() {
       );
     }
     /* Subject warning detail. */
-    const warningMatch = url.match(/\/rest-api\/parent\/holistic_assessment\/(\d+)\/subject_warning$/);
+    const warningMatch = url.match(
+      /\/rest-api\/parent\/holistic_assessment\/(\d+)\/subject_warning$/,
+    );
     if (warningMatch) {
       const id = Number(warningMatch[1]);
       if (id !== 179856) return Promise.resolve(json(null));
@@ -1158,28 +1320,53 @@ export function installMocks() {
       );
     }
     /* Knowledge development panel. */
-    const kdMatch = url.match(/\/rest-api\/parent\/holistic_assessment\/(\d+)\/knowledge_development\/view$/);
+    const kdMatch = url.match(
+      /\/rest-api\/parent\/holistic_assessment\/(\d+)\/knowledge_development\/view$/,
+    );
     if (kdMatch) {
       const id = Number(kdMatch[1]);
       const valuesById: Record<number, { value: string; updatedBy: string; date: string }> = {
-        179856: { value: "Is in need of support to achieve acceptable knowledge", updatedBy: "Ms. Anderson", date: "14 May 18:26" },
-        310723: { value: "Has more than acceptable knowledge", updatedBy: "Mr. Lindgren", date: "12 Apr 09:18" },
-        51109: { value: "Has acceptable knowledge", updatedBy: "Ms. Lindberg", date: "26 Feb 10:17" },
-        686419: { value: "Has acceptable knowledge", updatedBy: "Dr. Karlsson", date: "8 May 13:10" },
-        334069: { value: "Has more than acceptable knowledge", updatedBy: "Mr. Berg", date: "25 Feb 15:33" },
+        179856: {
+          value: "Is in need of support to achieve acceptable knowledge",
+          updatedBy: "Ms. Anderson",
+          date: "14 May 18:26",
+        },
+        310723: {
+          value: "Has more than acceptable knowledge",
+          updatedBy: "Mr. Lindgren",
+          date: "12 Apr 09:18",
+        },
+        51109: {
+          value: "Has acceptable knowledge",
+          updatedBy: "Ms. Lindberg",
+          date: "26 Feb 10:17",
+        },
+        686419: {
+          value: "Has acceptable knowledge",
+          updatedBy: "Dr. Karlsson",
+          date: "8 May 13:10",
+        },
+        334069: {
+          value: "Has more than acceptable knowledge",
+          updatedBy: "Mr. Berg",
+          date: "25 Feb 15:33",
+        },
       };
       const v = valuesById[id];
       if (!v) return Promise.resolve(json(null));
       return Promise.resolve(
         json({
           value: v.value,
-          supportMeasures: id === 179856 ? "Extra division practice during Friday support sessions." : "",
+          supportMeasures:
+            id === 179856 ? "Extra division practice during Friday support sessions." : "",
           updatedByInfo: `Last updated ${v.date} by ${v.updatedBy}`,
         }),
       );
     }
     /* Sections published — what panels to render. */
-    const sectionsMatch = url.match(/\/rest-api\/parent\/holistic_assessment\/(\d+)\/sections\/published$/);
+    const sectionsMatch = url.match(
+      /\/rest-api\/parent\/holistic_assessment\/(\d+)\/sections\/published$/,
+    );
     if (sectionsMatch) {
       const id = Number(sectionsMatch[1]);
       if (id === 179856) {

@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth.tsx";
 import { useHeroData } from "./useHeroData.tsx";
-import {
-  getSchoolsoftParameters,
-  type SchoolsoftParameters,
-} from "../api/schoolsoft.ts";
+import { getSchoolsoftParameters, type SchoolsoftParameters } from "../api/schoolsoft.ts";
 
 /** Resolves SchoolSoft's per-school parameters once and shares the result via
  *  the module-level cache in api/schoolsoft.ts. Returns `null` until resolved.
@@ -18,7 +15,7 @@ export function useSchoolsoftParameters(): SchoolsoftParameters | null {
   useEffect(() => {
     if (!session || !parentUserId || !child) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) return;

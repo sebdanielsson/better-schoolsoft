@@ -55,7 +55,7 @@ export default function PlanningsCard() {
      * flicker through a skeleton state. AnimateHeight smooths the swap. */
     setError(null);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
@@ -146,7 +146,10 @@ export default function PlanningsCard() {
                     to={`/plannings/${row.planningId}/${row.id}`}
                     className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5 text-inherit no-underline transition-colors hover:border-slate-300 hover:shadow-sm"
                   >
-                    <CalendarRange className="h-4 w-4 text-indigo-500 shrink-0" aria-hidden="true" />
+                    <CalendarRange
+                      className="h-4 w-4 text-indigo-500 shrink-0"
+                      aria-hidden="true"
+                    />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.92rem] font-semibold">

@@ -15,6 +15,8 @@ import {
   type TokenResponse,
   type UserType,
 } from "../api/schoolsoft.ts";
+import { clearPkce } from "../api/pkce.ts";
+import { clearSessionCaches } from "../lib/session-caches.ts";
 
 interface EvaSession {
   accessToken: string;
@@ -72,8 +74,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(STORAGE_KEY);
   }, [session]);
 
+  /* Identity of the account the module-level caches were filled for. Staff
+   * details are keyed by a bare teacherId and avatars by picture filename —
+   * neither is unique across orgs, so the caches have to be dropped whenever
+   * the account behind them changes, not just on logout. */
+  const cacheIdentity = session
+    ? `${session.school}:${session.orgId}:${session.userId ?? ""}`
+    : null;
+  const lastIdentity = useRef<string | null>(cacheIdentity);
+
+  useEffect(() => {
+    if (lastIdentity.current === cacheIdentity) return;
+    lastIdentity.current = cacheIdentity;
+    clearSessionCaches();
+  }, [cacheIdentity]);
+
   const logout = useCallback(() => {
     setSession(null);
+    /* Leaving these behind would expose the previous account's cached staff
+     * details and avatars to the next person who signs in on this device. */
+    clearSessionCaches();
+    clearPkce();
   }, []);
 
   const getToken = useCallback(async (): Promise<string> => {

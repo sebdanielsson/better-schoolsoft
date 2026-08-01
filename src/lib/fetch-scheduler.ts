@@ -27,13 +27,25 @@ function drain(): void {
 export function schedule<T>(priority: Priority, task: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     queues[priority].push(() => {
-      task()
-        .then(resolve, reject)
-        .finally(() => {
-          active--;
-          drain();
-        });
+      /* `task()` is typed as async, but a synchronous throw before its first
+       * await would skip the `.finally` below and leak the slot we just took.
+       * Six of those and the queue deadlocks for the lifetime of the tab, so
+       * route both failure modes through the same release path. */
+      let promise: Promise<T>;
+      try {
+        promise = task();
+      } catch (err) {
+        release();
+        reject(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      promise.then(resolve, reject).finally(release);
     });
     drain();
   });
+}
+
+function release(): void {
+  active--;
+  drain();
 }

@@ -60,7 +60,7 @@ export default function AssessmentDetailPage() {
     setError(null);
     setState(emptyState);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token available");
@@ -229,9 +229,7 @@ function SubjectWarningCard({
         </p>
       ) : (
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[0.85rem] text-slate-600">
-            Confirm that you have read this warning.
-          </p>
+          <p className="text-[0.85rem] text-slate-600">Confirm that you have read this warning.</p>
           <div className="flex flex-col items-end gap-1">
             <Button
               onClick={onConfirm}
@@ -240,9 +238,7 @@ function SubjectWarningCard({
             >
               {confirming ? "Confirming…" : "I confirm I have read this"}
             </Button>
-            {confirmError && (
-              <span className="text-[0.78rem] text-red-700">{confirmError}</span>
-            )}
+            {confirmError && <span className="text-[0.78rem] text-red-700">{confirmError}</span>}
           </div>
         </div>
       )}

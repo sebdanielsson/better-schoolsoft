@@ -94,7 +94,7 @@ export default function LunchCard() {
     if (!session) return;
     let cancelled = false;
     setLoading(true);
-    (async () => {
+    void (async () => {
       const evaToken = await getEvaToken().catch(() => null);
       let data: LunchWeek | null = null;
       if (evaToken) {
@@ -183,20 +183,12 @@ export default function LunchCard() {
         <ul className={lunchWeekListClass}>
           {LUNCH_DAYS.map((k, i) => {
             const day = i + 1;
-            const text = lunch ? ((lunch[k] as string) || "") : "";
+            const text = lunch ? (lunch[k] as string) || "" : "";
             const isFeatured = featuredDayIdx !== null && day === featuredDayIdx;
-            const main = firstLine(text).replace(
-              /^Veckans (lunch|vegetariska)\s*[·:-]?\s*/i,
-              "",
-            );
+            const main = firstLine(text).replace(/^Veckans (lunch|vegetariska)\s*[·:-]?\s*/i, "");
             return (
-              <li
-                key={k}
-                className={cn(lunchWeekRowClass, isFeatured && lunchWeekRowTodayClass)}
-              >
-                <span
-                  className={cn(lunchWeekDayClass, isFeatured && lunchWeekDayTodayClass)}
-                >
+              <li key={k} className={cn(lunchWeekRowClass, isFeatured && lunchWeekRowTodayClass)}>
+                <span className={cn(lunchWeekDayClass, isFeatured && lunchWeekDayTodayClass)}>
                   {DAY_NAMES_FULL[day]?.slice(0, 3)}
                 </span>
                 <span className={lunchWeekMealClass}>
@@ -220,8 +212,7 @@ function FeaturedLunch({
   emptyText: string;
   loading: boolean;
 }) {
-  const containerClass =
-    "mb-4 rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3";
+  const containerClass = "mb-4 rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3";
 
   if (loading) {
     return (
@@ -233,26 +224,16 @@ function FeaturedLunch({
   }
   const entries = text ? parseLunchLines(text) : [];
   if (entries.length === 0) {
-    return (
-      <div className={cn(containerClass, "text-sm italic text-slate-500")}>
-        {emptyText}
-      </div>
-    );
+    return <div className={cn(containerClass, "text-sm italic text-slate-500")}>{emptyText}</div>;
   }
   return (
     <div className={cn(containerClass, "flex flex-col gap-1.5")}>
       {entries.map((entry, i) => (
         <div key={i} className="flex items-start gap-2.5">
           {entry.vegetarian ? (
-            <Leaf
-              className="h-4 w-4 text-green-600 shrink-0 mt-0.5"
-              aria-label="Vegetarian"
-            />
+            <Leaf className="h-4 w-4 text-green-600 shrink-0 mt-0.5" aria-label="Vegetarian" />
           ) : (
-            <Utensils
-              className="h-4 w-4 text-amber-700 shrink-0 mt-0.5"
-              aria-label="Main"
-            />
+            <Utensils className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" aria-label="Main" />
           )}
           <span className="text-[0.92rem] leading-[1.35] text-slate-800 break-words">
             {entry.dish}
