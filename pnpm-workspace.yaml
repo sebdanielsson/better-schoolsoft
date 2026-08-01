@@ -7,6 +7,11 @@ catalog:
 overrides:
   vite: "catalog:"
   vitest: "catalog:"
+  # GHSA-6g55-p6wh-862q and GHSA-9v9h-cgj8-h64p: sourceMappingURL handling in
+  # postcss allows arbitrary file read at build time. Reached only as a
+  # transitive dep of the Vite+ toolchain, which pulls a vulnerable range;
+  # 8.5.x is semver-compatible, so pin the patched floor until upstream moves.
+  postcss: ">=8.5.18"
 peerDependencyRules:
   allowAny:
     - vite
