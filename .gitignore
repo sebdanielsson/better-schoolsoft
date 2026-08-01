@@ -27,4 +27,7 @@ dist-ssr
 .vp-cache
 
 # AI
-.claude/
+# Agent skills live in .agents/ and are symlinked into .claude/ — both are
+# tracked so a fresh clone has them without re-running the skills CLI.
+# Only machine-local agent settings are ignored.
+.claude/settings.local.json
