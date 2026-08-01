@@ -911,10 +911,10 @@ export interface AssignmentRow {
   activityId: number;
   id: number;
   read: boolean;
-  resultReportStatus: AssignmentResultStatus | string;
+  resultReportStatus: AssignmentResultStatus | (string & {});
   sortDate: string;
   subTitle: string;
-  submissionStatus: AssignmentSubmissionStatus | string;
+  submissionStatus: AssignmentSubmissionStatus | (string & {});
   title: string;
 }
 
@@ -944,7 +944,7 @@ export type AssignmentSectionType =
   | "SUBMISSION"
   | "RESULTREPORT"
   | "MATERIAL"
-  | string;
+  | (string & {});
 
 export interface AssignmentSection {
   id: number;
@@ -957,7 +957,7 @@ export interface AssignmentSubmission {
   description: string | null;
   expireDate: string;
   groupHandIn: boolean;
-  handInType: "PHYSICAL" | "DIGITAL" | string;
+  handInType: "PHYSICAL" | "DIGITAL" | (string & {});
   plagiarismCheck: boolean;
   submissionStatus: {
     groupSubmissionId: number;
@@ -1119,7 +1119,7 @@ export interface StudentLessonStatus {
 
 export interface ScheduleLesson {
   allDay: boolean;
-  category: "lesson" | string;
+  category: "lesson" | (string & {});
   dayId: number;
   description: string;
   editable: boolean;

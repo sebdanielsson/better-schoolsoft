@@ -94,7 +94,7 @@ export default function LunchCard() {
     if (!session) return;
     let cancelled = false;
     setLoading(true);
-    (async () => {
+    void (async () => {
       const evaToken = await getEvaToken().catch(() => null);
       let data: LunchWeek | null = null;
       if (evaToken) {

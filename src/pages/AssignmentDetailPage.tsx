@@ -62,7 +62,7 @@ export default function AssignmentDetailPage() {
     setError(null);
     setState(emptyState);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");

@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - run: vp install
+
+      # Format, lint, and type-check in one pass (see `lint.options` in vite.config.ts).
+      - run: vp check
+
+      # `vp test` cannot run yet: @voidzero-dev/vite-plus-test ships no `vitest`
+      # bin entry, so the command fails to resolve a runner. Node's built-in test
+      # runner covers the same files in the meantime — switch this to `vp test`
+      # once upstream ships the bin.
+      - run: pnpm test
+
+      - run: vp build

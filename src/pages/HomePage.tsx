@@ -352,7 +352,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!session || !parentUserId || !child) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) return;

@@ -55,7 +55,7 @@ export default function PlanningsCard() {
      * flicker through a skeleton state. AnimateHeight smooths the swap. */
     setError(null);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
