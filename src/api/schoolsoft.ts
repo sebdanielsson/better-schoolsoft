@@ -784,9 +784,7 @@ export async function bootstrapSchoolsoftSession(
   bootstrappedSchools.add(school);
 }
 
-export async function fetchHolisticAssessments(
-  school: string,
-): Promise<HolisticAssessmentRow[]> {
+export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
   return cookieGet<HolisticAssessmentRow[]>(
     `${BASE}/${school}/rest-api/parent/holistic_assessment/rows`,
   );
@@ -848,9 +846,7 @@ export function fetchHolisticAssessmentSubjectWarning(
   school: string,
   id: number,
 ): Promise<HolisticAssessmentSubjectWarning | null> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning`,
-  );
+  return cookieGet(`${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning`);
 }
 
 export function fetchHolisticAssessmentConfirmStatus(
@@ -940,11 +936,7 @@ export interface AssignmentView {
   contents: unknown[];
 }
 
-export type AssignmentSectionType =
-  | "SUBMISSION"
-  | "RESULTREPORT"
-  | "MATERIAL"
-  | (string & {});
+export type AssignmentSectionType = "SUBMISSION" | "RESULTREPORT" | "MATERIAL" | (string & {});
 
 export interface AssignmentSection {
   id: number;
@@ -987,10 +979,7 @@ export function fetchAssignmentView(school: string, id: number): Promise<Assignm
   return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/view`);
 }
 
-export function fetchAssignmentSections(
-  school: string,
-  id: number,
-): Promise<AssignmentSection[]> {
+export function fetchAssignmentSections(school: string, id: number): Promise<AssignmentSection[]> {
   return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/sections`);
 }
 
@@ -998,9 +987,7 @@ export function fetchAssignmentConnectedPlannings(
   school: string,
   id: number,
 ): Promise<ConnectedPlanning[]> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/assignments/${id}/connected_plannings`,
-  );
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/connected_plannings`);
 }
 
 export function fetchAssignmentSubmission(
@@ -1016,9 +1003,7 @@ export function fetchAssignmentAssessment(
   school: string,
   assignmentId: number,
 ): Promise<AssignmentAssessment> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/assignment/${assignmentId}/assessment`,
-  );
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignment/${assignmentId}/assessment`);
 }
 
 /* ---------- Plannings ---------- */
@@ -1070,29 +1055,18 @@ export function fetchPlanningsThisWeek(
   );
 }
 
-export function fetchPlanningView(
-  school: string,
-  planningId: number,
-): Promise<PlanningView> {
+export function fetchPlanningView(school: string, planningId: number): Promise<PlanningView> {
   return cookieGet(`${BASE}/${school}/rest-api/parent/ps/plannings/${planningId}/view`);
 }
 
-export function fetchPlanningTabs(
-  school: string,
-  planningId: number,
-): Promise<PlanningPartTab[]> {
+export function fetchPlanningTabs(school: string, planningId: number): Promise<PlanningPartTab[]> {
   return cookieGet(
     `${BASE}/${school}/rest-api/parent/ps/plannings/${planningId}/planning_parts/tabs`,
   );
 }
 
-export function fetchPlanningPartView(
-  school: string,
-  partId: number,
-): Promise<PlanningPartView> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/view`,
-  );
+export function fetchPlanningPartView(school: string, partId: number): Promise<PlanningPartView> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/view`);
 }
 
 export function fetchPlanningConnectedAssignments(
@@ -1136,13 +1110,8 @@ export interface ScheduleLesson {
   teachingGroup: string;
 }
 
-export function fetchScheduleLessons(
-  school: string,
-  week: number,
-): Promise<ScheduleLesson[]> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/calendar/lessons/week/${week}`,
-  );
+export function fetchScheduleLessons(school: string, week: number): Promise<ScheduleLesson[]> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/calendar/lessons/week/${week}`);
 }
 
 /* ---------- Material file metadata (used by assignment detail) ---------- */
@@ -1154,13 +1123,8 @@ export interface MaterialFile {
 
 /** Despite the `/file` suffix, this endpoint returns JSON metadata about the
  *  file(s) attached to a material (name + id), not the binary itself. */
-export function fetchMaterialFiles(
-  school: string,
-  materialId: number,
-): Promise<MaterialFile[]> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`,
-  );
+export function fetchMaterialFiles(school: string, materialId: number): Promise<MaterialFile[]> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`);
 }
 
 /* ---------- Feature parameters (gates PS-module features) ---------- */
@@ -1186,9 +1150,7 @@ export async function getSchoolsoftParameters(
   const cached = parametersCache.get(school);
   if (cached) return cached;
   await bootstrapSchoolsoftSession(school, evaToken, userId, orgId, studentId);
-  const params = await cookieGet<SchoolsoftParameters>(
-    `${BASE}/${school}/rest-api/parameters`,
-  );
+  const params = await cookieGet<SchoolsoftParameters>(`${BASE}/${school}/rest-api/parameters`);
   parametersCache.set(school, params);
   return params;
 }

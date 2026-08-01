@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronDown, Search, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
-import {
-  fetchEvaStaff,
-  type EvaStaffGroup,
-  type EvaStaffMember,
-} from "../api/schoolsoft.ts";
+import { fetchEvaStaff, type EvaStaffGroup, type EvaStaffMember } from "../api/schoolsoft.ts";
 import Avatar from "../components/Avatar.tsx";
 import StaffPopover from "../components/StaffPopover.tsx";
 import { preloadStaffDetail, staffDetailCache } from "../lib/staff-cache.ts";
@@ -234,10 +230,7 @@ export default function StaffPage() {
             )}
             <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-slate-400" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="max-h-[420px] w-[260px] overflow-y-auto"
-          >
+          <DropdownMenuContent align="end" className="max-h-[420px] w-[260px] overflow-y-auto">
             {activeRoles.size > 0 && (
               <>
                 <DropdownMenuLabel className="flex items-center justify-between gap-3 py-1.5 normal-case tracking-normal">
@@ -283,9 +276,7 @@ export default function StaffPage() {
 
       {totalShown === 0 ? (
         <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
-          {activeRoles.size > 0 || query
-            ? "No staff match your filters."
-            : "No staff to display."}
+          {activeRoles.size > 0 || query ? "No staff match your filters." : "No staff to display."}
         </div>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
@@ -349,13 +340,7 @@ function GroupBlock({ type, color, members, onOpen }: GroupBlockProps) {
   );
 }
 
-function StaffRow({
-  member,
-  onOpen,
-}: {
-  member: EvaStaffMember;
-  onOpen: (id: number) => void;
-}) {
+function StaffRow({ member, onOpen }: { member: EvaStaffMember; onOpen: (id: number) => void }) {
   /* Read straight from the cache. The parent re-renders (via detailsTick) as
    * preloads land, which drags this row's read along with it — no per-row
    * subscription needed. */

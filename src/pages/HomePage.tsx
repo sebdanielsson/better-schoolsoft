@@ -753,16 +753,12 @@ export default function HomePage() {
   );
 }
 
-
 /** Map a `ScheduleLesson` from the rest-api schedule onto the legacy `Lesson`
  *  shape so the existing `LessonRow` keeps working unchanged.
  *  - Standard Skolverket subject codes ("Ma", "SO", …) expanded to long names.
  *  - Teacher fields come back as "A,B" without a space — normalize so the row
  *    reads "A, B" cleanly. */
-function scheduleLessonsForDate(
-  scheduleLessons: ScheduleLesson[],
-  date: Date,
-): Lesson[] {
+function scheduleLessonsForDate(scheduleLessons: ScheduleLesson[], date: Date): Lesson[] {
   return scheduleLessons
     .filter((l) => l.category === "lesson")
     .filter((l) => sameLocalDate(new Date(l.startDate), date))

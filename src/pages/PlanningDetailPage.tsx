@@ -33,8 +33,10 @@ const emptyState: State = {
 };
 
 export default function PlanningDetailPage() {
-  const { planningId: planningIdParam, partId: partIdParam } =
-    useParams<{ planningId: string; partId: string }>();
+  const { planningId: planningIdParam, partId: partIdParam } = useParams<{
+    planningId: string;
+    partId: string;
+  }>();
   const planningId = planningIdParam ? Number(planningIdParam) : NaN;
   const initialPartId = partIdParam ? Number(partIdParam) : NaN;
   const [activePartId, setActivePartId] = useState<number>(initialPartId);
@@ -80,8 +82,7 @@ export default function PlanningDetailPage() {
           view: viewRes.status === "fulfilled" ? viewRes.value : null,
           tabs: tabsRes.status === "fulfilled" ? tabsRes.value : [],
           partView: partRes.status === "fulfilled" ? partRes.value : null,
-          assignments:
-            assignmentsRes.status === "fulfilled" ? assignmentsRes.value : [],
+          assignments: assignmentsRes.status === "fulfilled" ? assignmentsRes.value : [],
         });
       } catch (e: unknown) {
         if (!cancelled) {
@@ -98,8 +99,7 @@ export default function PlanningDetailPage() {
   }, [session, getEvaToken, parentUserId, child, planningId, activePartId]);
 
   const sanitizedDescription = useMemo(
-    () =>
-      state.partView?.description ? sanitizeStaffHtml(state.partView.description) : "",
+    () => (state.partView?.description ? sanitizeStaffHtml(state.partView.description) : ""),
     [state.partView?.description],
   );
 
@@ -121,7 +121,7 @@ export default function PlanningDetailPage() {
           {loading && !state.view ? (
             <Skeleton className="h-8 w-2/3 rounded-sm" />
           ) : (
-            state.view?.title ?? state.partView?.title ?? "Planning"
+            (state.view?.title ?? state.partView?.title ?? "Planning")
           )}
         </h2>
         {(state.view || state.partView) && (
@@ -193,7 +193,10 @@ export default function PlanningDetailPage() {
                         className="block rounded-md border border-slate-200 px-3 py-2 text-inherit no-underline transition-colors hover:border-slate-300 hover:shadow-sm"
                       >
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-slate-400 shrink-0" aria-hidden="true" />
+                          <FileText
+                            className="h-4 w-4 text-slate-400 shrink-0"
+                            aria-hidden="true"
+                          />
                           <span className="text-[0.92rem] font-semibold">{a.title}</span>
                           {!a.read && (
                             <span
@@ -202,9 +205,7 @@ export default function PlanningDetailPage() {
                             />
                           )}
                         </div>
-                        <div className="mt-0.5 text-[0.78rem] text-slate-500">
-                          {a.subTitle}
-                        </div>
+                        <div className="mt-0.5 text-[0.78rem] text-slate-500">{a.subTitle}</div>
                       </Link>
                     </li>
                   ))}
