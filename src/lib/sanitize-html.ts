@@ -15,21 +15,31 @@
 const FORBIDDEN_ELEMENTS =
   "script,style,iframe,object,embed,base,link,meta,form,noscript,frame,frameset";
 
-/** Attributes that resolve to a URL and therefore need a scheme check. */
+/** Attributes holding exactly one URL. */
 const URL_ATTRIBUTES = new Set([
   "href",
   "src",
-  "srcset",
   "action",
   "formaction",
   "poster",
-  "ping",
   "background",
   "cite",
   "longdesc",
   "data",
   "xlink:href",
 ]);
+
+/** Attributes holding a *list* of URLs, which need every candidate checked.
+ *  Testing the raw attribute value would only ever see the first one, so an
+ *  unsafe scheme in a later candidate slipped through behind a safe leading
+ *  URL. `srcset` is comma-separated with an optional descriptor after each URL
+ *  ("a.png 2x"); `ping` is whitespace-separated. */
+const URL_LIST_ATTRIBUTES = new Set(["srcset", "ping"]);
+
+function splitUrlList(name: string, value: string): string[] {
+  const candidates = name === "srcset" ? value.split(",") : value.split(/\s+/);
+  return candidates.map((c) => c.trim().split(/\s+/)[0] ?? "").filter((c) => c.length > 0);
+}
 
 /** Attributes dropped unconditionally — they embed a whole document. */
 const FORBIDDEN_ATTRIBUTES = new Set(["srcdoc"]);
@@ -69,6 +79,11 @@ export function sanitizeStaffHtml(html: string): string {
       if (name.startsWith("on") || FORBIDDEN_ATTRIBUTES.has(name)) {
         el.removeAttribute(attr.name);
       } else if (URL_ATTRIBUTES.has(name) && isUnsafeUrl(attr.value)) {
+        el.removeAttribute(attr.name);
+      } else if (
+        URL_LIST_ATTRIBUTES.has(name) &&
+        splitUrlList(name, attr.value).some(isUnsafeUrl)
+      ) {
         el.removeAttribute(attr.name);
       }
     }

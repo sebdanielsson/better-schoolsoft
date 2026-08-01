@@ -30,9 +30,17 @@ registerSessionCache(() => {
  *  permanently if it fails `MAX_ATTEMPTS` times. */
 export function useEvaResourceBlob(picture: string | null | undefined): string | null {
   const { session, getEvaToken } = useAuth();
-  const [src, setSrc] = useState<string | null>(() =>
-    picture && blobCache.has(picture) ? (blobCache.get(picture) ?? null) : null,
-  );
+  /* Stored together with the picture it belongs to, not as a bare URL. Reading
+   * it back below is then conditional on that picture still being the requested
+   * one, which makes showing a stale avatar structurally impossible: clearing
+   * on `picture` changing to null, to an uncached value, or to one whose fetch
+   * fails all fall out of the same check instead of needing an explicit reset
+   * on every early return — one of which was previously missing. */
+  const [resolved, setResolved] = useState<{ picture: string; url: string } | null>(() => {
+    const cached = picture ? blobCache.get(picture) : undefined;
+    return picture && cached ? { picture, url: cached } : null;
+  });
+
   useEffect(() => {
     /* Scoped to this effect run rather than held in a ref, so a response is
      * discarded whenever *its* run is superseded — not only on unmount. A
@@ -42,14 +50,12 @@ export function useEvaResourceBlob(picture: string | null | undefined): string |
     let cancelled = false;
     if (!picture || !session) return;
 
-    if (blobCache.has(picture)) {
-      setSrc(blobCache.get(picture) ?? null);
+    const cached = blobCache.get(picture);
+    if (cached) {
+      setResolved({ picture, url: cached });
       return;
     }
-    if ((failedAttempts.get(picture) ?? 0) >= MAX_ATTEMPTS) {
-      setSrc(null);
-      return;
-    }
+    if ((failedAttempts.get(picture) ?? 0) >= MAX_ATTEMPTS) return;
 
     let promise = inflight.get(picture);
     if (!promise) {
@@ -80,7 +86,7 @@ export function useEvaResourceBlob(picture: string | null | undefined): string |
     }
 
     void promise.then((url) => {
-      if (!cancelled && url) setSrc(url);
+      if (!cancelled && url) setResolved({ picture, url });
     });
 
     return () => {
@@ -88,5 +94,6 @@ export function useEvaResourceBlob(picture: string | null | undefined): string |
     };
   }, [picture, session, getEvaToken]);
 
-  return src;
+  /* Only surface a URL that belongs to the picture being asked for right now. */
+  return resolved && resolved.picture === picture ? resolved.url : null;
 }

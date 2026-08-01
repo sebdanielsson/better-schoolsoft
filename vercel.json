@@ -11,7 +11,7 @@
   ],
   "headers": [
     {
-      "source": "/((?!schoolsoft/).*)",
+      "source": "/((?!schoolsoft(?:/|$)).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
