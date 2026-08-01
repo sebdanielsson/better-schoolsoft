@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { exchangeEvaCode, fetchEvaParent } from "../api/schoolsoft.ts";
@@ -9,6 +9,12 @@ export default function OAuthCallbackPage() {
   const navigate = useNavigate();
   const { session, setEvaTokens } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  /* An authorization code is single-use, but `session` is in this effect's
+   * dependency list and the success path writes to it — so the effect re-ran
+   * and exchanged the same code a second time, which upstream rejects. Latch on
+   * the first attempt; a ref rather than state so it takes effect immediately
+   * and survives StrictMode's double-invoke without a redundant render. */
+  const exchangeStarted = useRef(false);
 
   useEffect(() => {
     const code = params.get("code");
@@ -32,6 +38,8 @@ export default function OAuthCallbackPage() {
       setError("State mismatch — possible CSRF. Please try signing in again.");
       return;
     }
+    if (exchangeStarted.current) return;
+    exchangeStarted.current = true;
 
     void (async () => {
       try {

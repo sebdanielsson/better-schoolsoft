@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
@@ -93,7 +93,11 @@ export default function HeroCard() {
     };
   }, []);
 
-  const today = useMemo(() => new Date(), []);
+  /* Read on every render rather than memoized. Behind `useMemo(…, [])` this
+   * froze at mount, so the minute timer above re-rendered the card with a stale
+   * date and the week number never rolled over. It is only used for display
+   * below, so there is nothing to gain from caching it. */
+  const today = new Date();
   const todayWeek = isoWeek(today);
 
   if (!session) return null;

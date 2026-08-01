@@ -364,10 +364,14 @@ export default function HomePage() {
           orgId,
           child.studentId,
         );
-        const week = isoWeek(new Date());
+        const now = new Date();
+        const week = isoWeek(now);
+        /* Derive the next week from a date rather than `week + 1`, which asked
+         * for week 53/54 every December instead of wrapping to week 1. */
+        const nextWeekNumber = isoWeek(new Date(now.getTime() + 7 * 86_400_000));
         const [thisWeek, nextWeek] = await Promise.all([
           fetchScheduleLessons(session.school, week).catch(() => [] as ScheduleLesson[]),
-          fetchScheduleLessons(session.school, week + 1).catch(() => [] as ScheduleLesson[]),
+          fetchScheduleLessons(session.school, nextWeekNumber).catch(() => [] as ScheduleLesson[]),
         ]);
         if (cancelled) return;
         setScheduleLessons([...thisWeek, ...nextWeek]);

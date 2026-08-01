@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth.tsx";
 import { fetchEvaResource } from "../api/schoolsoft.ts";
 import { schedule } from "../lib/fetch-scheduler.ts";
@@ -33,15 +33,13 @@ export function useEvaResourceBlob(picture: string | null | undefined): string |
   const [src, setSrc] = useState<string | null>(() =>
     picture && blobCache.has(picture) ? (blobCache.get(picture) ?? null) : null,
   );
-  /* Monotonic id of the newest effect run. A response is only applied if its
-   * run is still the current one — otherwise a slow fetch for a previous
-   * `picture` would land after a fast one for the current picture and paint
-   * the wrong avatar. A single boolean `aborted` ref cannot express this,
-   * because unmount is not the only reason a response goes stale. */
-  const runId = useRef(0);
-
   useEffect(() => {
-    const run = ++runId.current;
+    /* Scoped to this effect run rather than held in a ref, so a response is
+     * discarded whenever *its* run is superseded — not only on unmount. A
+     * component-lifetime `aborted` ref cannot express that, which is how a slow
+     * fetch for a previous `picture` used to land after a fast one for the
+     * current picture and paint the wrong avatar. */
+    let cancelled = false;
     if (!picture || !session) return;
 
     if (blobCache.has(picture)) {
@@ -82,12 +80,11 @@ export function useEvaResourceBlob(picture: string | null | undefined): string |
     }
 
     void promise.then((url) => {
-      if (runId.current === run && url) setSrc(url);
+      if (!cancelled && url) setSrc(url);
     });
 
     return () => {
-      /* Invalidate this run so a late response can't overwrite a newer one. */
-      runId.current++;
+      cancelled = true;
     };
   }, [picture, session, getEvaToken]);
 
