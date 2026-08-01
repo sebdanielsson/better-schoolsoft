@@ -35,6 +35,10 @@ export async function fetchToken(school: string, appKey: string): Promise<TokenR
 export function isTokenExpired(expiryDate: string): boolean {
   const clean = expiryDate.replace(/\.\d+$/, "");
   const expiry = new Date(clean.replace(" ", "T"));
+  /* An unparseable date yields NaN, and every comparison against NaN is false —
+   * which previously reported the token as *valid* and sent it anyway. Treat
+   * anything we cannot read as expired so the caller refreshes instead. */
+  if (Number.isNaN(expiry.getTime())) return true;
   return Date.now() + 5 * 60 * 1000 > expiry.getTime();
 }
 
@@ -183,20 +187,12 @@ export interface EvaTokenResponse {
 
 /* ---------- Data fetchers (legacy app API — works with appKey/token auth) ---------- */
 
-async function getJson<T>(url: string, token: string): Promise<T> {
-  const res = await fetch(url, { headers: authHeaders(token) });
-  if (!res.ok) throw new Error(`Request failed (${res.status}) ${url}`);
-  const text = await res.text();
-  if (!text) return null as T;
-  return JSON.parse(text) as T;
-}
-
 export function fetchLunch(school: string, token: string, orgId: number): Promise<LunchWeek[]> {
-  return getJson(`${BASE}/${school}/api/lunchmenus/student/${orgId}`, token);
+  return getJsonList(`${BASE}/${school}/api/lunchmenus/student/${orgId}`, token);
 }
 
 export function fetchLessons(school: string, token: string, orgId: number): Promise<Lesson[]> {
-  return getJson(`${BASE}/${school}/api/lessons/student/${orgId}`, token);
+  return getJsonList(`${BASE}/${school}/api/lessons/student/${orgId}`, token);
 }
 
 const NOTICE_TYPES = "calendar,schoolcalendar,privatecalendar";
@@ -210,7 +206,7 @@ export function fetchCalendar(
   const now = Date.now();
   const end = now + days * 24 * 60 * 60 * 1000;
   const url = `${BASE}/${school}/api/notices/student/${orgId}/${now}/${end}/${NOTICE_TYPES}`;
-  return getJson(url, token);
+  return getJsonList(url, token);
 }
 
 /** Fetch all kinds of notices over a window — useful for "news" feed.
@@ -228,7 +224,7 @@ export function fetchNotices(
   const start = now - daysBack * 24 * 60 * 60 * 1000;
   const end = now + daysAhead * 24 * 60 * 60 * 1000;
   const url = `${BASE}/${school}/api/notices/student/${orgId}/${start}/${end}/${types}`;
-  return getJson(url, token);
+  return getJsonList(url, token);
 }
 
 /* ---------- Eva (modern OAuth) API ---------- */
@@ -276,7 +272,7 @@ export function fetchEvaLunchWeek(
   orgId: number,
   week: number,
 ): Promise<EvaLunchDay[]> {
-  return evaGet(`${BASE}/${school}/eva/api/v1/schools/${orgId}/lunchmenu/${week}`, accessToken);
+  return evaGetList(`${BASE}/${school}/eva/api/v1/schools/${orgId}/lunchmenu/${week}`, accessToken);
 }
 
 /** Convert Eva lunch days (Mon=1…Fri=5) into the legacy LunchWeek shape so existing UI works. */
@@ -344,7 +340,7 @@ export function fetchEvaChildren(
   accessToken: string,
   userId: number,
 ): Promise<EvaChild[]> {
-  return evaGet(`${BASE}/${school}/eva/api/v1/parent/${userId}/children`, accessToken);
+  return evaGetList(`${BASE}/${school}/eva/api/v1/parent/${userId}/children`, accessToken);
 }
 
 /** Single-day lunch (per-meal-type). Matches `/lunchmenu/week/{week}/day/{day}` in the iOS app. */
@@ -355,7 +351,7 @@ export function fetchEvaLunchDay(
   week: number,
   day: number,
 ): Promise<EvaLunchMeal[]> {
-  return evaGet(
+  return evaGetList(
     `${BASE}/${school}/eva/api/v1/schools/${orgId}/lunchmenu/week/${week}/day/${day}`,
     accessToken,
   );
@@ -384,7 +380,7 @@ export function fetchEvaNews(
   studentId: number,
   langId = 1,
 ): Promise<EvaNewsItem[]> {
-  return evaGet(
+  return evaGetList(
     `${BASE}/${school}/eva/api/v2/parent/${userId}/schools/${orgId}/news?studentId=${studentId}&langId=${langId}`,
     accessToken,
   );
@@ -478,7 +474,7 @@ export function fetchEvaLessonsDay(
   week: number,
   day: number,
 ): Promise<EvaLessonTile[]> {
-  return evaGet(
+  return evaGetList(
     `${BASE}/${school}/eva/api/v1/schools/${orgId}/student/${studentId}/lessons/week/${week}/day/${day}?langId=1`,
     accessToken,
   );
@@ -544,7 +540,7 @@ export function fetchEvaInbox(
   userId: number,
   orgId: number,
 ): Promise<EvaMessageInbox[]> {
-  return evaGet(
+  return evaGetList(
     `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/messages/inbox`,
     accessToken,
   );
@@ -705,7 +701,7 @@ export function fetchEvaStaff(
   orgId: number,
   langId = 1,
 ): Promise<EvaStaffGroup[]> {
-  return evaGet(
+  return evaGetList(
     `${BASE}/${school}/eva/api/v1/schools/${orgId}/staff?langId=${langId}`,
     accessToken,
   );
@@ -784,10 +780,8 @@ export async function bootstrapSchoolsoftSession(
   bootstrappedSchools.add(school);
 }
 
-export async function fetchHolisticAssessments(
-  school: string,
-): Promise<HolisticAssessmentRow[]> {
-  return cookieGet<HolisticAssessmentRow[]>(
+export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
+  return cookieGetList<HolisticAssessmentRow>(
     `${BASE}/${school}/rest-api/parent/holistic_assessment/rows`,
   );
 }
@@ -848,9 +842,7 @@ export function fetchHolisticAssessmentSubjectWarning(
   school: string,
   id: number,
 ): Promise<HolisticAssessmentSubjectWarning | null> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning`,
-  );
+  return cookieGet(`${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning`);
 }
 
 export function fetchHolisticAssessmentConfirmStatus(
@@ -875,7 +867,7 @@ export function fetchHolisticAssessmentSections(
   school: string,
   id: number,
 ): Promise<HolisticAssessmentSection[]> {
-  return cookieGet(
+  return cookieGetList(
     `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/sections/published`,
   );
 }
@@ -911,10 +903,10 @@ export interface AssignmentRow {
   activityId: number;
   id: number;
   read: boolean;
-  resultReportStatus: AssignmentResultStatus | string;
+  resultReportStatus: AssignmentResultStatus | (string & {});
   sortDate: string;
   subTitle: string;
-  submissionStatus: AssignmentSubmissionStatus | string;
+  submissionStatus: AssignmentSubmissionStatus | (string & {});
   title: string;
 }
 
@@ -923,7 +915,7 @@ export function fetchAssignmentsThisWeek(
   week: number,
   year: number,
 ): Promise<AssignmentRow[]> {
-  return cookieGet(
+  return cookieGetList(
     `${BASE}/${school}/rest-api/parent/ps/assignments/start-page?week=${week}&year=${year}`,
   );
 }
@@ -940,11 +932,7 @@ export interface AssignmentView {
   contents: unknown[];
 }
 
-export type AssignmentSectionType =
-  | "SUBMISSION"
-  | "RESULTREPORT"
-  | "MATERIAL"
-  | string;
+export type AssignmentSectionType = "SUBMISSION" | "RESULTREPORT" | "MATERIAL" | (string & {});
 
 export interface AssignmentSection {
   id: number;
@@ -957,7 +945,7 @@ export interface AssignmentSubmission {
   description: string | null;
   expireDate: string;
   groupHandIn: boolean;
-  handInType: "PHYSICAL" | "DIGITAL" | string;
+  handInType: "PHYSICAL" | "DIGITAL" | (string & {});
   plagiarismCheck: boolean;
   submissionStatus: {
     groupSubmissionId: number;
@@ -987,18 +975,15 @@ export function fetchAssignmentView(school: string, id: number): Promise<Assignm
   return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/view`);
 }
 
-export function fetchAssignmentSections(
-  school: string,
-  id: number,
-): Promise<AssignmentSection[]> {
-  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/sections`);
+export function fetchAssignmentSections(school: string, id: number): Promise<AssignmentSection[]> {
+  return cookieGetList(`${BASE}/${school}/rest-api/parent/ps/assignments/${id}/sections`);
 }
 
 export function fetchAssignmentConnectedPlannings(
   school: string,
   id: number,
 ): Promise<ConnectedPlanning[]> {
-  return cookieGet(
+  return cookieGetList(
     `${BASE}/${school}/rest-api/parent/ps/assignments/${id}/connected_plannings`,
   );
 }
@@ -1016,9 +1001,7 @@ export function fetchAssignmentAssessment(
   school: string,
   assignmentId: number,
 ): Promise<AssignmentAssessment> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/assignment/${assignmentId}/assessment`,
-  );
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/assignment/${assignmentId}/assessment`);
 }
 
 /* ---------- Plannings ---------- */
@@ -1065,41 +1048,30 @@ export function fetchPlanningsThisWeek(
   week: number,
   year: number,
 ): Promise<PlanningRow[]> {
-  return cookieGet(
+  return cookieGetList(
     `${BASE}/${school}/rest-api/parent/ps/planning_parts/start-page?week=${week}&year=${year}`,
   );
 }
 
-export function fetchPlanningView(
-  school: string,
-  planningId: number,
-): Promise<PlanningView> {
+export function fetchPlanningView(school: string, planningId: number): Promise<PlanningView> {
   return cookieGet(`${BASE}/${school}/rest-api/parent/ps/plannings/${planningId}/view`);
 }
 
-export function fetchPlanningTabs(
-  school: string,
-  planningId: number,
-): Promise<PlanningPartTab[]> {
-  return cookieGet(
+export function fetchPlanningTabs(school: string, planningId: number): Promise<PlanningPartTab[]> {
+  return cookieGetList(
     `${BASE}/${school}/rest-api/parent/ps/plannings/${planningId}/planning_parts/tabs`,
   );
 }
 
-export function fetchPlanningPartView(
-  school: string,
-  partId: number,
-): Promise<PlanningPartView> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/view`,
-  );
+export function fetchPlanningPartView(school: string, partId: number): Promise<PlanningPartView> {
+  return cookieGet(`${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/view`);
 }
 
 export function fetchPlanningConnectedAssignments(
   school: string,
   partId: number,
 ): Promise<ConnectedAssignment[]> {
-  return cookieGet(
+  return cookieGetList(
     `${BASE}/${school}/rest-api/parent/ps/planning_parts/${partId}/connected_assignments`,
   );
 }
@@ -1119,7 +1091,7 @@ export interface StudentLessonStatus {
 
 export interface ScheduleLesson {
   allDay: boolean;
-  category: "lesson" | string;
+  category: "lesson" | (string & {});
   dayId: number;
   description: string;
   editable: boolean;
@@ -1136,13 +1108,8 @@ export interface ScheduleLesson {
   teachingGroup: string;
 }
 
-export function fetchScheduleLessons(
-  school: string,
-  week: number,
-): Promise<ScheduleLesson[]> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/calendar/lessons/week/${week}`,
-  );
+export function fetchScheduleLessons(school: string, week: number): Promise<ScheduleLesson[]> {
+  return cookieGetList(`${BASE}/${school}/rest-api/parent/calendar/lessons/week/${week}`);
 }
 
 /* ---------- Material file metadata (used by assignment detail) ---------- */
@@ -1154,13 +1121,8 @@ export interface MaterialFile {
 
 /** Despite the `/file` suffix, this endpoint returns JSON metadata about the
  *  file(s) attached to a material (name + id), not the binary itself. */
-export function fetchMaterialFiles(
-  school: string,
-  materialId: number,
-): Promise<MaterialFile[]> {
-  return cookieGet(
-    `${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`,
-  );
+export function fetchMaterialFiles(school: string, materialId: number): Promise<MaterialFile[]> {
+  return cookieGetList(`${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`);
 }
 
 /* ---------- Feature parameters (gates PS-module features) ---------- */
@@ -1186,9 +1148,7 @@ export async function getSchoolsoftParameters(
   const cached = parametersCache.get(school);
   if (cached) return cached;
   await bootstrapSchoolsoftSession(school, evaToken, userId, orgId, studentId);
-  const params = await cookieGet<SchoolsoftParameters>(
-    `${BASE}/${school}/rest-api/parameters`,
-  );
+  const params = await cookieGet<SchoolsoftParameters>(`${BASE}/${school}/rest-api/parameters`);
   parametersCache.set(school, params);
   return params;
 }
@@ -1199,6 +1159,46 @@ async function cookieGet<T>(url: string): Promise<T> {
   const text = await res.text();
   if (!text) return null as T;
   return JSON.parse(text) as T;
+}
+
+/** Array-safe JSON fetch for the legacy app API. The object-returning helpers
+ *  return `null as T` on
+ *  an empty body, which is a lie for every fetcher whose return type is an
+ *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
+ *  reached the UI. An absent or non-array body means "no rows" here. */
+async function getJsonList<T>(url: string, token: string): Promise<T[]> {
+  const res = await fetch(url, { headers: authHeaders(token) });
+  if (!res.ok) throw new Error(`Request failed (${res.status}) ${url}`);
+  const text = await res.text();
+  if (!text) return [];
+  const data: unknown = JSON.parse(text);
+  return Array.isArray(data) ? (data as T[]) : [];
+}
+
+/** Array-returning sibling of `evaGet`. It returns `null as T` on
+ *  an empty body, which is a lie for every fetcher whose return type is an
+ *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
+ *  reached the UI. An absent or non-array body means "no rows" here. */
+async function evaGetList<T>(url: string, accessToken: string): Promise<T[]> {
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!res.ok) throw new Error(`Eva request failed (${res.status}) ${url}`);
+  const text = await res.text();
+  if (!text) return [];
+  const data: unknown = JSON.parse(text);
+  return Array.isArray(data) ? (data as T[]) : [];
+}
+
+/** Array-returning sibling of `cookieGet`. It returns `null as T` on
+ *  an empty body, which is a lie for every fetcher whose return type is an
+ *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
+ *  reached the UI. An absent or non-array body means "no rows" here. */
+async function cookieGetList<T>(url: string): Promise<T[]> {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status}) ${url}`);
+  const text = await res.text();
+  if (!text) return [];
+  const data: unknown = JSON.parse(text);
+  return Array.isArray(data) ? (data as T[]) : [];
 }
 
 /* ---------- School list ---------- */
@@ -1303,8 +1303,13 @@ export function isoDay(d: Date = new Date()): number {
 /** Convert SchoolSoft lessons' bitmask of week numbers to an array. */
 export function bitmaskToWeeks(bitmask: number): number[] {
   const weeks: number[] = [];
+  /* Bitwise operators coerce to int32, and `1 << i` wraps at i === 32 (`1 << 32`
+   * is 1, not 2**32). The old `bitmask & (1 << i)` therefore made weeks 33+
+   * unreachable and aliased them onto weeks 1-21. A 53-week mask needs more
+   * than 32 bits, so test each bit arithmetically instead — Number is exact
+   * well past 2**53. */
   for (let i = 0; i < 53; i++) {
-    if (bitmask & (1 << i)) weeks.push(i + 1);
+    if (Math.floor(bitmask / 2 ** i) % 2 === 1) weeks.push(i + 1);
   }
   return weeks;
 }

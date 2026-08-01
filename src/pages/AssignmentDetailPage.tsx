@@ -62,7 +62,7 @@ export default function AssignmentDetailPage() {
     setError(null);
     setState(emptyState);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
@@ -76,16 +76,14 @@ export default function AssignmentDetailPage() {
         );
         /* Fire view + sections + plannings + assessment in parallel. Submission
          * depends on sections (we need the section's id), so it fetches after. */
-        const [viewRes, sectionsRes, planningsRes, assessmentRes] =
-          await Promise.allSettled([
-            fetchAssignmentView(session.school, id),
-            fetchAssignmentSections(session.school, id),
-            fetchAssignmentConnectedPlannings(session.school, id),
-            fetchAssignmentAssessment(session.school, id),
-          ]);
+        const [viewRes, sectionsRes, planningsRes, assessmentRes] = await Promise.allSettled([
+          fetchAssignmentView(session.school, id),
+          fetchAssignmentSections(session.school, id),
+          fetchAssignmentConnectedPlannings(session.school, id),
+          fetchAssignmentAssessment(session.school, id),
+        ]);
         if (cancelled) return;
-        const sections =
-          sectionsRes.status === "fulfilled" ? sectionsRes.value : [];
+        const sections = sectionsRes.status === "fulfilled" ? sectionsRes.value : [];
         const submissionSection = sections.find((s) => s.type === "SUBMISSION");
         const materialSections = sections.filter((s) => s.type === "MATERIAL");
         const [submissionRes2, ...materialResults] = await Promise.allSettled([
@@ -95,8 +93,7 @@ export default function AssignmentDetailPage() {
           ...materialSections.map((m) => fetchMaterialFiles(session.school, m.id)),
         ]);
         if (cancelled) return;
-        const submission =
-          submissionRes2.status === "fulfilled" ? submissionRes2.value : null;
+        const submission = submissionRes2.status === "fulfilled" ? submissionRes2.value : null;
         const materialFiles = materialResults.flatMap((r) =>
           r.status === "fulfilled" ? r.value : [],
         );
@@ -104,8 +101,7 @@ export default function AssignmentDetailPage() {
           view: viewRes.status === "fulfilled" ? viewRes.value : null,
           sections,
           submission,
-          assessment:
-            assessmentRes.status === "fulfilled" ? assessmentRes.value : null,
+          assessment: assessmentRes.status === "fulfilled" ? assessmentRes.value : null,
           plannings: planningsRes.status === "fulfilled" ? planningsRes.value : [],
           materialFiles,
         });
@@ -147,7 +143,7 @@ export default function AssignmentDetailPage() {
           {loading && !state.view ? (
             <Skeleton className="h-8 w-2/3 rounded-sm" />
           ) : (
-            state.view?.title ?? "Assignment"
+            (state.view?.title ?? "Assignment")
           )}
         </h2>
         {state.view && (
@@ -180,17 +176,11 @@ export default function AssignmentDetailPage() {
                 />
               </section>
             )}
-            {hasSubmission && state.submission && (
-              <SubmissionPanel submission={state.submission} />
-            )}
-            {hasResult && state.assessment && (
-              <ResultPanel assessment={state.assessment} />
-            )}
+            {hasSubmission && state.submission && <SubmissionPanel submission={state.submission} />}
+            {hasResult && state.assessment && <ResultPanel assessment={state.assessment} />}
             {state.materialFiles.length > 0 && (
               <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
-                <h3 className="text-[1.05rem] font-semibold tracking-[-0.01em] mb-2">
-                  Materials
-                </h3>
+                <h3 className="text-[1.05rem] font-semibold tracking-[-0.01em] mb-2">Materials</h3>
                 <ul className="flex flex-col gap-1.5">
                   {state.materialFiles.map((f) => (
                     <li
@@ -225,9 +215,7 @@ export default function AssignmentDetailPage() {
                           <Link2 className="h-4 w-4 text-slate-400 shrink-0" aria-hidden="true" />
                           <span className="text-[0.92rem] font-semibold">{p.title}</span>
                         </div>
-                        <div className="mt-0.5 text-[0.78rem] text-slate-500">
-                          {p.subTitle}
-                        </div>
+                        <div className="mt-0.5 text-[0.78rem] text-slate-500">{p.subTitle}</div>
                       </Link>
                     </li>
                   ))}
@@ -294,9 +282,7 @@ function ResultPanel({ assessment }: { assessment: AssignmentAssessment }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
       <h3 className="text-[1.05rem] font-semibold tracking-[-0.01em] mb-2">Result</h3>
-      {assessment.review && (
-        <p className="text-[0.95rem] text-slate-800">{assessment.review}</p>
-      )}
+      {assessment.review && <p className="text-[0.95rem] text-slate-800">{assessment.review}</p>}
       {assessment.teacherComment && (
         <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 px-3 py-2">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-500">

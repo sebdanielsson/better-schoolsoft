@@ -37,10 +37,17 @@ const submissionIconClass = "h-4 w-4 shrink-0";
 
 function SubmissionIcon({ status }: { status: string }) {
   if (status === "SUBMITTED" || status === "EXPIRED_SUBMITTED") {
-    return <CheckCircle2 className={cn(submissionIconClass, "text-green-600")} aria-label="Submitted" />;
+    return (
+      <CheckCircle2 className={cn(submissionIconClass, "text-green-600")} aria-label="Submitted" />
+    );
   }
   if (status === "EXPIRED_NOT_SUBMITTED") {
-    return <AlertCircle className={cn(submissionIconClass, "text-red-600")} aria-label="Past due, not submitted" />;
+    return (
+      <AlertCircle
+        className={cn(submissionIconClass, "text-red-600")}
+        aria-label="Past due, not submitted"
+      />
+    );
   }
   return <FileText className={cn(submissionIconClass, "text-slate-400")} aria-label="Assignment" />;
 }
@@ -69,7 +76,7 @@ export default function AssignmentsCard() {
      * flicker through a skeleton state. AnimateHeight smooths the swap. */
     setError(null);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");

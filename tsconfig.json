@@ -15,6 +15,8 @@
     "noEmit": true,
 
     /* Linting */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
@@ -23,5 +25,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  /* `api/` holds the Vercel Edge proxy. It was excluded, so the one piece of
+   * server-side code in the repo was never typechecked. */
+  "include": ["src", "api"]
 }

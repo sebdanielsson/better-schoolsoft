@@ -52,7 +52,7 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
     let cancelled = false;
     setDetail(null);
     setError(null);
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");

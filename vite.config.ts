@@ -14,7 +14,10 @@ export default defineConfig({
     },
   },
   fmt: {},
-  lint: { options: { typeAware: true, typeCheck: true } },
+  lint: {
+    options: { typeAware: true, typeCheck: true },
+    plugins: ["react", "react-perf", "typescript", "unicorn", "oxc", "import", "promise"],
+  },
   server: {
     proxy: {
       "/schoolsoft": {

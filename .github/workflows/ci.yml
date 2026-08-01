@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      # Node 24 matches the version mise.toml pins for local development.
+      # >=22.18 is required either way: the test script relies on the test
+      # runner stripping TypeScript types without a flag.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Format, lint, and type-check in one pass. Type-aware linting and
+      # type-checking are enabled via `lint.options` in vite.config.ts, so this
+      # single command covers all three.
+      - run: pnpm exec vp check
+
+      # Not `vp test`: @voidzero-dev/vite-plus-test ships no `vitest` bin entry,
+      # so the command cannot resolve a runner. Node's built-in test runner
+      # covers the same files meanwhile — switch once upstream ships the bin.
+      - run: pnpm test
+
+      - run: pnpm exec vp build

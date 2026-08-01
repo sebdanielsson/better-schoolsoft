@@ -25,7 +25,7 @@ export default function AssessmentsPage() {
     setLoading(true);
     setError(null);
 
-    (async () => {
+    void (async () => {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token available");
@@ -141,15 +141,16 @@ function AssessmentRow({ row }: { row: HolisticAssessmentRow }) {
           {row.subTitle}
         </div>
       </div>
-      <div className="text-[0.78rem] text-slate-500 whitespace-nowrap">
-        {row.friendlyUpdatedAt}
-      </div>
+      <div className="text-[0.78rem] text-slate-500 whitespace-nowrap">{row.friendlyUpdatedAt}</div>
     </>
   );
   return (
     <li>
       {hasDetail ? (
-        <Link to={`/assessments/${row.holisticAssessmentId}`} className={cn(className, "no-underline text-inherit")}>
+        <Link
+          to={`/assessments/${row.holisticAssessmentId}`}
+          className={cn(className, "no-underline text-inherit")}
+        >
           {body}
         </Link>
       ) : (
