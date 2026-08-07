@@ -36,8 +36,17 @@
     "vite": "catalog:",
     "vite-plus": "catalog:"
   },
-  "engines": {
-    "node": ">=22.18"
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.20.0",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.18.0",
+      "onFail": "download"
+    }
   },
   "packageManager": "pnpm@11.20.0"
 }
