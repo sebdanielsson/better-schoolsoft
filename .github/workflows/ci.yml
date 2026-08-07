@@ -30,14 +30,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Format, lint, and type-check in one pass. Type-aware linting and
-      # type-checking are enabled via `lint.options` in vite.config.ts, so this
-      # single command covers all three.
-      - run: pnpm exec vp check
+      # oxfmt --check, then type-aware oxlint, then tsc --noEmit.
+      - run: pnpm run check
 
-      # Not `vp test`: @voidzero-dev/vite-plus-test ships no `vitest` bin entry,
-      # so the command cannot resolve a runner. Node's built-in test runner
-      # covers the same files meanwhile — switch once upstream ships the bin.
       - run: pnpm test
 
-      - run: pnpm exec vp build
+      - run: pnpm build
