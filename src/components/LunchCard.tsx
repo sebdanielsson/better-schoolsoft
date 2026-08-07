@@ -143,15 +143,15 @@ export default function LunchCard() {
     : "No lunch published for this week.";
 
   return (
-    <section className="relative overflow-hidden rounded-[18px] border border-slate-200 border-l-4 border-l-amber-500 bg-gradient-to-b from-amber-50 to-white to-[60px] shadow flex flex-col md:col-span-6">
-      <header className="flex items-center justify-between px-5 pt-4 pb-1 gap-3">
+    <section className="relative flex flex-col overflow-hidden rounded-[18px] border border-l-4 border-slate-200 border-l-amber-500 bg-gradient-to-b from-amber-50 to-white to-[60px] shadow md:col-span-6">
+      <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-1">
         <h3 className="text-base font-bold tracking-[-0.01em]">Lunch</h3>
         <div className="flex items-center gap-1">
           {!isActiveWeek && (
             <button
               type="button"
               onClick={() => setWeekMonday(activeMonday)}
-              className="mr-1 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
+              className="mr-1 text-xs font-medium text-slate-500 transition-colors hover:text-blue-600"
             >
               Today
             </button>
@@ -164,7 +164,7 @@ export default function LunchCard() {
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
-          <span className="text-xs font-semibold tabular-nums text-slate-600 min-w-[3.5rem] text-center">
+          <span className="min-w-[3.5rem] text-center text-xs font-semibold text-slate-600 tabular-nums">
             w{week}
           </span>
           <button
@@ -177,7 +177,7 @@ export default function LunchCard() {
           </button>
         </div>
       </header>
-      <div className="flex-1 px-5 pb-5 pt-2">
+      <div className="flex-1 px-5 pt-2 pb-5">
         <div className={cardSubtitleClass}>{subtitle}</div>
         <FeaturedLunch text={featuredText} emptyText={emptyText} loading={loading} />
         <ul className={lunchWeekListClass}>
@@ -224,18 +224,18 @@ function FeaturedLunch({
   }
   const entries = text ? parseLunchLines(text) : [];
   if (entries.length === 0) {
-    return <div className={cn(containerClass, "text-sm italic text-slate-500")}>{emptyText}</div>;
+    return <div className={cn(containerClass, "text-sm text-slate-500 italic")}>{emptyText}</div>;
   }
   return (
     <div className={cn(containerClass, "flex flex-col gap-1.5")}>
       {entries.map((entry, i) => (
         <div key={i} className="flex items-start gap-2.5">
           {entry.vegetarian ? (
-            <Leaf className="h-4 w-4 text-green-600 shrink-0 mt-0.5" aria-label="Vegetarian" />
+            <Leaf className="mt-0.5 h-4 w-4 shrink-0 text-green-600" aria-label="Vegetarian" />
           ) : (
-            <Utensils className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" aria-label="Main" />
+            <Utensils className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-label="Main" />
           )}
-          <span className="text-[0.92rem] leading-[1.35] text-slate-800 break-words">
+          <span className="text-[0.92rem] leading-[1.35] break-words text-slate-800">
             {entry.dish}
           </span>
         </div>

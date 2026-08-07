@@ -91,15 +91,15 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
       }}
     >
       <DialogContent
-        className="p-0 gap-0 rounded-2xl bg-white text-slate-900 max-w-[560px] sm:max-w-[560px] max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden"
+        className="flex max-h-[calc(100dvh-3rem)] max-w-[560px] flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 text-slate-900 sm:max-w-[560px]"
         aria-labelledby="staff-popover-title"
       >
-        <div className="flex items-start gap-4 pt-6 pr-[3.25rem] pb-5 pl-7 border-b border-slate-200 shrink-0">
+        <div className="flex shrink-0 items-start gap-4 border-b border-slate-200 pt-6 pr-[3.25rem] pb-5 pl-7">
           <Avatar name={name} picture={detail?.picture || null} size={64} />
           <div className="min-w-0 flex-1 pt-0.5">
             <h2
               id="staff-popover-title"
-              className="text-[1.4rem] font-bold leading-[1.2] tracking-[-0.01em] m-0 text-slate-900 break-words"
+              className="m-0 text-[1.4rem] leading-[1.2] font-bold tracking-[-0.01em] break-words text-slate-900"
             >
               {name}
             </h2>
@@ -116,9 +116,9 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
           </div>
         </div>
 
-        <div className="px-7 py-5 overflow-y-auto flex-1 min-h-0 flex flex-col gap-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-7 py-5">
           {error && (
-            <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {error}
             </div>
           )}
@@ -165,7 +165,7 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
 
           {detail?.contactInfo && detail.contactInfo.trim() && (
             <Section label="About">
-              <p className="whitespace-pre-wrap text-[0.92rem] leading-[1.55] text-slate-700">
+              <p className="text-[0.92rem] leading-[1.55] whitespace-pre-wrap text-slate-700">
                 {detail.contactInfo}
               </p>
             </Section>
@@ -176,7 +176,7 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
             !detail.mobile &&
             !(detail.roles && detail.roles.length) &&
             !(detail.contactInfo && detail.contactInfo.trim()) && (
-              <div className="text-sm italic text-slate-500">No contact details published.</div>
+              <div className="text-sm text-slate-500 italic">No contact details published.</div>
             )}
         </div>
       </DialogContent>
@@ -187,7 +187,7 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1.5 text-[0.7rem] font-bold uppercase tracking-[0.06em] text-slate-500">
+      <div className="mb-1.5 text-[0.7rem] font-bold tracking-[0.06em] text-slate-500 uppercase">
         {label}
       </div>
       {children}

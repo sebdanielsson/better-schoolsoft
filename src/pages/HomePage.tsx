@@ -467,7 +467,7 @@ export default function HomePage() {
   return (
     <div className={homePageClass}>
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
@@ -482,8 +482,8 @@ export default function HomePage() {
             </Link>
           </header>
           <div className={cardBodyClass}>
-            <div className="flex items-center justify-between gap-3 mb-2.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+            <div className="mb-2.5 flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold tracking-[0.05em] text-slate-500 uppercase">
                 {selectedSubtitle}
               </span>
               <div className="flex items-center gap-1">
@@ -491,7 +491,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setSelectedDay(activeSchoolDay)}
-                    className="mr-1 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
+                    className="mr-1 text-xs font-medium text-slate-500 transition-colors hover:text-blue-600"
                   >
                     Today
                   </button>
@@ -865,7 +865,7 @@ function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean 
     /* Half-height row for short between-lesson breaks. */
     return (
       <li className="grid grid-cols-[58px_1fr] items-center gap-3 rounded-md border border-slate-100 bg-slate-50/60 px-2.5 py-1 text-slate-500">
-        <div className="text-center text-[0.72rem] font-medium leading-[1.1] tabular-nums">
+        <div className="text-center text-[0.72rem] leading-[1.1] font-medium tabular-nums">
           {formatLessonTime(lesson.startTime)}
           {lesson.endTime && (
             <>
@@ -906,7 +906,7 @@ function NewsSkeletonList({ count }: { count: number }) {
     <ul className={newsListClass} aria-hidden="true">
       {Array.from({ length: count }).map((_, i) => (
         <li key={i} className={cn(newsItemClass, newsItemSkeletonClass)}>
-          <Skeleton className="size-8 rounded-full shrink-0" />
+          <Skeleton className="size-8 shrink-0 rounded-full" />
           <div className={newsBodyClass}>
             {/* Use the real layout classes so paddings/margins line up exactly with the
              * loaded state — skeleton bars stand in for the text but the boxes match. */}

@@ -143,12 +143,12 @@ export default function SchedulePage() {
 
   if (loading)
     return (
-      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading schedule…</div>
+      <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">Loading schedule…</div>
     );
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">Schedule</h2>
         <div className="flex items-center gap-2">
           <button
@@ -163,7 +163,7 @@ export default function SchedulePage() {
           <span className="min-w-[7rem] text-center text-[0.95rem] font-semibold">
             Week {selectedWeek}
             {selectedWeek === currentWeek && (
-              <span className="inline-block ml-2 px-[0.6em] py-[0.15em] bg-blue-600 text-white rounded-full text-[0.7rem] font-semibold align-middle tracking-[0.02em]">
+              <span className="ml-2 inline-block rounded-full bg-blue-600 px-[0.6em] py-[0.15em] align-middle text-[0.7rem] font-semibold tracking-[0.02em] text-white">
                 current
               </span>
             )}
@@ -181,13 +181,13 @@ export default function SchedulePage() {
       </div>
 
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
 
       {source === "empty" ? (
-        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
           <p>
             <strong>Full schedule not available as JSON.</strong>
           </p>
@@ -223,19 +223,19 @@ export default function SchedulePage() {
               >
                 <div
                   className={cn(
-                    "flex items-center justify-between border-b-2 border-blue-600 pb-2 text-[0.8rem] font-bold uppercase tracking-[0.05em] text-slate-500",
+                    "flex items-center justify-between border-b-2 border-blue-600 pb-2 text-[0.8rem] font-bold tracking-[0.05em] text-slate-500 uppercase",
                     isToday && "text-blue-600",
                   )}
                 >
                   {label}
                   {isToday && (
-                    <span className="inline-block ml-2 px-[0.6em] py-[0.15em] bg-blue-600 text-white rounded-full text-[0.7rem] font-semibold align-middle tracking-[0.02em]">
+                    <span className="ml-2 inline-block rounded-full bg-blue-600 px-[0.6em] py-[0.15em] align-middle text-[0.7rem] font-semibold tracking-[0.02em] text-white">
                       today
                     </span>
                   )}
                 </div>
                 {dayLessons.length === 0 ? (
-                  <div className="py-2 text-[0.8rem] italic text-slate-500">Free</div>
+                  <div className="py-2 text-[0.8rem] text-slate-500 italic">Free</div>
                 ) : (
                   dayLessons.map((row) => (
                     <div
@@ -246,7 +246,7 @@ export default function SchedulePage() {
                         {formatLessonTime(row.startTime)}
                         {row.endTime && `–${formatLessonTime(row.endTime)}`}
                       </div>
-                      <div className="text-[0.92rem] font-semibold leading-tight">
+                      <div className="text-[0.92rem] leading-tight font-semibold">
                         {row.subject}
                       </div>
                       {row.location && (

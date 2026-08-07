@@ -128,12 +128,12 @@ export default function NewsPage() {
 
   if (loading)
     return (
-      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading news…</div>
+      <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">Loading news…</div>
     );
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">News</h2>
         <span className="text-[0.85rem] text-slate-500">
           {items.length} {items.length === 1 ? "item" : "items"}
@@ -141,7 +141,7 @@ export default function NewsPage() {
       </div>
 
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
@@ -200,7 +200,7 @@ export default function NewsPage() {
       )}
 
       {filtered.length === 0 ? (
-        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
           No news in this category.
         </div>
       ) : (
@@ -249,11 +249,11 @@ export default function NewsPage() {
                       />
                     )}
                   </div>
-                  <h3 className="mb-[0.45rem] text-[1.05rem] font-bold leading-tight tracking-tight">
+                  <h3 className="mb-[0.45rem] text-[1.05rem] leading-tight font-bold tracking-tight">
                     {n.title.trim()}
                   </h3>
                   {decoded && (
-                    <div className="whitespace-pre-wrap break-words text-[0.92rem] leading-relaxed text-slate-900 [&_a]:break-all">
+                    <div className="text-[0.92rem] leading-relaxed break-words whitespace-pre-wrap text-slate-900 [&_a]:break-all">
                       {isOpen ? (
                         renderDescription(n.description)
                       ) : (
