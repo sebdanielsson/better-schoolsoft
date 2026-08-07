@@ -25,13 +25,13 @@ export default function DashboardPage() {
 
   return (
     <HeroDataProvider>
-      <div className="flex flex-col min-h-dvh">
-        <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-7">
+      <div className="flex min-h-dvh flex-col">
+        <main className="mx-auto w-full max-w-[1400px] flex-1 p-4 md:p-7">
           <HeroCard />
           {!isHome && (
             <Link
               to="/"
-              className="inline-flex items-center gap-[0.4rem] mb-4 px-[0.85rem] py-[0.4rem] bg-white border border-slate-200 rounded-full text-slate-500 text-[0.85rem] font-medium no-underline transition-colors hover:bg-blue-50 hover:text-blue-600 hover:border-blue-600"
+              className="mb-4 inline-flex items-center gap-[0.4rem] rounded-full border border-slate-200 bg-white px-[0.85rem] py-[0.4rem] text-[0.85rem] font-medium text-slate-500 no-underline transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600"
             >
               <span aria-hidden="true">←</span> Home
             </Link>
@@ -64,7 +64,7 @@ export default function DashboardPage() {
 function RouteFallback() {
   return (
     <div
-      className="h-40 rounded-[18px] bg-slate-100 animate-pulse"
+      className="h-40 animate-pulse rounded-[18px] bg-slate-100"
       role="status"
       aria-label="Loading page"
     />

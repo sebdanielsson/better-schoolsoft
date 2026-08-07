@@ -107,19 +107,19 @@ export default function HeroCard() {
   const isGuardian = session.userType === "2";
 
   return (
-    <section className="relative overflow-hidden mb-6 rounded-[18px] text-white shadow-[var(--shadow-lg)] bg-[linear-gradient(135deg,#1e40af_0%,#2563eb_50%,#3b82f6_100%)] p-6 md:py-7 md:px-8 grid grid-cols-2 items-center gap-x-4 gap-y-3 md:gap-x-8 md:gap-y-4">
+    <section className="relative mb-6 grid grid-cols-2 items-center gap-x-4 gap-y-3 overflow-hidden rounded-[18px] bg-[linear-gradient(135deg,#1e40af_0%,#2563eb_50%,#3b82f6_100%)] p-6 text-white shadow-[var(--shadow-lg)] md:gap-x-8 md:gap-y-4 md:px-8 md:py-7">
       {/* Decorative circles */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-[50px] -top-[80px] w-[240px] h-[240px] rounded-full bg-white/[0.08]"
+        className="pointer-events-none absolute -top-[80px] -right-[50px] h-[240px] w-[240px] rounded-full bg-white/[0.08]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-[100px] right-20 w-[200px] h-[200px] rounded-full bg-white/[0.05]"
+        className="pointer-events-none absolute right-20 -bottom-[100px] h-[200px] w-[200px] rounded-full bg-white/[0.05]"
       />
 
       {/* Row 1: date + week, centered in the top padding area. */}
-      <span className="relative z-[1] col-span-2 text-xs opacity-85 text-center sm:text-sm">
+      <span className="relative z-[1] col-span-2 text-center text-xs opacity-85 sm:text-sm">
         {today.toLocaleDateString(undefined, {
           weekday: "long",
           month: "long",
@@ -141,7 +141,7 @@ export default function HeroCard() {
             {initials(session.name)}
           </AvatarFallback>
         </Avatar>
-        <h1 className="m-0 text-base sm:text-[1.2rem] md:text-[1.6rem] font-bold tracking-[-0.02em] leading-[1.1] min-w-0">
+        <h1 className="m-0 min-w-0 text-base leading-[1.1] font-bold tracking-[-0.02em] sm:text-[1.2rem] md:text-[1.6rem]">
           {session.name}
         </h1>
       </div>
@@ -150,7 +150,7 @@ export default function HeroCard() {
        * Always rendered for guardians so the card height doesn't pop when data arrives. */}
       {isGuardian && (
         <div className="relative z-[1] flex flex-col-reverse items-center gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-[0.6rem]">
-          <span className="text-base sm:text-[1.2rem] md:text-[1.6rem] font-bold tracking-[-0.02em] leading-[1.1] text-right min-w-0 md:min-w-[9rem]">
+          <span className="min-w-0 text-right text-base leading-[1.1] font-bold tracking-[-0.02em] sm:text-[1.2rem] md:min-w-[9rem] md:text-[1.6rem]">
             {child ? (
               <>
                 {child.firstName}

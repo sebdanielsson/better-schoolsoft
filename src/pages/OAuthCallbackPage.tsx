@@ -85,17 +85,17 @@ export default function OAuthCallbackPage() {
 
   return (
     <div
-      className="flex items-center justify-center min-h-dvh p-4"
+      className="flex min-h-dvh items-center justify-center p-4"
       style={{
         background:
           "radial-gradient(circle at 20% 0%, #e0e7ff 0%, transparent 50%), radial-gradient(circle at 100% 100%, #dbeafe 0%, transparent 50%), #f5f7fb",
       }}
     >
-      <div className="bg-white py-10 px-8 rounded-[18px] shadow-[var(--shadow-lg)] w-full max-w-[420px]">
-        <h1 className="text-[1.85rem] font-bold mb-1 tracking-[-0.02em]">Signing you in…</h1>
+      <div className="w-full max-w-[420px] rounded-[18px] bg-white px-8 py-10 shadow-[var(--shadow-lg)]">
+        <h1 className="mb-1 text-[1.85rem] font-bold tracking-[-0.02em]">Signing you in…</h1>
         {error ? (
           <>
-            <p className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm mb-4">
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {error}
             </p>
             <button
@@ -103,13 +103,13 @@ export default function OAuthCallbackPage() {
               onClick={() => {
                 void navigate("/login");
               }}
-              className="block w-full py-[0.8rem] px-4 bg-blue-600 text-white border-0 rounded-lg text-base font-semibold cursor-pointer transition-[background] duration-150 hover:bg-blue-700 active:translate-y-px"
+              className="block w-full cursor-pointer rounded-lg border-0 bg-blue-600 px-4 py-[0.8rem] text-base font-semibold text-white transition-[background] duration-150 hover:bg-blue-700 active:translate-y-px"
             >
               Back to sign in
             </button>
           </>
         ) : (
-          <p className="text-slate-500 text-[0.9rem]">
+          <p className="text-[0.9rem] text-slate-500">
             Exchanging the SchoolSoft code for your session…
           </p>
         )}

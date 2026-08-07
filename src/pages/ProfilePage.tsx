@@ -260,12 +260,12 @@ export default function ProfilePage() {
 
   if (loading)
     return (
-      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading profile…</div>
+      <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">Loading profile…</div>
     );
   if (!profile) {
     return (
-      <div className="flex flex-col gap-4 max-w-[720px] mx-auto">
-        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="mx-auto flex max-w-[720px] flex-col gap-4">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-bold tracking-tight">Profile settings</h2>
         </div>
         {banner && <BannerView banner={banner} />}
@@ -278,8 +278,8 @@ export default function ProfilePage() {
   const notPublish = !!profile.notPublish;
 
   return (
-    <div className="flex flex-col gap-4 max-w-[720px] mx-auto">
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+    <div className="mx-auto flex max-w-[720px] flex-col gap-4">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">Profile settings</h2>
         <span className="text-[0.85rem] text-slate-500">{session?.orgName}</span>
       </div>
@@ -591,12 +591,12 @@ export default function ProfilePage() {
           <dd className={ddClass}>
             {ssn ? (
               <>
-                <span className="font-mono text-[0.9rem] tracking-[0.05em] bg-slate-50 px-2 py-[0.15em] rounded">
+                <span className="rounded bg-slate-50 px-2 py-[0.15em] font-mono text-[0.9rem] tracking-[0.05em]">
                   {revealSsn ? ssn : "•••••• – ••••"}
                 </span>
                 <button
                   type="button"
-                  className="text-blue-600 text-xs underline-offset-2 hover:underline cursor-pointer bg-transparent border-0 px-2 py-[0.15rem]"
+                  className="cursor-pointer border-0 bg-transparent px-2 py-[0.15rem] text-xs text-blue-600 underline-offset-2 hover:underline"
                   onClick={() => {
                     setRevealSsn((v) => !v);
                   }}
@@ -621,20 +621,20 @@ export default function ProfilePage() {
           <h3 className={cardHeadingClass}>Privacy</h3>
         </div>
         <div className="flex items-start justify-between gap-6">
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-[0.95rem] mb-[0.2rem]">Hide my profile</div>
-            <div className="text-[0.82rem] text-slate-500 leading-[1.5]">
+          <div className="min-w-0 flex-1">
+            <div className="mb-[0.2rem] text-[0.95rem] font-semibold">Hide my profile</div>
+            <div className="text-[0.82rem] leading-[1.5] text-slate-500">
               When on, students and other guardians at your child's schools can't see your user
               account or contact details. School staff and administrators can still see you.
             </div>
           </div>
           <label
-            className="relative inline-block w-12 h-7 shrink-0 cursor-pointer"
+            className="relative inline-block h-7 w-12 shrink-0 cursor-pointer"
             aria-label="Hide my profile"
           >
             <input
               type="checkbox"
-              className="peer absolute inset-0 m-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+              className="peer absolute inset-0 m-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
               checked={notPublish}
               disabled={savingNotPublish}
               onChange={(e) => {
@@ -651,7 +651,7 @@ export default function ProfilePage() {
             >
               <span
                 className={cn(
-                  "absolute top-[3px] left-[3px] w-[22px] h-[22px] rounded-full bg-white",
+                  "absolute top-[3px] left-[3px] h-[22px] w-[22px] rounded-full bg-white",
                   "shadow-[0_2px_4px_rgba(15,23,42,0.18)] transition-transform duration-[0.18s]",
                   notPublish && "translate-x-[20px]",
                 )}
@@ -670,7 +670,7 @@ function BannerView({ banner, role }: { banner: Banner; role?: "status" }) {
       ? "bg-green-50 border-green-200 text-green-800"
       : "bg-red-50 border-red-200 text-red-800";
   return (
-    <div role={role} className={cn("px-4 py-[0.7rem] rounded-lg text-sm border", tone)}>
+    <div role={role} className={cn("rounded-lg border px-4 py-[0.7rem] text-sm", tone)}>
       {banner.text}
     </div>
   );
