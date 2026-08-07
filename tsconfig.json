@@ -4,7 +4,9 @@
     "module": "esnext",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    /* `node` covers the `node:*` imports in the tests and in the dev-server
+     * proxy config; vite-plus used to pull @types/node in transitively. */
+    "types": ["vite/client", "node"],
     "skipLibCheck": true,
 
     /* Bundler mode */

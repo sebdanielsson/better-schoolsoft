@@ -71,7 +71,7 @@ export default function AssessmentsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">Assessments</h2>
         {rows && (
           <span className="text-[0.85rem] text-slate-500">
@@ -82,7 +82,7 @@ export default function AssessmentsPage() {
       </div>
 
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
@@ -90,7 +90,7 @@ export default function AssessmentsPage() {
       {loading ? (
         <SkeletonList />
       ) : !rows || rows.length === 0 ? (
-        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
           No assessments to display.
         </div>
       ) : (
@@ -120,10 +120,10 @@ function AssessmentRow({ row }: { row: HolisticAssessmentRow }) {
         style={{ background: row.color }}
       />
       <div className="min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-[0.95rem]">{row.title}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[0.95rem] font-semibold">{row.title}</span>
           {row.subjectWarning && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[0.7rem] font-semibold tracking-wide text-amber-800 uppercase">
               <AlertTriangle className="h-3 w-3" aria-hidden="true" />
               Subject warning
             </span>
@@ -134,14 +134,14 @@ function AssessmentRow({ row }: { row: HolisticAssessmentRow }) {
         </div>
         <div
           className={cn(
-            "text-[0.85rem] mt-0.5",
+            "mt-0.5 text-[0.85rem]",
             row.published ? "text-slate-700" : "text-slate-400 italic",
           )}
         >
           {row.subTitle}
         </div>
       </div>
-      <div className="text-[0.78rem] text-slate-500 whitespace-nowrap">{row.friendlyUpdatedAt}</div>
+      <div className="text-[0.78rem] whitespace-nowrap text-slate-500">{row.friendlyUpdatedAt}</div>
     </>
   );
   return (
@@ -149,7 +149,7 @@ function AssessmentRow({ row }: { row: HolisticAssessmentRow }) {
       {hasDetail ? (
         <Link
           to={`/assessments/${row.holisticAssessmentId}`}
-          className={cn(className, "no-underline text-inherit")}
+          className={cn(className, "text-inherit no-underline")}
         >
           {body}
         </Link>
@@ -171,7 +171,7 @@ function SkeletonList() {
           <Skeleton className="self-stretch rounded-full" />
           <div className="min-w-0">
             <Skeleton className="h-4 w-32 rounded-sm" />
-            <Skeleton className="h-3 w-48 rounded-sm mt-2" />
+            <Skeleton className="mt-2 h-3 w-48 rounded-sm" />
           </div>
           <Skeleton className="h-3 w-16 rounded-sm" />
         </li>

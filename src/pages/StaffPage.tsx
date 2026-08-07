@@ -164,18 +164,18 @@ export default function StaffPage() {
 
   if (loading)
     return (
-      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading staff…</div>
+      <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">Loading staff…</div>
     );
   if (error)
     return (
-      <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+      <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
         {error}
       </div>
     );
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">Staff</h2>
         <span className="text-[0.85rem] text-slate-500">
           {totalShown === totalAll
@@ -184,11 +184,11 @@ export default function StaffPage() {
         </span>
       </div>
 
-      <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:items-center">
-        <div className="relative flex-1 min-w-0">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
           <Search
             aria-hidden="true"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none"
+            className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
           />
           <Input
             type="text"
@@ -206,7 +206,7 @@ export default function StaffPage() {
               onClick={() => {
                 setQuery("");
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              className="absolute top-1/2 right-2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />
@@ -224,7 +224,7 @@ export default function StaffPage() {
           >
             <span>Roles</span>
             {activeRoles.size > 0 && (
-              <span className="rounded-full bg-blue-600 px-1.5 text-[0.68rem] font-semibold leading-[1.4] text-white">
+              <span className="rounded-full bg-blue-600 px-1.5 text-[0.68rem] leading-[1.4] font-semibold text-white">
                 {activeRoles.size}
               </span>
             )}
@@ -233,8 +233,8 @@ export default function StaffPage() {
           <DropdownMenuContent align="end" className="max-h-[420px] w-[260px] overflow-y-auto">
             {activeRoles.size > 0 && (
               <>
-                <DropdownMenuLabel className="flex items-center justify-between gap-3 py-1.5 normal-case tracking-normal">
-                  <span className="text-[0.72rem] font-semibold uppercase tracking-wider text-slate-500">
+                <DropdownMenuLabel className="flex items-center justify-between gap-3 py-1.5 tracking-normal normal-case">
+                  <span className="text-[0.72rem] font-semibold tracking-wider text-slate-500 uppercase">
                     {activeRoles.size} selected
                   </span>
                   <button
@@ -264,7 +264,7 @@ export default function StaffPage() {
                   closeOnClick={false}
                   /* Override the shadcn defaults that uppercase + wide-track everything —
                    * role labels like "HoY" or "Mentor Yr4" carry case information we need. */
-                  className="text-[0.85rem] font-normal normal-case tracking-normal"
+                  className="text-[0.85rem] font-normal tracking-normal normal-case"
                 >
                   {role}
                 </DropdownMenuCheckboxItem>
@@ -275,11 +275,11 @@ export default function StaffPage() {
       </div>
 
       {totalShown === 0 ? (
-        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
           {activeRoles.size > 0 || query ? "No staff match your filters." : "No staff to display."}
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -324,10 +324,10 @@ function GroupBlock({ type, color, members, onOpen }: GroupBlockProps) {
     <>
       <TableRow className="bg-slate-50 hover:bg-slate-50">
         <TableCell colSpan={3} className="py-2">
-          <div className="flex items-center gap-2 text-[0.7rem] font-bold uppercase tracking-[0.06em] text-slate-500">
+          <div className="flex items-center gap-2 text-[0.7rem] font-bold tracking-[0.06em] text-slate-500 uppercase">
             <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
             {type}
-            <span className="text-slate-400 normal-case tracking-normal font-normal">
+            <span className="font-normal tracking-normal text-slate-400 normal-case">
               · {members.length}
             </span>
           </div>
@@ -363,7 +363,7 @@ function StaffRow({ member, onOpen }: { member: EvaStaffMember; onOpen: (id: num
         <Avatar name={fullName(member)} picture={member.picture || null} size={32} />
       </TableCell>
       <TableCell className="font-medium text-slate-900">{fullName(member)}</TableCell>
-      <TableCell className="hidden sm:table-cell whitespace-normal">
+      <TableCell className="hidden whitespace-normal sm:table-cell">
         {roles.length === 0 ? (
           <span className="text-[0.85rem] text-slate-400">—</span>
         ) : (

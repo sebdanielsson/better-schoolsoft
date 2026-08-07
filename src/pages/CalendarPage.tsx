@@ -147,12 +147,12 @@ export default function CalendarPage() {
 
   if (loading)
     return (
-      <div className="py-16 px-8 text-center text-slate-500 text-[0.95rem]">Loading calendar…</div>
+      <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">Loading calendar…</div>
     );
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">Calendar</h2>
         <span className="text-[0.85rem] text-slate-500">
           {events.length} event{events.length === 1 ? "" : "s"}
@@ -162,13 +162,13 @@ export default function CalendarPage() {
       </div>
 
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
 
       {events.length === 0 ? (
-        <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
           <p>
             {source === "eva"
               ? "No upcoming events. SchoolSoft's modern API only exposes the next calendar event as a tile — the full list isn't available as JSON."
@@ -179,7 +179,7 @@ export default function CalendarPage() {
         <div className="flex flex-col gap-6">
           {grouped.map(([key, dayEvents]) => (
             <div key={key}>
-              <div className="mb-[0.65rem] text-[0.82rem] font-bold uppercase tracking-[0.05em] text-slate-500">
+              <div className="mb-[0.65rem] text-[0.82rem] font-bold tracking-[0.05em] text-slate-500 uppercase">
                 {formatDateHeading(dayEvents[0]!.start)}
               </div>
               <ul className="flex list-none flex-col gap-[0.65rem]">
@@ -188,7 +188,7 @@ export default function CalendarPage() {
                     key={event.id}
                     className="grid grid-cols-[80px_1fr] gap-4 rounded-lg border border-slate-200 bg-white px-[1.1rem] py-4 shadow-[var(--shadow-sm)] transition-all hover:-translate-y-px hover:shadow-[var(--shadow)]"
                   >
-                    <div className="-mr-1 border-r border-dashed border-slate-200 pr-4 pt-0.5 text-center">
+                    <div className="-mr-1 border-r border-dashed border-slate-200 pt-0.5 pr-4 text-center">
                       <div className="text-[0.95rem] font-bold text-blue-600">
                         {formatTime(event.start)}
                       </div>

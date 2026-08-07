@@ -107,8 +107,8 @@ export default function PlanningDetailPage() {
 
   return (
     <div>
-      <nav className="text-[0.85rem] text-slate-500 mb-2">
-        <Link to="/" className="hover:text-blue-600 transition-colors">
+      <nav className="mb-2 text-[0.85rem] text-slate-500">
+        <Link to="/" className="transition-colors hover:text-blue-600">
           Home
         </Link>
         <span className="mx-1.5 text-slate-300">/</span>
@@ -133,14 +133,14 @@ export default function PlanningDetailPage() {
       </div>
 
       {state.tabs.length > 1 && (
-        <div className="flex gap-1 border-b border-slate-200 mb-4 overflow-x-auto">
+        <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
           {state.tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActivePartId(tab.id)}
               className={cn(
-                "px-3 py-2 text-[0.85rem] font-medium border-b-2 transition-colors whitespace-nowrap",
+                "border-b-2 px-3 py-2 text-[0.85rem] font-medium whitespace-nowrap transition-colors",
                 tab.id === activePartId
                   ? "border-indigo-500 text-indigo-700"
                   : "border-transparent text-slate-500 hover:text-slate-700",
@@ -153,7 +153,7 @@ export default function PlanningDetailPage() {
       )}
 
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
@@ -164,25 +164,25 @@ export default function PlanningDetailPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="md:col-span-2 flex flex-col gap-4">
+          <div className="flex flex-col gap-4 md:col-span-2">
             {sanitizedDescription && (
               <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
                 <div
-                  className="text-[0.95rem] leading-[1.55] text-slate-800 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_a]:text-blue-600 [&_a]:underline"
+                  className="text-[0.95rem] leading-[1.55] text-slate-800 [&_a]:text-blue-600 [&_a]:underline [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5"
                   dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
                 />
                 {state.partView?.publishDate && (
-                  <p className="text-[0.78rem] text-slate-500 mt-3">
+                  <p className="mt-3 text-[0.78rem] text-slate-500">
                     Published {state.partView.publishDate}
                   </p>
                 )}
               </section>
             )}
           </div>
-          <aside className="md:col-span-1 flex flex-col gap-4">
+          <aside className="flex flex-col gap-4 md:col-span-1">
             {state.assignments.length > 0 && (
               <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
-                <h3 className="text-[1.05rem] font-semibold tracking-[-0.01em] mb-2">
+                <h3 className="mb-2 text-[1.05rem] font-semibold tracking-[-0.01em]">
                   Linked assignments
                 </h3>
                 <ul className="flex flex-col gap-2">
@@ -194,13 +194,13 @@ export default function PlanningDetailPage() {
                       >
                         <div className="flex items-center gap-2">
                           <FileText
-                            className="h-4 w-4 text-slate-400 shrink-0"
+                            className="h-4 w-4 shrink-0 text-slate-400"
                             aria-hidden="true"
                           />
                           <span className="text-[0.92rem] font-semibold">{a.title}</span>
                           {!a.read && (
                             <span
-                              className="inline-block h-2 w-2 rounded-full bg-blue-600 shrink-0"
+                              className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-600"
                               aria-label="Unread"
                             />
                           )}
@@ -214,7 +214,7 @@ export default function PlanningDetailPage() {
             )}
             {state.assignments.length === 0 && !loading && (
               <section className="rounded-lg border border-dashed border-slate-200 px-5 py-4 text-[0.85rem] text-slate-500">
-                <Link2 className="h-4 w-4 inline mr-1.5 align-text-bottom" aria-hidden="true" />
+                <Link2 className="mr-1.5 inline h-4 w-4 align-text-bottom" aria-hidden="true" />
                 No linked assignments.
               </section>
             )}

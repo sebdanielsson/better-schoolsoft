@@ -127,7 +127,7 @@ export default function SchoolCombobox({
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        className="w-full pl-[0.9rem] pr-[2.2rem] py-[0.7rem] border border-slate-200 rounded-lg text-base bg-white font-[inherit] transition-[border-color,box-shadow] duration-150 focus:outline-none focus:border-blue-600 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]"
+        className="w-full rounded-lg border border-slate-200 bg-white py-[0.7rem] pr-[2.2rem] pl-[0.9rem] font-[inherit] text-base transition-[border-color,box-shadow] duration-150 focus:border-blue-600 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] focus:outline-none"
       />
       <button
         type="button"
@@ -139,7 +139,7 @@ export default function SchoolCombobox({
           setOpen((v) => !v);
           inputRef.current?.focus();
         }}
-        className="absolute top-1/2 right-[0.55rem] -translate-y-1/2 inline-flex items-center justify-center size-6 border-0 bg-transparent text-slate-500 cursor-pointer p-0 rounded-md hover:text-slate-900 hover:bg-slate-50"
+        className="absolute top-1/2 right-[0.55rem] inline-flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent p-0 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
       >
         <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
           <path d="M5 7l5 6 5-6" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -148,19 +148,19 @@ export default function SchoolCombobox({
 
       {open && (
         <ul
-          className="absolute top-[calc(100%+4px)] left-0 right-0 max-h-[260px] overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg list-none m-0 p-1 z-50"
+          className="absolute top-[calc(100%+4px)] right-0 left-0 z-50 m-0 max-h-[260px] list-none overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg"
           id={listboxId}
           role="listbox"
           ref={listRef}
         >
           {loading && (
-            <li className="px-[0.7rem] py-[0.7rem] text-slate-500 text-sm">Loading schools…</li>
+            <li className="px-[0.7rem] py-[0.7rem] text-sm text-slate-500">Loading schools…</li>
           )}
           {!loading && error && (
-            <li className="px-[0.7rem] py-[0.7rem] text-red-500 text-sm">{error}</li>
+            <li className="px-[0.7rem] py-[0.7rem] text-sm text-red-500">{error}</li>
           )}
           {!loading && !error && filtered.length === 0 && (
-            <li className="px-[0.7rem] py-[0.7rem] text-slate-500 text-sm">
+            <li className="px-[0.7rem] py-[0.7rem] text-sm text-slate-500">
               No schools match — you can still submit a custom slug.
             </li>
           )}
@@ -174,7 +174,7 @@ export default function SchoolCombobox({
                 aria-selected={i === activeIdx}
                 data-idx={i}
                 className={cn(
-                  "px-[0.7rem] py-[0.55rem] rounded-md cursor-pointer flex flex-col gap-[0.15rem]",
+                  "flex cursor-pointer flex-col gap-[0.15rem] rounded-md px-[0.7rem] py-[0.55rem]",
                   i === activeIdx ? "bg-blue-50" : "hover:bg-blue-50",
                 )}
                 onMouseDown={(e) => {
@@ -185,11 +185,11 @@ export default function SchoolCombobox({
                   setActiveIdx(i);
                 }}
               >
-                <div className="text-[0.92rem] font-medium text-slate-900 leading-[1.25]">
+                <div className="text-[0.92rem] leading-[1.25] font-medium text-slate-900">
                   {o.primaryName}
                 </div>
-                <div className="flex items-center flex-wrap text-[0.78rem] text-slate-500 leading-[1.3]">
-                  <code className="bg-slate-50 rounded px-[0.35rem] py-[0.05rem] text-[0.74rem] text-slate-900 font-mono">
+                <div className="flex flex-wrap items-center text-[0.78rem] leading-[1.3] text-slate-500">
+                  <code className="rounded bg-slate-50 px-[0.35rem] py-[0.05rem] font-mono text-[0.74rem] text-slate-900">
                     {o.slug}
                   </code>
                   {o.subNames.length > 0 && (

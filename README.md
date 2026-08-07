@@ -1,6 +1,6 @@
 # better-schoolsoft
 
-A better frontend for [SchoolSoft](https://www.schoolsoft.se/), built with [VitePlus](https://viteplus.dev/) + React + TypeScript.
+A better frontend for [SchoolSoft](https://www.schoolsoft.se/), built with Vite + React + TypeScript.
 
 ## Features
 
@@ -38,13 +38,14 @@ For example, if your URL is `https://sms.schoolsoft.se/nacka/jsp/…`, enter `na
 
 ## Tech stack
 
-| Tool                                          | Purpose                 |
-| --------------------------------------------- | ----------------------- |
-| [VitePlus](https://viteplus.dev/)             | Unified build toolchain |
-| [Vite](https://vitejs.dev/)                   | Dev server & bundler    |
-| [React 19](https://react.dev/)                | UI framework            |
-| [React Router 7](https://reactrouter.com/)    | Client-side routing     |
-| [TypeScript](https://www.typescriptlang.org/) | Type safety             |
+| Tool                                               | Purpose              |
+| -------------------------------------------------- | -------------------- |
+| [Vite](https://vite.dev/)                          | Dev server & bundler |
+| [React 19](https://react.dev/)                     | UI framework         |
+| [React Router 7](https://reactrouter.com/)         | Client-side routing  |
+| [TypeScript](https://www.typescriptlang.org/)      | Type safety          |
+| [Oxlint](https://oxc.rs/docs/guide/usage/linter)   | Linting              |
+| [Oxfmt](https://oxc.rs/docs/guide/usage/formatter) | Formatting           |
 
 ## Development notes
 

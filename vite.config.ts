@@ -1,4 +1,4 @@
-import { defineConfig } from "vite-plus";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
@@ -12,11 +12,6 @@ export default defineConfig({
     alias: {
       "@": path.resolve(here, "src"),
     },
-  },
-  fmt: {},
-  lint: {
-    options: { typeAware: true, typeCheck: true },
-    plugins: ["react", "react-perf", "typescript", "unicorn", "oxc", "import", "promise"],
   },
   server: {
     proxy: {

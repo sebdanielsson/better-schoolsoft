@@ -75,21 +75,21 @@ export default function NewsPopover({ open, data, onClose }: Props) {
       }}
     >
       <DialogContent
-        className="p-0 gap-0 rounded-2xl bg-white text-slate-900 max-w-[680px] sm:max-w-[680px] max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden"
+        className="flex max-h-[calc(100dvh-3rem)] max-w-[680px] flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 text-slate-900 sm:max-w-[680px]"
         aria-labelledby="news-popover-title"
       >
-        <div className="flex items-start gap-[0.85rem] pt-6 pr-[3.25rem] pb-[1.1rem] pl-7 border-b border-slate-200 shrink-0">
+        <div className="flex shrink-0 items-start gap-[0.85rem] border-b border-slate-200 pt-6 pr-[3.25rem] pb-[1.1rem] pl-7">
           {data.authorName && (
             <Avatar name={data.authorName} picture={data.authorPicture ?? null} size={44} />
           )}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center flex-wrap gap-[0.45rem] text-[0.8rem] text-slate-500 leading-[1.3] mb-[0.4rem]">
+            <div className="mb-[0.4rem] flex flex-wrap items-center gap-[0.45rem] text-[0.8rem] leading-[1.3] text-slate-500">
               {data.authorName && (
                 <span className="font-semibold text-slate-900">{data.authorName}</span>
               )}
               {data.categoryLabel && (
                 <span
-                  className="px-[0.55rem] py-[0.1rem] rounded-full text-[0.72rem] font-semibold tracking-[0.01em]"
+                  className="rounded-full px-[0.55rem] py-[0.1rem] text-[0.72rem] font-semibold tracking-[0.01em]"
                   style={{ background: `${catColor}1f`, color: catColor }}
                 >
                   {data.categoryLabel}
@@ -104,7 +104,7 @@ export default function NewsPopover({ open, data, onClose }: Props) {
             </div>
             <h2
               id="news-popover-title"
-              className="text-[1.4rem] font-bold leading-[1.3] tracking-[-0.01em] m-0 text-slate-900 break-words"
+              className="m-0 text-[1.4rem] leading-[1.3] font-bold tracking-[-0.01em] break-words text-slate-900"
             >
               {data.title.trim()}
             </h2>
@@ -112,11 +112,11 @@ export default function NewsPopover({ open, data, onClose }: Props) {
         </div>
 
         {data.description && data.description.trim() !== "" ? (
-          <div className="text-[0.98rem] leading-[1.65] text-slate-900 whitespace-pre-wrap break-words px-7 pt-5 pb-7 overflow-y-auto flex-1 min-h-0">
+          <div className="min-h-0 flex-1 overflow-y-auto px-7 pt-5 pb-7 text-[0.98rem] leading-[1.65] break-words whitespace-pre-wrap text-slate-900">
             {renderDescription(data.description)}
           </div>
         ) : (
-          <div className="p-7 text-slate-500 text-sm italic text-center">No body text.</div>
+          <div className="p-7 text-center text-sm text-slate-500 italic">No body text.</div>
         )}
       </DialogContent>
     </Dialog>

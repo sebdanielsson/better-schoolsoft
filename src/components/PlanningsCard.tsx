@@ -88,15 +88,15 @@ export default function PlanningsCard() {
   if (!params) return null;
 
   return (
-    <section className="relative overflow-hidden rounded-[18px] border border-slate-200 border-l-4 border-l-indigo-500 bg-gradient-to-b from-indigo-50 to-white to-[60px] shadow flex flex-col md:col-span-6">
-      <header className="flex items-center justify-between px-5 pt-4 pb-1 gap-3">
+    <section className="relative flex flex-col overflow-hidden rounded-[18px] border border-l-4 border-slate-200 border-l-indigo-500 bg-gradient-to-b from-indigo-50 to-white to-[60px] shadow md:col-span-6">
+      <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-1">
         <h3 className="text-base font-bold tracking-[-0.01em]">Plannings</h3>
         <div className="flex items-center gap-1">
           {!isCurrentWeek && (
             <button
               type="button"
               onClick={() => setWeekMonday(currentWeekMonday)}
-              className="mr-1 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors"
+              className="mr-1 text-xs font-medium text-slate-500 transition-colors hover:text-blue-600"
             >
               Today
             </button>
@@ -109,7 +109,7 @@ export default function PlanningsCard() {
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
-          <span className="text-xs font-semibold tabular-nums text-slate-600 min-w-[3.5rem] text-center">
+          <span className="min-w-[3.5rem] text-center text-xs font-semibold text-slate-600 tabular-nums">
             w{week}
           </span>
           <button
@@ -122,13 +122,13 @@ export default function PlanningsCard() {
           </button>
         </div>
       </header>
-      <div className="flex-1 px-5 pb-5 pt-2">
-        <div className="mb-2.5 text-xs font-semibold uppercase tracking-[0.05em] text-slate-500">
+      <div className="flex-1 px-5 pt-2 pb-5">
+        <div className="mb-2.5 text-xs font-semibold tracking-[0.05em] text-slate-500 uppercase">
           {range}
         </div>
         <AnimateHeight>
           {error && (
-            <div className="text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3 text-sm">
+            <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {error}
             </div>
           )}
@@ -147,22 +147,22 @@ export default function PlanningsCard() {
                     className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5 text-inherit no-underline transition-colors hover:border-slate-300 hover:shadow-sm"
                   >
                     <CalendarRange
-                      className="h-4 w-4 text-indigo-500 shrink-0"
+                      className="h-4 w-4 shrink-0 text-indigo-500"
                       aria-hidden="true"
                     />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.92rem] font-semibold">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="overflow-hidden text-[0.92rem] font-semibold text-ellipsis whitespace-nowrap">
                           {row.title}
                         </span>
                         {!row.read && (
                           <span
-                            className="inline-block h-2 w-2 rounded-full bg-blue-600 shrink-0"
+                            className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-600"
                             aria-label="Unread"
                           />
                         )}
                       </div>
-                      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.78rem] text-slate-500">
+                      <div className="overflow-hidden text-[0.78rem] text-ellipsis whitespace-nowrap text-slate-500">
                         {row.subTitle}
                       </div>
                     </div>
@@ -188,7 +188,7 @@ function SkeletonList() {
           <Skeleton className="h-4 w-4 rounded-sm" />
           <div className="min-w-0">
             <Skeleton className="h-4 w-2/3 rounded-sm" />
-            <Skeleton className="h-3 w-3/4 rounded-sm mt-1.5" />
+            <Skeleton className="mt-1.5 h-3 w-3/4 rounded-sm" />
           </div>
         </li>
       ))}

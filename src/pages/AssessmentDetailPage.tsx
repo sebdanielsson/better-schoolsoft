@@ -127,8 +127,8 @@ export default function AssessmentDetailPage() {
 
   return (
     <div>
-      <nav className="text-[0.85rem] text-slate-500 mb-2">
-        <Link to="/assessments" className="hover:text-blue-600 transition-colors">
+      <nav className="mb-2 text-[0.85rem] text-slate-500">
+        <Link to="/assessments" className="transition-colors hover:text-blue-600">
           Assessments
         </Link>
         {subjectName && (
@@ -138,7 +138,7 @@ export default function AssessmentDetailPage() {
           </>
         )}
       </nav>
-      <h2 className="text-2xl font-bold tracking-tight mb-5">
+      <h2 className="mb-5 text-2xl font-bold tracking-tight">
         {loading && !state.detail ? (
           <Skeleton className="h-8 w-64 rounded-sm" />
         ) : (
@@ -147,7 +147,7 @@ export default function AssessmentDetailPage() {
       </h2>
 
       {error && (
-        <div className="text-red-800 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
       )}
@@ -172,7 +172,7 @@ export default function AssessmentDetailPage() {
             <KnowledgeDevelopmentCard knowledge={state.knowledge} />
           )}
           {!showWarning && !showKnowledge && (
-            <div className="py-12 px-8 text-center text-slate-500 bg-white rounded-lg border border-dashed border-slate-200">
+            <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
               No assessment details published yet.
             </div>
           )}
@@ -204,17 +204,17 @@ function SubjectWarningCard({
           : "rounded-lg border border-red-200 bg-red-50 px-5 py-4"
       }
     >
-      <div className="flex items-start gap-3 mb-3">
+      <div className="mb-3 flex items-start gap-3">
         {hasConfirmed ? (
-          <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" aria-hidden="true" />
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" aria-hidden="true" />
         ) : (
-          <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
         )}
         <div className="min-w-0 flex-1">
           <h3 className="text-[1.05rem] font-semibold tracking-[-0.01em]">
             {hasConfirmed ? "Subject warning acknowledged" : "Subject warning"}
           </h3>
-          <p className="text-[0.78rem] text-slate-500 mt-0.5">
+          <p className="mt-0.5 text-[0.78rem] text-slate-500">
             Published {warning.publishedAt} by {warning.lastUpdatedBy}
           </p>
         </div>
@@ -223,7 +223,7 @@ function SubjectWarningCard({
         {warning.comment}
       </p>
       {hasConfirmed ? (
-        <p className="text-[0.85rem] text-slate-600 mt-3">
+        <p className="mt-3 text-[0.85rem] text-slate-600">
           Acknowledged {confirmStatus?.confirmedAt}
           {confirmStatus?.name ? ` by ${confirmStatus.name}` : ""}.
         </p>
@@ -234,7 +234,7 @@ function SubjectWarningCard({
             <Button
               onClick={onConfirm}
               disabled={confirming}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 text-white hover:bg-red-700"
             >
               {confirming ? "Confirming…" : "I confirm I have read this"}
             </Button>
@@ -253,17 +253,17 @@ function KnowledgeDevelopmentCard({
 }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
-      <h3 className="text-[1.05rem] font-semibold tracking-[-0.01em] mb-2">
+      <h3 className="mb-2 text-[1.05rem] font-semibold tracking-[-0.01em]">
         Knowledge development
       </h3>
       <p className="text-[0.95rem] text-slate-800">{knowledge.value}</p>
       {knowledge.supportMeasures && (
-        <div className="mt-3 rounded-md bg-slate-50 border border-slate-200 px-3 py-2 text-[0.85rem] text-slate-700">
+        <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[0.85rem] text-slate-700">
           <span className="font-semibold">Support measures: </span>
           {knowledge.supportMeasures}
         </div>
       )}
-      <p className="text-[0.78rem] text-slate-500 mt-3">{knowledge.updatedByInfo}</p>
+      <p className="mt-3 text-[0.78rem] text-slate-500">{knowledge.updatedByInfo}</p>
     </section>
   );
 }
