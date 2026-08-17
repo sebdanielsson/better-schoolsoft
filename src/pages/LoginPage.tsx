@@ -45,7 +45,7 @@ export default function LoginPage() {
     // The slug is interpolated into the authorize URL's path, so constrain it to the shape
     // SchoolSoft actually uses instead of letting arbitrary input steer the destination.
     if (!isSchoolSlug(schoolSlug)) {
-      setError("School names contain only lowercase letters, numbers and hyphens");
+      setError("Pick your school from the list — that identifier isn't valid");
       return;
     }
     const pkce = await generatePkce();

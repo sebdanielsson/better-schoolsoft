@@ -20,9 +20,11 @@ function renderDescription(raw: string): React.ReactNode {
   const decoded = decodeEntities(raw).replace(/\r\n/g, "\n");
   const parts = decoded.split(URL_RE);
   return parts.map((p, i) => {
-    // safeHttpUrl also sidesteps URL_RE.test() being stateful: the regex is /g, so
-    // .test() advances lastIndex between calls and alternates on repeated input.
-    const href = safeHttpUrl(p);
+    // split() with a capturing group puts the matches at odd indices, so only those can be
+    // links. Checking the index first keeps new URL() off the plain-text segments, where it
+    // would throw on every one, and sidesteps URL_RE.test() being stateful (/g advances
+    // lastIndex between calls, so repeated input alternates).
+    const href = i % 2 === 1 ? safeHttpUrl(p) : undefined;
     return href ? (
       <a key={i} href={href} target="_blank" rel="noreferrer">
         {p}

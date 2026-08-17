@@ -17,7 +17,10 @@ function renderDescription(raw: string): ReactNode {
   const decoded = decodeEntities(raw).replace(/\r\n/g, "\n");
   const parts = decoded.split(URL_RE);
   return parts.map((p, i) => {
-    const href = safeHttpUrl(p);
+    // split() with a capturing group puts the matches at odd indices, so only those can be
+    // links. Checking the index first keeps new URL() off the plain-text segments, where it
+    // would throw on every one.
+    const href = i % 2 === 1 ? safeHttpUrl(p) : undefined;
     return href ? (
       <a
         key={i}
