@@ -13,6 +13,7 @@ import {
   type Lesson,
 } from "../api/schoolsoft.ts";
 import { cn } from "../lib/utils.ts";
+import { schoolSoftUrl } from "../lib/safe-url.ts";
 
 const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
   { idx: 1, label: "Monday" },
@@ -196,17 +197,25 @@ export default function SchedulePage() {
             equivalent endpoint exists. The current and next lesson tiles on the home page do work —
             those are exposed via Eva.
           </p>
-          <p className="mt-3">
-            You can{" "}
-            <a
-              href={`https://sms.schoolsoft.se/${session!.school}/jsp/student/right_student_schedule.jsp`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              open the schedule directly in SchoolSoft
-            </a>{" "}
-            for now.
-          </p>
+          {/* A session stored before slug validation existed can hold a school that no longer
+              builds a URL; render plain text rather than a dead link in that case. */}
+          {(() => {
+            const scheduleUrl = schoolSoftUrl(
+              session!.school,
+              "jsp/student/right_student_schedule.jsp",
+            );
+            return scheduleUrl ? (
+              <p className="mt-3">
+                You can{" "}
+                <a href={scheduleUrl} target="_blank" rel="noreferrer">
+                  open the schedule directly in SchoolSoft
+                </a>{" "}
+                for now.
+              </p>
+            ) : (
+              <p className="mt-3">You can open the schedule directly in SchoolSoft for now.</p>
+            );
+          })()}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-[0.85rem] md:grid-cols-3 lg:grid-cols-5">
