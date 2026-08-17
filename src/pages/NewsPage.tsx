@@ -3,6 +3,7 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import { fetchEvaNews, fetchEvaParent, type EvaNewsItem } from "../api/schoolsoft.ts";
 import Avatar from "../components/Avatar.tsx";
 import { cn } from "../lib/utils.ts";
+import { safeHttpUrl } from "../lib/safe-url.ts";
 
 /** Decode HTML entities (&eacute;, &bull;, &ndash;, &amp; …) using a throwaway textarea. */
 function decodeEntities(s: string): string {
@@ -18,15 +19,20 @@ const URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 function renderDescription(raw: string): React.ReactNode {
   const decoded = decodeEntities(raw).replace(/\r\n/g, "\n");
   const parts = decoded.split(URL_RE);
-  return parts.map((p, i) =>
-    URL_RE.test(p) ? (
-      <a key={i} href={p} target="_blank" rel="noreferrer">
+  return parts.map((p, i) => {
+    // split() with a capturing group puts the matches at odd indices, so only those can be
+    // links. Checking the index first keeps new URL() off the plain-text segments, where it
+    // would throw on every one, and sidesteps URL_RE.test() being stateful (/g advances
+    // lastIndex between calls, so repeated input alternates).
+    const href = i % 2 === 1 ? safeHttpUrl(p) : undefined;
+    return href ? (
+      <a key={i} href={href} target="_blank" rel="noreferrer">
         {p}
       </a>
     ) : (
       <span key={i}>{p}</span>
-    ),
-  );
+    );
+  });
 }
 
 function formatRelativeDate(iso: string): string {
