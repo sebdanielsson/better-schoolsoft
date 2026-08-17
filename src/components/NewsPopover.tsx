@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import Avatar from "./Avatar.tsx";
 import { Dialog, DialogContent } from "./ui/dialog.tsx";
+import { safeHttpUrl } from "../lib/safe-url.ts";
 
 /** Decode HTML entities (&eacute;, &bull;, &ndash;, &amp; …) using a throwaway textarea. */
 function decodeEntities(s: string): string {
@@ -15,11 +16,12 @@ const URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 function renderDescription(raw: string): ReactNode {
   const decoded = decodeEntities(raw).replace(/\r\n/g, "\n");
   const parts = decoded.split(URL_RE);
-  return parts.map((p, i) =>
-    URL_RE.test(p) ? (
+  return parts.map((p, i) => {
+    const href = safeHttpUrl(p);
+    return href ? (
       <a
         key={i}
-        href={p}
+        href={href}
         target="_blank"
         rel="noreferrer"
         className="text-blue-600 underline underline-offset-2 hover:text-blue-700"
@@ -28,8 +30,8 @@ function renderDescription(raw: string): ReactNode {
       </a>
     ) : (
       <span key={i}>{p}</span>
-    ),
-  );
+    );
+  });
 }
 
 /* Same palette as NewsPage. */

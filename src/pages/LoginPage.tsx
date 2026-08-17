@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { fetchSchoolList, groupSchoolsBySlug, type SchoolOption } from "../api/schoolsoft.ts";
 import { buildAuthorizeUrl, generatePkce, savePkce } from "../api/pkce.ts";
 import SchoolCombobox from "../components/SchoolCombobox.tsx";
+import { isSchoolSlug } from "../lib/safe-url.ts";
 
 const inputClass =
   "px-[0.9rem] py-[0.7rem] border border-slate-200 rounded-lg text-base bg-white font-[inherit] transition-[border-color,box-shadow] duration-150 focus:outline-none focus:border-blue-600 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.15)]";
@@ -39,6 +40,12 @@ export default function LoginPage() {
     const schoolSlug = school.trim().toLowerCase();
     if (!schoolSlug) {
       setError("Enter your school name first");
+      return;
+    }
+    // The slug is interpolated into the authorize URL's path, so constrain it to the shape
+    // SchoolSoft actually uses instead of letting arbitrary input steer the destination.
+    if (!isSchoolSlug(schoolSlug)) {
+      setError("School names contain only lowercase letters, numbers and hyphens");
       return;
     }
     const pkce = await generatePkce();

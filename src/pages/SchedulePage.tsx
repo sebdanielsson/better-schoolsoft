@@ -13,6 +13,7 @@ import {
   type Lesson,
 } from "../api/schoolsoft.ts";
 import { cn } from "../lib/utils.ts";
+import { schoolSoftUrl } from "../lib/safe-url.ts";
 
 const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
   { idx: 1, label: "Monday" },
@@ -199,7 +200,7 @@ export default function SchedulePage() {
           <p className="mt-3">
             You can{" "}
             <a
-              href={`https://sms.schoolsoft.se/${session!.school}/jsp/student/right_student_schedule.jsp`}
+              href={schoolSoftUrl(session!.school, "jsp/student/right_student_schedule.jsp")}
               target="_blank"
               rel="noreferrer"
             >
