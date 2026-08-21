@@ -7,11 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck",
-    "format": "oxfmt .",
-    "format:check": "oxfmt --check .",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc --noEmit",
+    "check": "pnpm run fmt:check && pnpm run lint && pnpm run typecheck",
     "test": "node --test \"src/**/*.test.ts\" \"api/**/*.test.ts\""
   },
   "dependencies": {

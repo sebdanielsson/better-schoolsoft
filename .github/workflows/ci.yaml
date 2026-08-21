@@ -1,40 +1,38 @@
+---
 name: CI
+
+permissions:
+  contents: read
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
-  check:
+  ci:
     runs-on: ubuntu-24.04-arm
+
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v6
-
-      # Node 24 matches the version mise.toml pins for local development.
-      # >=22.18 is required either way: the test script relies on the test
-      # runner stripping TypeScript types without a flag.
-      - uses: actions/setup-node@v7
+      # Installs pnpm from devEngines.packageManager, Node from devEngines.runtime,
+      # and runs pnpm install — so the versions live in package.json, not here.
+      - uses: pnpm/setup@v2
         with:
-          node-version: 24
-          cache: pnpm
+          cache: true
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Split into named steps so a failure names itself in the checks list,
-      # matching johnson-racing-tunes and election-map-sweden.
       - name: Run format check
-        run: pnpm run format:check
+        run: pnpm run fmt:check
 
       - name: Run lint check
         run: pnpm run lint
@@ -46,4 +44,4 @@ jobs:
         run: pnpm test
 
       - name: Build project
-        run: pnpm build
+        run: pnpm run build
