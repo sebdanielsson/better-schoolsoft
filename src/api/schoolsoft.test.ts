@@ -1,4 +1,5 @@
-// promise the runner owns; awaiting it at the call site would serialize the suite.
+/* node:test's `test()` returns a promise the runner owns, so every call below is
+ * prefixed with `void`: awaiting them at the call site would serialize the suite. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { bitmaskToWeeks, isTokenExpired, isoWeek } from "./schoolsoft.ts";
