@@ -59,7 +59,11 @@ const SAFE_SCHEME = /^(?:https?|mailto|tel):/;
  *  so `data:`, `blob:`, `vbscript:` and friends are rejected without needing to
  *  be enumerated. */
 export function isUnsafeUrl(value: string): boolean {
-  // oxlint-disable-next-line no-control-regex -- matching C0 controls is the point
+  /* Stripping C0 controls is the whole point — it is what makes `java\0script:` resolve to
+   * `javascript:` and get rejected (see the "sees through control characters" test). These are
+   * already Unicode escapes, which is what the rule suggests; it objects to matching control
+   * characters at all, so there is nothing to rewrite. */
+  // oxlint-disable-next-line no-control-regex -- matching C0 controls is the security behaviour
   const normalized = value.replace(/[\u0000-\u0020\u007f]/g, "").toLowerCase();
   if (!/^[a-z][a-z0-9+.-]*:/.test(normalized)) return false;
   return !SAFE_SCHEME.test(normalized);
