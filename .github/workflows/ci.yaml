@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
 
@@ -28,11 +28,22 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      # oxfmt --check, then type-aware oxlint, then tsc --noEmit.
-      - run: pnpm run check
+      # Split into named steps so a failure names itself in the checks list,
+      # matching johnson-racing-tunes and election-map-sweden.
+      - name: Run format check
+        run: pnpm run format:check
 
-      - run: pnpm test
+      - name: Run lint check
+        run: pnpm run lint
 
-      - run: pnpm build
+      - name: Run typecheck
+        run: pnpm run typecheck
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build project
+        run: pnpm build
