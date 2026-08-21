@@ -119,9 +119,12 @@ export default function AssignmentDetailPage() {
     };
   }, [session, getEvaToken, parentUserId, child, id]);
 
+  /* Depend on state.view rather than state.view?.description: the narrower array is
+   * more precise, but React Compiler infers state.view and bails out of optimizing the
+   * whole component when the two disagree. Re-sanitizing on an identity change is cheap. */
   const sanitizedDescription = useMemo(
     () => (state.view?.description ? sanitizeStaffHtml(state.view.description) : ""),
-    [state.view?.description],
+    [state.view],
   );
 
   if (!session) return null;
@@ -232,7 +235,10 @@ export default function AssignmentDetailPage() {
 function SubmissionPanel({ submission }: { submission: AssignmentSubmission }) {
   const { submitted } = submission.submissionStatus;
   const expireDate = submission.expireDate;
-  const expired = expireDate ? Date.now() > new Date(expireDate).getTime() : false;
+  /* Read the clock once on mount instead of on every render: an impure render is
+   * unstable under concurrent rendering, and the React Compiler may memoize it. */
+  const [now] = useState(() => Date.now());
+  const expired = expireDate ? now > new Date(expireDate).getTime() : false;
   const past = expired && !submitted;
 
   let label: string;

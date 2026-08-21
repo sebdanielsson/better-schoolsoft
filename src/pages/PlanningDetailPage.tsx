@@ -100,7 +100,8 @@ export default function PlanningDetailPage() {
 
   const sanitizedDescription = useMemo(
     () => (state.partView?.description ? sanitizeStaffHtml(state.partView.description) : ""),
-    [state.partView?.description],
+    /* See AssignmentDetailPage: the narrower dep makes React Compiler skip the component. */
+    [state.partView],
   );
 
   if (!session) return null;
