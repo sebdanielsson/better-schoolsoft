@@ -2,6 +2,9 @@ import { defineConfig } from "oxlint";
 
 export default defineConfig({
   plugins: ["react", "react-perf", "typescript", "unicorn", "oxc", "import", "promise"],
+  /* Vendored shadcn components stay untouched so re-running `shadcn add` diffs cleanly
+   * against upstream. They are not ours to lint or reformat. */
+  ignorePatterns: ["src/components/ui/**"],
   /* Type-aware rules run through oxlint-tsgolint (a devDependency). Plain type
    * checking stays with `tsc --noEmit` in the `typecheck` script. */
   options: { typeAware: true, typeCheck: true },

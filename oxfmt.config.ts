@@ -15,5 +15,5 @@ export default defineConfig({
    * CLI. They are upstream content pinned by computedHash in skills-lock.json:
    * reformatting them desyncs the lockfile and is reverted on the next skill
    * update. */
-  ignorePatterns: [".agents/**", ".claude/**", "dist/**", "pnpm-lock.yaml"],
+  ignorePatterns: ["src/components/ui/**"],
 });
