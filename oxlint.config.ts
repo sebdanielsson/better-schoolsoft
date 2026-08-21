@@ -6,11 +6,12 @@ export default defineConfig({
    * checking stays with `tsc --noEmit` in the `typecheck` script. */
   options: { typeAware: true, typeCheck: true },
   rules: {
-    /* Added in oxlint 1.79. It fires on the standard data-fetching effect —
-     * setLoading(true)/setError(null) before an async load — which is exactly the
-     * "synchronizing with an external system" case the rule text says effects are for.
-     * Seven pages here do that; contorting them to satisfy the rule would be worse code. */
+    /* The only rule turned off, and it fires 19 times on one shape: setLoading(true) /
+     * setError(null) at the top of a data-fetching effect, across 12 pages. That is the
+     * "synchronizing with an external system" case the rule's own help text says effects
+     * are for. Satisfying it means either moving the calls into the async function — which
+     * changes nothing except what the linter can see — or restructuring data loading behind
+     * a shared hook, which is a refactor these pages have no test coverage for. */
     "react/set-state-in-effect": "off",
   },
-  ignorePatterns: [".agents/**", ".claude/**", "dist/**"],
 });

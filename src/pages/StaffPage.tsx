@@ -116,6 +116,11 @@ export default function StaffPage() {
       for (const r of d.roles ?? []) set.add(r);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "sv"));
+    /* detailsTick is a change signal, not a value the memo reads: staffDetailCache is a
+     * module-level Map filled by background preloads, so the tick is what tells React the
+     * derived value is stale. Dropping it (as the rule suggests) freezes the roles dropdown
+     * at whatever had loaded on first render. Fixing it properly means moving the cache into
+     * state, which is a refactor of this page rather than a lint fix. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailsTick]);
 
@@ -135,7 +140,7 @@ export default function StaffPage() {
         }),
       }))
       .filter((g) => g.data.length > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see the note on allRoles above
   }, [groups, query, activeRoles, detailsTick]);
 
   const totalShown = visibleGroups.reduce((n, g) => n + g.data.length, 0);

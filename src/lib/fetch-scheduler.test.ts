@@ -1,4 +1,3 @@
-// oxlint-disable typescript/no-floating-promises -- node:test `test()` returns a
 // promise the runner owns; awaiting it at the call site would serialize the suite.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -16,15 +15,15 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-test("runs tasks and resolves with their value", async () => {
+void test("runs tasks and resolves with their value", async () => {
   assert.equal(await schedule("high", () => Promise.resolve(42)), 42);
 });
 
-test("propagates rejections to the caller", async () => {
+void test("propagates rejections to the caller", async () => {
   await assert.rejects(() => schedule("high", () => Promise.reject(new Error("boom"))), /boom/);
 });
 
-test("caps concurrency", async () => {
+void test("caps concurrency", async () => {
   let running = 0;
   let peak = 0;
   const gate = deferred<void>();
@@ -46,7 +45,7 @@ test("caps concurrency", async () => {
   await Promise.all(tasks);
 });
 
-test("drains high priority before low", async () => {
+void test("drains high priority before low", async () => {
   const order: string[] = [];
   const gate = deferred<void>();
 
@@ -71,7 +70,7 @@ test("drains high priority before low", async () => {
 /* Regression: a task that threw before its first await skipped the `.finally`
  * that releases the slot. Six of those permanently deadlocked the queue, so
  * every later scheduled fetch — avatars, staff details — hung forever. */
-test("releases the slot when a task throws synchronously", async () => {
+void test("releases the slot when a task throws synchronously", async () => {
   for (let i = 0; i < MAX_CONCURRENT + 2; i++) {
     await assert.rejects(
       () =>
@@ -94,7 +93,7 @@ test("releases the slot when a task throws synchronously", async () => {
   assert.equal(after, "alive");
 });
 
-test("normalizes a non-Error synchronous throw", async () => {
+void test("normalizes a non-Error synchronous throw", async () => {
   await assert.rejects(
     () =>
       schedule("high", (): Promise<never> => {
