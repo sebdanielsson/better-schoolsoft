@@ -35,7 +35,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "happy-dom": "^20.11.6",
-    "oxc-transform-react": "^0.148.0",
+    "oxc-transform-react": "^0.149.0",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.79.0",
     "oxlint-tsgolint": "^7.0.2001",
