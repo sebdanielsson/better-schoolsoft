@@ -205,10 +205,10 @@ importers:
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.3.3
-        version: 4.3.3(vite@8.2.2(@types/node@26.5.0)(jiti@2.7.0))
+        version: 4.3.3(vite@8.2.2(@types/node@26.5.1)(jiti@2.7.0))
       '@types/node':
         specifier: ^26.2.0
-        version: 26.5.0
+        version: 26.5.1
       '@types/react':
         specifier: ^19.2.18
         version: 19.2.18
@@ -217,7 +217,7 @@ importers:
         version: 19.2.7(@types/react@19.2.18)
       '@vitejs/plugin-react':
         specifier: ^6.1.0
-        version: 6.1.1(oxc-transform-react@0.149.0)(vite@8.2.2(@types/node@26.5.0)(jiti@2.7.0))
+        version: 6.1.1(oxc-transform-react@0.149.0)(vite@8.2.2(@types/node@26.5.1)(jiti@2.7.0))
       happy-dom:
         specifier: ^20.11.6
         version: 20.14.0
@@ -244,7 +244,7 @@ importers:
         version: 6.0.3
       vite:
         specifier: ^8.2.2
-        version: 8.2.2(@types/node@26.5.0)(jiti@2.7.0)
+        version: 8.2.2(@types/node@26.5.1)(jiti@2.7.0)
 
 packages:
 
@@ -1082,8 +1082,8 @@ packages:
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
 
-  '@types/node@26.5.0':
-    resolution: {integrity: sha512-dVSGpriSoCgz8WnDNTuSSuSv1PC/ALXihO4ulRZt7Md8k9mlbdin3lGOcDE8SnWOgf513ByWlXd7BK4azmyg/A==}
+  '@types/node@26.5.1':
+    resolution: {integrity: sha512-CzNm2FezW4VR/LjG6yUdiEgLE/rAQ9Slj5gCu/C2VrdcW7I0ahNZ8DRbHT7zOZ6r3ONgd/bsQIeSaoDGrd1C6g==}
 
   '@types/react-dom@19.2.7':
     resolution: {integrity: sha512-I8bPpDLcHBv1qiIiXDCy71Rt8eQDKJP0sMSWJphDdAcdqiJ1sGpZamavoEIRZmYzjia9LuEb2HlYdDpmoENpvQ==}
@@ -3295,12 +3295,12 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.3.3
       '@tailwindcss/oxide-win32-x64-msvc': 4.3.3
 
-  '@tailwindcss/vite@4.3.3(vite@8.2.2(@types/node@26.5.0)(jiti@2.7.0))':
+  '@tailwindcss/vite@4.3.3(vite@8.2.2(@types/node@26.5.1)(jiti@2.7.0))':
     dependencies:
       '@tailwindcss/node': 4.3.3
       '@tailwindcss/oxide': 4.3.3
       tailwindcss: 4.3.3
-      vite: 8.2.2(@types/node@26.5.0)(jiti@2.7.0)
+      vite: 8.2.2(@types/node@26.5.1)(jiti@2.7.0)
 
   '@ts-morph/common@0.27.0':
     dependencies:
@@ -3308,7 +3308,7 @@ snapshots:
       minimatch: 10.2.6
       path-browserify: 1.0.1
 
-  '@types/node@26.5.0':
+  '@types/node@26.5.1':
     dependencies:
       undici-types: 8.9.0
 
@@ -3326,12 +3326,12 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 26.5.0
+      '@types/node': 26.5.1
 
-  '@vitejs/plugin-react@6.1.1(oxc-transform-react@0.149.0)(vite@8.2.2(@types/node@26.5.0)(jiti@2.7.0))':
+  '@vitejs/plugin-react@6.1.1(oxc-transform-react@0.149.0)(vite@8.2.2(@types/node@26.5.1)(jiti@2.7.0))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.2.2(@types/node@26.5.0)(jiti@2.7.0)
+      vite: 8.2.2(@types/node@26.5.1)(jiti@2.7.0)
     optionalDependencies:
       oxc-transform-react: 0.149.0
 
@@ -3405,7 +3405,7 @@ snapshots:
 
   buffer-image-size@0.6.4:
     dependencies:
-      '@types/node': 26.5.0
+      '@types/node': 26.5.1
 
   bundle-name@4.1.0:
     dependencies:
@@ -3758,7 +3758,7 @@ snapshots:
 
   happy-dom@20.14.0:
     dependencies:
-      '@types/node': 26.5.0
+      '@types/node': 26.5.1
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
       buffer-image-size: 0.6.4
@@ -4595,7 +4595,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@8.2.2(@types/node@26.5.0)(jiti@2.7.0):
+  vite@8.2.2(@types/node@26.5.1)(jiti@2.7.0):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -4603,7 +4603,7 @@ snapshots:
       rolldown: 1.2.7
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.5.0
+      '@types/node': 26.5.1
       fsevents: 2.3.3
       jiti: 2.7.0
 
