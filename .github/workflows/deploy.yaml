@@ -164,7 +164,9 @@ jobs:
           }
           # The /schoolsoft proxy is a Vercel Function (api/schoolsoft). Without it the static
           # site deploys fine and every request to SchoolSoft 404s, so its presence is asserted.
-          find .vercel/output/functions/api -name '*.func' -type d | grep -q . || {
+          # -print -quit stops find at the first match. Without it, grep -q exits early, find
+          # gets SIGPIPE, and pipefail fails a build that has many functions.
+          find .vercel/output/functions/api -name '*.func' -type d -print -quit | grep -q . || {
             echo "::error::Build produced no api/ functions — refusing to deploy"
             exit 1
           }
