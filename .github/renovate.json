@@ -2,5 +2,17 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "semanticCommits": "enabled",
-  "minimumReleaseAge": "3 days"
+  "minimumReleaseAge": "3 days",
+  "customManagers": [
+    {
+      "description": "Update the pnpm version in devEngines.packageManager. Renovate's npm manager only updates the top-level packageManager field, which these repositories no longer set.",
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)package\\.json$/"],
+      "matchStrings": [
+        "\"packageManager\":\\s*\\{\\s*\"name\":\\s*\"pnpm\",\\s*\"version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "pnpm",
+      "datasourceTemplate": "npm"
+    }
+  ]
 }
