@@ -1,0 +1,202 @@
+---
+name: Deploy
+
+# Builds here and deploys the result to Vercel, instead of letting Vercel's Git integration
+# build and deploy on every push (`git.deploymentEnabled: false` in vercel.json turns that off).
+#
+# main goes straight to production. Every pull request gets a preview, linked from the PR's
+# "View deployment" button through the GitHub environment set on the job.
+#
+# Why this exists: the Git integration deploys on every push with no way to say "not this one",
+# and bursts of pushes kept hitting Vercel's daily deployment cap. `cancel-in-progress` below is
+# the part that actually saves them — a burst of pushes now produces one deployment for the last
+# commit instead of one per commit. Modelled on election-map-sweden's deploy workflow.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # Per ref, cancelling in progress: pushing three times in a minute should cost one
+  # deployment, not three. Production is grouped per ref too, so a rapid merge sequence
+  # collapses the same way.
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Same-repository events only. GitHub withholds secrets from `pull_request` runs on forks,
+    # so a fork would fail the credentials check on every push — and more to the point, this
+    # job runs the checked-out branch's build scripts with VERCEL_TOKEN in the environment.
+    # That is fine for branches in this repository, whose authors already have the secrets, and
+    # is not something to offer an arbitrary fork.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-26.04-arm
+    timeout-minutes: 15
+    # Records a GitHub Deployment per run, which is what puts the Environments sidebar, the
+    # "deployed to Preview" PR timeline entry and its "View deployment" button back — the parts
+    # of the Vercel Git integration lost when building moved here. The names match the
+    # environments that integration created, so their history carries on. The condition has to
+    # be restated rather than read from the `target` step: the environment is fixed before any
+    # step runs. `url` is evaluated at the end, so it can use the deploy step's output.
+    environment:
+      name: >-
+        ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        && 'Production' || 'Preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    permissions:
+      contents: read
+    steps:
+      - name: Fail early if the Vercel credentials are missing
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            [ -z "${!name}" ] && missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing — see .github/workflows/deploy.yaml"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
+
+      - name: Install Vercel CLI
+        # Into a scratch directory outside the repository, not globally: `pnpm add --global`
+        # needs a global bin directory that `pnpm/setup` does not configure, and it failed
+        # immediately on the first run with the secrets in place. Installing here also keeps
+        # package.json and the lockfile untouched, so the tree the build sees is the tree that
+        # was committed.
+        #
+        # Pinned: an unpinned CLI changes how this workflow builds and deploys with no commit
+        # here to explain it.
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/vercel-cli"
+          cd "$RUNNER_TEMP/vercel-cli"
+          pnpm init >/dev/null
+          # Build approvals as config rather than --allow-build flags, matching how the
+          # repository declares its own. This directory is outside the repository so it
+          # inherits nothing; both packages that run install scripts are named here. esbuild
+          # is the one that actually needs it — a transitive dependency of the CLI whose
+          # postinstall links its native binary.
+          #
+          # minimumReleaseAge is deliberately not set: pnpm's built-in default is already
+          # 1440 minutes, so restating it would only create a second place to keep in sync.
+          printf 'allowBuilds:\n  vercel: true\n  esbuild: true\n' > pnpm-workspace.yaml
+          pnpm add vercel@59.16.0
+          echo "$RUNNER_TEMP/vercel-cli/node_modules/.bin" >> "$GITHUB_PATH"
+
+      # Environment is decided once and reused, so the pull, the build and the deploy cannot
+      # disagree about which one they are targeting.
+      - name: Resolve target environment
+        id: target
+        env:
+          # Read from the environment, not interpolated into the script. workflow_dispatch can
+          # run on any branch, and a branch name containing shell metacharacters would
+          # otherwise be pasted straight into this `if` as source.
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" = "refs/heads/main" ] && [ "$EVENT" != "pull_request" ]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "prod_flag=--prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=preview" >> "$GITHUB_OUTPUT"
+            echo "prod_flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pull Vercel project settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          # The link is written out rather than left to the CLI to infer from environment
+          # variables. Relying on VERCEL_ORG_ID/VERCEL_PROJECT_ID alone failed here with
+          # "Could not retrieve Project Settings", and which variables a given CLI version
+          # honours is not something to guess at from a workflow. This file is exactly what
+          # `vercel link` produces, so the CLI has nothing left to work out.
+          mkdir -p .vercel
+          # printf rather than a heredoc: a heredoc's terminator has to sit at column zero,
+          # which it cannot inside an indented YAML block, and %s keeps the ids out of the
+          # shell's word splitting.
+          printf '{"projectId":"%s","orgId":"%s"}\n' "$VERCEL_PROJECT_ID" "$VERCEL_ORG_ID" \
+            > .vercel/project.json
+          # Shape only — the ids are secrets and are not printed.
+          python3 -c "import json;d=json.load(open('.vercel/project.json'));print('link written, keys:', sorted(d))"
+          vercel pull --yes \
+            --environment="${{ steps.target.outputs.environment }}" \
+            --token="$VERCEL_TOKEN"
+
+      - name: Build
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          vercel build ${{ steps.target.outputs.prod_flag }} --token="$VERCEL_TOKEN"
+          # A build that produces nothing would otherwise deploy an empty site over a working
+          # one. Checked before anything is uploaded.
+          test -s .vercel/output/static/index.html || {
+            echo "::error::Build produced no .vercel/output/static/index.html — refusing to deploy"
+            exit 1
+          }
+          # The /schoolsoft proxy is a Vercel Function (api/schoolsoft). Without it the static
+          # site deploys fine and every request to SchoolSoft 404s, so its presence is asserted.
+          find .vercel/output/functions/api -name '*.func' -type d | grep -q . || {
+            echo "::error::Build produced no api/ functions — refusing to deploy"
+            exit 1
+          }
+      - name: Deploy
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          url=$(vercel deploy --prebuilt ${{ steps.target.outputs.prod_flag }} --token="$VERCEL_TOKEN")
+          # `vercel deploy` prints the URL on stdout and progress on stderr, so this is the URL
+          # and nothing else. Empty means the deploy did not produce one, which is a failure
+          # even if the CLI exited 0.
+          [ -n "$url" ] || { echo "::error::Deploy returned no URL"; exit 1; }
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $url"
+
+      - name: Summary
+        if: always()
+        env:
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          URL: ${{ steps.deploy.outputs.url }}
+          STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "### Deploy"
+            echo ""
+            if [ "$STATUS" = "success" ]; then
+              echo "Deployed to **$ENVIRONMENT**: $URL"
+            else
+              echo "**Deploy failed.** See the failing step above."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
