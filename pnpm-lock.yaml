@@ -194,7 +194,7 @@ importers:
         specifier: ^7.18.4
         version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       shadcn:
-        specifier: ^4.18.0
+        specifier: ^4.21.0
         version: 4.21.0(typescript@6.0.3)
       tailwind-merge:
         specifier: ^3.6.0
