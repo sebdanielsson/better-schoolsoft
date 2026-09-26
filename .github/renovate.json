@@ -3,5 +3,26 @@
   "extends": ["config:recommended"],
   "rangeStrategy": "bump",
   "semanticCommits": "enabled",
-  "minimumReleaseAge": "3 days"
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "groupName": "all patch dependencies",
+      "groupSlug": "all-patch",
+      "matchUpdateTypes": ["patch"],
+      "matchPackageNames": ["*"]
+    },
+    {
+      "groupName": "oxc",
+      "matchPackageNames": [
+        "oxlint",
+        "oxlint-**",
+        "@oxlint/**",
+        "oxfmt",
+        "@oxfmt/**",
+        "eslint-plugin-oxlint",
+        "oxc-**",
+        "@oxc-*/**"
+      ]
+    }
+  ]
 }
