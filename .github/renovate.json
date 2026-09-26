@@ -6,9 +6,16 @@
   "minimumReleaseAge": "3 days",
   "packageRules": [
     {
+      "groupName": "all patch dependencies (manual)",
+      "groupSlug": "all-patch-manual",
+      "matchUpdateTypes": ["patch"],
+      "matchPackageNames": ["*"]
+    },
+    {
       "groupName": "all patch dependencies",
       "groupSlug": "all-patch",
       "matchUpdateTypes": ["patch"],
+      "matchCurrentVersion": "!/^0/",
       "matchPackageNames": ["*"]
     },
     {
@@ -23,6 +30,11 @@
         "oxc-**",
         "@oxc-*/**"
       ]
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
     }
   ]
 }
