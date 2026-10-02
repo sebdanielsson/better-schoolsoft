@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useEvaResourceBlob } from "../hooks/useEvaResourceBlob.tsx";
 import { isoWeek } from "../api/schoolsoft.ts";
@@ -82,22 +82,8 @@ export default function HeroCard() {
   const { child, unread, badges, loading } = useHeroData();
   const childPictureSrc = useEvaResourceBlob(child?.picture);
 
-  /* Re-render once a minute so the displayed date/week stay accurate across a long session. */
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setTick((t) => t + 1);
-    }, 60_000);
-    return () => {
-      window.clearInterval(id);
-    };
-  }, []);
-
-  /* Read on every render rather than memoized. Behind `useMemo(…, [])` this
-   * froze at mount, so the minute timer above re-rendered the card with a stale
-   * date and the week number never rolled over. It is only used for display
-   * below, so there is nothing to gain from caching it. */
-  const today = new Date();
+  /* Ticks once a minute so the displayed date/week stay accurate across a long session. */
+  const today = useNow();
   const todayWeek = isoWeek(today);
 
   if (!session) return null;

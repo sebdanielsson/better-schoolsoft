@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import {
   fetchLessons,
   fetchEvaLessonsWeek,
@@ -62,8 +63,9 @@ export default function SchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<"eva" | "legacy" | "empty">("empty");
 
-  const currentWeek = isoWeek(new Date());
-  const todayIdx = isoDay(new Date());
+  const now = useNow();
+  const currentWeek = isoWeek(now);
+  const todayIdx = isoDay(now);
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);
 
   useEffect(() => {

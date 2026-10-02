@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
   bootstrapSchoolsoftSession,
@@ -239,7 +240,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [openNews, setOpenNews] = useState<NewsPopoverData | null>(null);
 
-  const today = useMemo(() => new Date(), []);
+  const today = useNow();
   const todayWeek = isoWeek(today);
   const todayDayIdx = isoDay(today);
 
