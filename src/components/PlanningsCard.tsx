@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useSchoolsoftParameters } from "../hooks/useSchoolsoftParameters.tsx";
 import {
@@ -44,7 +45,8 @@ export default function PlanningsCard() {
   const week = useMemo(() => isoWeek(weekMonday), [weekMonday]);
   const year = useMemo(() => isoWeekYear(weekMonday), [weekMonday]);
   const range = useMemo(() => formatRange(weekMonday), [weekMonday]);
-  const currentWeekMonday = useMemo(() => startOfIsoWeek(new Date()), []);
+  const now = useNow();
+  const currentWeekMonday = useMemo(() => startOfIsoWeek(now), [now]);
   const isCurrentWeek = weekMonday.getTime() === currentWeekMonday.getTime();
 
   useEffect(() => {

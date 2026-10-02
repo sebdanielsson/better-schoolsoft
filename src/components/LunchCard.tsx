@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Leaf, Utensils } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import {
   DAY_NAMES_FULL,
   evaLunchToWeek,
@@ -86,9 +87,10 @@ export default function LunchCard() {
   const [loading, setLoading] = useState(true);
 
   const week = useMemo(() => isoWeek(weekMonday), [weekMonday]);
-  const activeMonday = useMemo(() => activeLunchMonday(new Date()), []);
+  const now = useNow();
+  const activeMonday = useMemo(() => activeLunchMonday(now), [now]);
   const isActiveWeek = weekMonday.getTime() === activeMonday.getTime();
-  const featuredDayIdx = isActiveWeek ? featuredDayForActiveWeek(new Date()) : null;
+  const featuredDayIdx = isActiveWeek ? featuredDayForActiveWeek(now) : null;
 
   useEffect(() => {
     if (!session) return;
@@ -132,12 +134,12 @@ export default function LunchCard() {
     ? ((lunch?.[LUNCH_DAYS[featuredDayIdx - 1] ?? "monday"] as string) ?? "")
     : "";
   const subtitle = isActiveWeek
-    ? isoDay(new Date()) >= 6
+    ? isoDay(now) >= 6
       ? `Next ${DAY_NAMES_FULL[featuredDayIdx ?? 1]} · Week ${week}`
       : `Today · ${DAY_NAMES_FULL[featuredDayIdx ?? 1]}`
     : `Week ${week}`;
   const emptyText = isActiveWeek
-    ? isoDay(new Date()) >= 6
+    ? isoDay(now) >= 6
       ? "Next week's menu isn't published yet."
       : "No lunch published for today."
     : "No lunch published for this week.";
