@@ -58,9 +58,10 @@ function evaToRow(l: EvaLessonTile, idx: number): ScheduleRow {
 
 export default function SchedulePage() {
   const { session, getToken, getEvaToken } = useAuth();
-  const { child } = useHeroData();
+  const { child, children } = useHeroData();
   const childStudentId = child?.studentId ?? null;
   const childOrgId = child?.schools[0]?.orgId ?? null;
+  const isDefaultChild = !child || children[0]?.studentId === child.studentId;
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +99,17 @@ export default function SchedulePage() {
               setSource("eva");
               return;
             }
+            /* An empty week from Eva is authoritative for any child but the
+             * login's default one: the legacy schedule below always belongs
+             * to the default child, so falling back would show a sibling's
+             * lessons. */
+            if (!isDefaultChild) {
+              if (!cancelled) {
+                setRows([]);
+                setSource("empty");
+              }
+              return;
+            }
           }
         } catch {
           /* fall through to legacy */
@@ -132,7 +144,7 @@ export default function SchedulePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, selectedWeek, childStudentId, childOrgId]);
+  }, [session, getToken, getEvaToken, selectedWeek, childStudentId, childOrgId, isDefaultChild]);
 
   const byDay = useMemo(() => {
     const map: Record<number, ScheduleRow[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };

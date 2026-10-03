@@ -80,6 +80,11 @@ function RouteFallback() {
  *  state (an open booking dialog, an absence note, a message draft) can't be
  *  carried over and then submitted against a sibling. */
 function ChildScope({ children }: { children: ReactNode }) {
-  const { child } = useHeroData();
+  const { child, loading } = useHeroData();
+  /* Until the (possibly remembered) child is known, pages would fall back to
+   * the login's default school and could flash a sibling's data. Wait on the
+   * route placeholder; logins without children still render once loading
+   * ends, and later switches set the child synchronously. */
+  if (!child && loading) return <RouteFallback />;
   return <Fragment key={child?.studentId ?? "none"}>{children}</Fragment>;
 }

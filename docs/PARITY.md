@@ -19,7 +19,7 @@ Sources: web sidebar (`/rest-api/parent/sidebar/sectiongroups`), iOS menu (`/eva
 
 ## Missing
 
-Ordered by priority. Each item ships on its own branch with `pnpm run check` and `pnpm test` green.
+Ordered by priority. The first batch shipped together in PR #176. Each item lands as its own commit with `pnpm run check` and `pnpm test` green.
 
 - [x] **Subject rooms**: subject list with teachers, assignments and plannings per subject, unread markers (web `/react/#/parent/subjectrooms`, iOS `SUBJECT_ROOMS`). The hero pill links here.
 - [x] **Bookings**: time-booking list and detail, reserve, confirm and cancel a slot, next booking on the home page (web `right_student_timebooking.jsp`, iOS `BOOKINGS`). The write calls (reserve, confirm, cancel) were verified against mocked responses only, because the account had no open booking. Past bookings appear only on the web page.

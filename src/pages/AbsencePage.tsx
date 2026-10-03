@@ -204,7 +204,7 @@ export default function AbsencePage() {
         )}
       </div>
 
-      {ctx && p?.enabled && p.allowComment && (
+      {ctx && p?.enabled && !p.isPreSchool && p.allowComment && (
         <WeekComment
           key={`${year}-${week}`}
           ctx={ctx}

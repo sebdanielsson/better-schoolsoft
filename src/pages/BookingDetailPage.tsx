@@ -182,7 +182,7 @@ export default function BookingDetailPage() {
               onSelect={(s) => setSelected((cur) => (sameSlot(cur, s) ? undefined : s))}
             />
             <div className="mt-4 flex flex-wrap justify-end gap-2">
-              {held && d.status === "NEEDS_CONFIRMATION" && (
+              {held && d.status === "NEEDS_CONFIRMATION" && !d.onlyStudent && (
                 <button
                   type="button"
                   className={btnPrimaryClass}
