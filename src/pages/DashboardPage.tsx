@@ -1,7 +1,8 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./HomePage.tsx";
 import HeroCard from "../components/HeroCard.tsx";
+import SectionNav from "../components/SectionNav.tsx";
 import { HeroDataProvider } from "../hooks/useHeroData.tsx";
 
 /* HomePage stays eager — it is the landing route, so lazy-loading it would only
@@ -25,22 +26,12 @@ const BookingDetailPage = lazy(() => import("./BookingDetailPage.tsx"));
 const AbsencePage = lazy(() => import("./AbsencePage.tsx"));
 
 export default function DashboardPage() {
-  const location = useLocation();
-  const isHome = location.pathname === "/";
-
   return (
     <HeroDataProvider>
       <div className="flex min-h-dvh flex-col">
         <main className="mx-auto w-full max-w-[1400px] flex-1 p-4 md:p-7">
           <HeroCard />
-          {!isHome && (
-            <Link
-              to="/"
-              className="mb-4 inline-flex items-center gap-[0.4rem] rounded-full border border-slate-200 bg-white px-[0.85rem] py-[0.4rem] text-[0.85rem] font-medium text-slate-500 no-underline transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <span aria-hidden="true">←</span> Home
-            </Link>
-          )}
+          <SectionNav />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<HomePage />} />
