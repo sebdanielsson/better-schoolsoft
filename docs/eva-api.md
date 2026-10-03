@@ -248,21 +248,11 @@ There is no separate reply endpoint and no attachment upload in the guardian app
 | GET    | `v1/parent/{parentId}/schools/{orgId}/news/calendarevent/next?studentId={studentId}`       | —                                                            | implemented | confirmed  |
 | GET    | `v1/schools/{orgId}/parents/{parentId}/badge/news?studentId={studentId}`                   | — → `number`                                                 | implemented | confirmed  |
 
-List item fields: `id`, `title`, `description`, `category`, `creDate`, `fromDate`, `toDate`, `read`, `hasAttachment`, `author { name, picture }`, `newsConfirm { response, responseText, toDate }`. Detail adds `strippedDescription`, `attachments[] { fileId, name, type }` (type `IMAGE` for inline images), `toParent`, `toStudent`, `toTeacher`, `groupRecipients`, `teamRecipients`, `responseLabel`.
+List item fields (confirmed from live responses): `id`, `title`, `description`, `category` (may be an empty string), `creDate`, `toDate`, `read`, `response`, `hasAttachment`, `author { id, name, picture }`, `newsConfirm`. `response: true` means the item asks guardians a question. `newsConfirm` is `null` until the guardian has answered, then `{ responseText, confirmDate }`. `toDate` is a full ISO timestamp at local midnight (e.g. `2026-10-04T22:00:00.000+00:00`), and the app treats the question as answerable until the end of that day.
 
-`newsconfirm` response:
+Detail adds `strippedDescription`, `fromDate`, `responseLabel` (the question text; empty when there is none), `attachments[] { fileId, name, type }` (type `IMAGE` for inline images, otherwise e.g. `DOCUMENT`), `toParent`, `toStudent`, `toTeacher`, `groupRecipients`, `teamRecipients`, `orgId`.
 
-```json
-{
-  "newsId": 123,
-  "question": "{question}",
-  "responseText": "",
-  "confirmDate": null,
-  "toDate": "2025-10-10"
-}
-```
-
-The app allows answering until `toDate` (end of day); an existing `responseText` switches the button to "update response".
+`GET newsconfirm/{newsId}` returns `{ responseText, confirmDate }`; `PUT` with `{ "responseText": "string" }` answers or updates the answer.
 
 ## 5. Subject rooms (Ämnesrum) and badges
 
