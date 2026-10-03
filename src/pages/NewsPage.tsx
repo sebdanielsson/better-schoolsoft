@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, ArchiveRestore, HelpCircle, Paperclip } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.tsx";
-import { useNow } from "../hooks/useNow.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import {
   fetchEvaNewsDetail,
   fetchEvaNewsFeed,
@@ -468,7 +468,7 @@ function NewsQuestion({
   item: EvaNewsItem;
   question: string | undefined;
 }) {
-  const now = useNow();
+  const now = useNow().getTime();
   const answered = item.newsConfirm?.responseText ?? "";
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

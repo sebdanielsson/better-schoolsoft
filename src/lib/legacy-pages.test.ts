@@ -76,7 +76,11 @@ const SCHOOL = `<div class="formtable"><table>
 void test("parseSchoolInfo joins continuation rows and drops empty fields", () => {
   assert.deepEqual(parseSchoolInfo(SCHOOL), [
     { label: "Adress", lines: ["Exempelskolan", "Skolvägen 1", "123 45 Exempelstad"] },
-    { label: "Hemsida", lines: ["http://www.exempelskolan.se"], href: "http://www.exempelskolan.se/" },
+    {
+      label: "Hemsida",
+      lines: ["http://www.exempelskolan.se"],
+      href: "http://www.exempelskolan.se/",
+    },
   ]);
 });
 

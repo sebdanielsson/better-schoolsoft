@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.tsx";
-import { useNow } from "../hooks/useNow.tsx";
+import { useNow } from "../hooks/useNow.ts";
 import {
   fetchEvaAbsenceDay,
   fetchEvaAbsencePermissions,
@@ -56,7 +56,7 @@ export default function AbsencePage() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const week = isoWeek(monday);
   const year = isoWeekYear(monday);
-  const thisMonday = mondayOf(new Date());
+  const thisMonday = mondayOf(useNow());
   const isThisWeek = monday.getTime() === thisMonday.getTime();
 
   const perms = useQuery(
@@ -279,7 +279,7 @@ function DayColumn({
       dayId,
     ),
   );
-  const now = useNow();
+  const now = useNow().getTime();
   const isToday = date.toDateString() === new Date(now).toDateString();
   const d: AbsenceDay | null | undefined = day.data;
   const lessons = d?.lessons ?? [];
