@@ -29,6 +29,14 @@ function time(s: string): number {
   return parseLocalDateTime(s)?.getTime() ?? 0;
 }
 
+/** When an assignment is due. A bare "00:00" is how SchoolSoft encodes "no
+ *  particular time" (see formatRoomDate), so it means the end of that day,
+ *  not its first minute. */
+function dueTime(s: string): number {
+  const t = time(s);
+  return s.trim().endsWith(" 00:00") ? t + 86_400_000 - 1 : t;
+}
+
 /** Split assignments into upcoming (soonest first) and past (most recent
  *  first). "Upcoming" means the end date has not passed yet, which is what a
  *  guardian cares about; the server's `status` flag lags on the day itself. */
@@ -40,7 +48,7 @@ export function partitionAssignments(
   const upcoming: SubjectRoomAssignmentRow[] = [];
   const past: SubjectRoomAssignmentRow[] = [];
   for (const r of rows) {
-    const end = time(r.endDate || r.startDate);
+    const end = dueTime(r.endDate || r.startDate);
     (end >= nowMs ? upcoming : past).push(r);
   }
   upcoming.sort((a, b) => time(a.startDate) - time(b.startDate));

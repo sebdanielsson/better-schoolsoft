@@ -143,8 +143,10 @@ function FileItem({ ctx, file }: { ctx: SchoolsoftContext; file: LibraryFile }) 
   async function download() {
     setState("loading");
     try {
-      await ctx.cookieSession();
-      saveBlob(await fetchLibraryFile(ctx.school, file.requestId), file.fileName);
+      saveBlob(
+        await ctx.withCookies(() => fetchLibraryFile(ctx.school, file.requestId)),
+        file.fileName,
+      );
       setState("idle");
     } catch {
       setState("error");

@@ -165,7 +165,10 @@ export default function MessagesPage() {
 
   const d = detail.data;
   const canCompose = allowAll.data === true;
-  const canReply = !!d && folder === "inbox" && !d.sentByUser && (canCompose || d.replyTo);
+  /* Same rule as the official app: the school-wide setting or the message's
+   * own flag allows a reply, but never to SchoolSoft's system sender (-1). */
+  const canReply =
+    !!d && folder === "inbox" && !d.sentByUser && d.sender.id !== -1 && (canCompose || d.replyTo);
   const hasSelection = selectedId !== null;
 
   return (

@@ -141,3 +141,17 @@ void test("assignmentWhen shows the start while ahead, the due date once started
     /^due /,
   );
 });
+
+void test("partitionAssignments keeps a midnight-only due date upcoming all that day", () => {
+  const dueToday = assignment(9, "2026-09-01 08:00", "2026-10-03 00:00");
+  const { upcoming } = partitionAssignments([dueToday], new Date(2026, 9, 3, 15, 0));
+  assert.deepEqual(
+    upcoming.map((a) => a.assignmentId),
+    [9],
+  );
+  const { past } = partitionAssignments([dueToday], new Date(2026, 9, 4, 0, 30));
+  assert.deepEqual(
+    past.map((a) => a.assignmentId),
+    [9],
+  );
+});
