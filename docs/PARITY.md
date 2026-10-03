@@ -24,7 +24,7 @@ Ordered by priority. Each item ships on its own branch with `pnpm run check` and
 - [x] **Subject rooms**: subject list with teachers, assignments and plannings per subject, unread markers (web `/react/#/parent/subjectrooms`, iOS `SUBJECT_ROOMS`). The hero pill links here.
 - [x] **Bookings**: time-booking list and detail, reserve, confirm and cancel a slot, next booking on the home page (web `right_student_timebooking.jsp`, iOS `BOOKINGS`). The write calls (reserve, confirm, cancel) were verified against mocked responses only, because the account had no open booking. Past bookings appear only on the web page.
 - [x] **Report absence**: week overview of per-day and per-lesson status, report a full day or single lessons with a comment, gated by school parameters (web `right_student_absence.jsp`, iOS `ABSENCE`). The write calls follow the iOS app but have not been exercised against the live server; first real use should be watched.
-- [ ] **Messages**: sent folder, trash, compose, reply, delete and restore, mark as unread, attachments.
+- [x] **Messages**: sent folder, trash, compose, reply, delete and restore, mark as unread, attachments. Read/unread and trash/restore were verified live. Compose and reply follow the school's `message-usage-level-allow-all` setting and the message's `replyTo` flag. Both are off at the reference school, so sending is untested.
 - [ ] **News**: read state, confirm ("I have read this") where required, archived and older news, attachments.
 - [ ] **Files & links**: school library of documents and links (web `right_student_library.jsp`).
 - [ ] **School information**: address, homepage, contact (web `right_student_school.jsp`).
@@ -56,6 +56,6 @@ These web pages redirect app-type sessions (ours, created via `/eva-apps/auth/lo
 ## Tech debt found along the way
 
 - [ ] Profile name edit calls `PUT …/profile/name`, which the iOS app never uses. The app uses `PUT …/profile/personal` with `{fName, lName}`. Verify which one works.
-- [ ] `EvaMessageDetail.attachments` is typed `{id, size}`, but the API returns `{fileId, name}`, downloaded via `v1/resource/attachment/{fileId}`.
+- [x] `EvaMessageDetail.attachments` is typed `{id, size}`, but the API returns `{fileId, name}`, downloaded via `v1/resource/attachment/{fileId}`.
 - [ ] `sanitizeStaffHtml` is a hand-rolled sanitizer. Consider DOMPurify, given that the refresh token lives in `localStorage`.
 - [ ] `api/schoolsoft/[...path].ts` uses `runtime: "edge"`, which Vercel has deprecated. Move it to the default Node.js runtime.

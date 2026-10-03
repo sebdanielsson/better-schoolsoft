@@ -172,9 +172,27 @@ export interface EvaMessageDetail {
   replyTo: boolean;
   isRead: boolean;
   date: string;
-  recipients: Array<{ id: number; firstName: string; lastName: string; picture?: string }>;
-  attachments: Array<{ id?: number; name?: string; size?: number }>;
+  recipients: Array<{ id: number; firstName?: string; lastName?: string; name?: string }>;
+  attachments: EvaMessageAttachment[];
   sentByUser: boolean;
+}
+
+/** Download via `fetchEvaAttachment(fileId)`. */
+export interface EvaMessageAttachment {
+  fileId: number;
+  name: string;
+  type?: string;
+}
+
+export type EvaMessageFolder = "inbox" | "sent" | "bin";
+
+/** A staff member a guardian can write to, from `/teachers`. */
+export interface EvaTeacher {
+  teacherId: number;
+  fname: string;
+  lname: string;
+  picture?: string;
+  type?: string;
 }
 
 /** OAuth-style token response from `/{school}/rest-api/login/token`. */
@@ -546,6 +564,20 @@ export function fetchEvaInbox(
   );
 }
 
+/** Inbox, sent or bin listing. */
+export function fetchEvaMessages(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  folder: EvaMessageFolder,
+): Promise<EvaMessageInbox[]> {
+  return evaGetList(
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/messages/${folder}`,
+    accessToken,
+  );
+}
+
 /** Full message detail by id. */
 export function fetchEvaMessage(
   school: string,
@@ -648,6 +680,100 @@ export class EvaWriteError extends Error {
     this.name = "EvaWriteError";
     this.status = status;
   }
+}
+
+/* ---------- Messages: writes (Eva) ---------- */
+
+const messagesBase = (school: string, userId: number, orgId: number) =>
+  `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}`;
+
+/** Mark a received message read (`read`) or unread again. */
+export function setEvaMessageRead(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  messageId: number,
+  read: boolean,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${messagesBase(school, userId, orgId)}/message-recipient/${read ? "read-date" : "un-read"}`,
+    accessToken,
+    { messageId },
+  );
+}
+
+/** Folder moves. `remove-inbox`/`remove-sent` move to the bin; `restore`
+ *  brings back from the bin; `delete` removes from the bin for good. */
+export type EvaMessageMove = "remove-inbox" | "remove-sent" | "restore" | "delete";
+
+export function moveEvaMessages(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  move: EvaMessageMove,
+  messageIds: number[],
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${messagesBase(school, userId, orgId)}/messages/${move}`,
+    accessToken,
+    messageIds,
+  );
+}
+
+/** Send a new message or a reply (the official app uses the same call for
+ *  both). Only `teacherId` of each recipient is meaningful to the server. */
+export function sendEvaMessage(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  message: { subject: string; messageBody: string; recipients: EvaTeacher[] },
+): Promise<void> {
+  return evaSend("POST", `${messagesBase(school, userId, orgId)}/messages`, accessToken, {
+    subject: message.subject,
+    messageBody: message.messageBody,
+    recipients: message.recipients,
+    showRecipients: false,
+  });
+}
+
+export function fetchEvaTeachers(
+  school: string,
+  accessToken: string,
+  orgId: number,
+): Promise<EvaTeacher[]> {
+  return evaGetList(`${BASE}/${school}/eva/api/v1/schools/${orgId}/teachers`, accessToken);
+}
+
+/** Whether guardians may start new conversations. When false, they can only
+ *  reply to messages that allow it (`replyTo`). */
+export function fetchEvaMessagingAllowAll(
+  school: string,
+  accessToken: string,
+  orgId: number,
+): Promise<boolean> {
+  return evaGet<boolean>(
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/parameters/message-usage-level-allow-all`,
+    accessToken,
+  ).then((v) => v === true);
+}
+
+/** Download a message attachment as a Blob. */
+export async function fetchEvaAttachment(
+  school: string,
+  accessToken: string,
+  fileId: number,
+): Promise<Blob> {
+  const res = await fetch(
+    `${BASE}/${school}/eva/api/v1/resource/attachment/${encodeURIComponent(String(fileId))}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`Attachment download failed (${res.status})`);
+  return res.blob();
 }
 
 /* ---------- Time bookings (Eva) ---------- */
