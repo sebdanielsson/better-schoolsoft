@@ -1,4 +1,5 @@
-/** Edge-function proxy to https://sms.schoolsoft.se.
+/** Vercel Function (Node.js runtime, Web `fetch` handler) proxying to
+ *  https://sms.schoolsoft.se.
  *
  * Mirrors the Vite dev proxy in vite.config.ts, with one important addition:
  * upstream sets cookies with `Path=/<school>` (or `Path=/`), which won't
@@ -11,8 +12,6 @@ import {
   rewriteCookiePath,
   rewriteLocation,
 } from "../_lib/proxy-rewrites.ts";
-
-export const config = { runtime: "edge" } as const;
 
 const UPSTREAM = "https://sms.schoolsoft.se";
 
@@ -28,14 +27,19 @@ const HOP_BY_HOP = [
   "upgrade",
 ] as const;
 
-export default async function handler(request: Request): Promise<Response> {
+export default { fetch: handler };
+
+async function handler(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const upstreamPath = url.pathname.replace(/^\/schoolsoft/, "");
   const upstreamUrl = `${UPSTREAM}${upstreamPath}${url.search}`;
 
   const headers = new Headers(request.headers);
+  /* fetch() derives Host from the upstream URL. Vercel's own request headers
+   * (x-vercel-*) are platform-internal and have no business upstream. */
   headers.delete("host");
-  headers.set("host", "sms.schoolsoft.se");
+  const internal = Array.from(headers.keys()).filter((n) => n.startsWith("x-vercel-"));
+  for (const name of internal) headers.delete(name);
   /* Hop-by-hop headers describe the client<->proxy connection and must not be
    * relayed onto the proxy<->upstream one. */
   for (const h of HOP_BY_HOP) headers.delete(h);
@@ -48,7 +52,7 @@ export default async function handler(request: Request): Promise<Response> {
   /* Only attach a body for methods that actually have one. Several of our
    * POSTs (the OAuth code/refresh exchange, subject-warning confirm) carry
    * everything in the query string and send no body — passing `body` +
-   * `duplex: "half"` for those crashes the Edge runtime with a 500. */
+   * `duplex: "half"` for those made the runtime answer 500. */
   const contentLength = request.headers.get("content-length");
   const hasBody =
     request.method !== "GET" &&
@@ -57,7 +61,7 @@ export default async function handler(request: Request): Promise<Response> {
     contentLength !== "0";
   if (hasBody) {
     init.body = request.body;
-    // @ts-expect-error — duplex is required by Edge runtime for streaming bodies
+    // @ts-expect-error — duplex is required for streaming request bodies
     init.duplex = "half";
   }
 
