@@ -1125,6 +1125,140 @@ export function fetchMaterialFiles(school: string, materialId: number): Promise<
   return cookieGetList(`${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`);
 }
 
+/* ---------- Subject rooms (cookie session, /rest-api/parent/ps/subjectroom) ---------- */
+
+export interface SubjectRoom {
+  activityId: number;
+  subject: string;
+  groupNames: string[];
+  /** Hex colour picked by the teacher; empty string when unset. */
+  color: string;
+  isSubjectRoom: boolean;
+  hiddenForStudents: boolean;
+}
+
+export interface SubjectRoomUnread {
+  assignments: number;
+  plannings: number;
+  results: number;
+  sum: number;
+}
+
+export interface SubjectRoomTeacher {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+export type SubjectRoomRowStatus = "ONGOING" | "EXPIRED" | (string & {});
+
+export interface SubjectRoomAssignmentRow {
+  assignmentId: number;
+  activityId: number;
+  title: string;
+  assignmentType: string;
+  submissionStatus: AssignmentSubmissionStatus | (string & {});
+  /** "" when nothing has been submitted. */
+  submissionDate: string;
+  resultReportStatus: AssignmentResultStatus | (string & {});
+  /** "YYYY-MM-DD HH:mm" */
+  startDate: string;
+  endDate: string;
+  publishDate: string;
+  teacher: string;
+  status: SubjectRoomRowStatus;
+  read: boolean;
+}
+
+export interface SubjectRoomResultRow {
+  assignmentId: number;
+  activityId: number;
+  title: string;
+  assignmentType: string;
+  teacher: string;
+  /** When the result was published, "YYYY-MM-DD HH:mm". */
+  publishDate: string;
+  read: boolean;
+}
+
+export interface SubjectRoomPlanningRow {
+  planningPartId: number;
+  planningId: number;
+  activityId: number;
+  planningTitle: string;
+  planningPartTitle: string;
+  teacher: string;
+  /** "YYYY-MM-DD" */
+  startDate: string;
+  endDate: string;
+  publishDate: string;
+  status: SubjectRoomRowStatus;
+  read: boolean;
+}
+
+export interface SubjectRoomInformation {
+  id: number;
+  /** Teacher-authored HTML — always pass through `sanitizeHtml` before rendering. */
+  information: string;
+  createdBy: string;
+  createdById: number;
+  /** Pre-formatted by the server, e.g. "18 Aug 18:07". */
+  updatedAt: string;
+}
+
+const subjectRoomBase = (school: string) => `${BASE}/${school}/rest-api/parent/ps/subjectroom`;
+
+export function fetchSubjectRooms(school: string): Promise<SubjectRoom[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/all`);
+}
+
+export function fetchSubjectRoom(school: string, activityId: number): Promise<SubjectRoom> {
+  return cookieGet(`${subjectRoomBase(school)}/${activityId}`);
+}
+
+export function fetchSubjectRoomUnread(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomUnread> {
+  return cookieGet(`${subjectRoomBase(school)}/${activityId}/unread_entities`);
+}
+
+export function fetchSubjectRoomTeachers(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomTeacher[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/teachers`);
+}
+
+export function fetchSubjectRoomAssignments(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomAssignmentRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/assignments/grid/rows`);
+}
+
+export function fetchSubjectRoomResults(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomResultRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/results/grid/rows`);
+}
+
+export function fetchSubjectRoomPlannings(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomPlanningRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/plannings/grid/rows`);
+}
+
+export function fetchSubjectRoomInformation(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomInformation[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/information`);
+}
+
 /* ---------- Feature parameters (gates PS-module features) ---------- */
 
 export interface SchoolsoftParameters {

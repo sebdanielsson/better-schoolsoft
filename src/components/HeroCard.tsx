@@ -174,7 +174,12 @@ export default function HeroCard() {
             loading={loading}
             tone="alert"
           />
-          <CounterPill label="Subject rooms" value={badges.subjectrooms ?? 0} loading={loading} />
+          <CounterPill
+            label="Subject rooms"
+            value={badges.subjectrooms ?? 0}
+            to="/subjects"
+            loading={loading}
+          />
           <CounterPill label="Bookings" value={badges.bookings ?? 0} loading={loading} />
           <CounterPill
             label="Assessments"
