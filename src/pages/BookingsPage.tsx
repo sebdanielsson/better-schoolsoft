@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarClock, ChevronRight } from "lucide-react";
 import { useSchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
-import { useQuery } from "../hooks/useQuery.tsx";
+import { useQuery } from "../hooks/useQuery.ts";
 import {
   fetchEvaTimebookings,
   fetchEvaTimebookingsEnabled,

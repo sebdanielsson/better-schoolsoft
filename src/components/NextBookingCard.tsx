@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarClock } from "lucide-react";
 import { useSchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
-import { useQuery } from "../hooks/useQuery.tsx";
+import { useQuery } from "../hooks/useQuery.ts";
 import { fetchEvaTimebookingStartpage } from "../api/schoolsoft.ts";
 import { bookingKeys, toDate } from "../lib/bookings.ts";
 

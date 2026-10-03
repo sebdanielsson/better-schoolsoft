@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CheckCircle2, Video } from "lucide-react";
 import { useSchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
-import { useQuery } from "../hooks/useQuery.tsx";
+import { useQuery } from "../hooks/useQuery.ts";
 import {
   EvaWriteError,
   fetchEvaTimebooking,

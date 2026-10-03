@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, FileText, Globe, MapPin } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
-import { useQuery } from "../hooks/useQuery.tsx";
+import { useQuery } from "../hooks/useQuery.ts";
 import { fetchLegacyPage, fetchLibraryFile } from "../api/schoolsoft.ts";
 import { parseLibrary, parseSchoolInfo, type LibraryFile } from "../lib/legacy-pages.ts";
 import { saveBlob } from "../lib/download.ts";

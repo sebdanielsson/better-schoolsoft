@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type { SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
-import { useQuery } from "../hooks/useQuery.tsx";
+import { useQuery } from "../hooks/useQuery.ts";
 import {
   fetchEvaTeachers,
   sendEvaMessage,

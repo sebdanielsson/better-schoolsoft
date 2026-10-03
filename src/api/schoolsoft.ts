@@ -1366,9 +1366,11 @@ export interface HolisticAssessmentRow {
  *  burst of parallel requests triggers one bootstrap rather than dozens. */
 let sessionFocus: { key: string; promise: Promise<void> } | null = null;
 
-/** Key of the focus the cookie session was last minted for. */
-export function cookieSessionFocus(): string | null {
-  return sessionFocus?.key ?? null;
+/** Opaque token for the focus the cookie session was last minted for. A new
+ *  token is created for every re-focus, so comparing tokens (not keys) also
+ *  catches a quick A → B → A switch during a single request. */
+export function cookieSessionFocus(): object | null {
+  return sessionFocus;
 }
 
 export function cookieFocusKey(

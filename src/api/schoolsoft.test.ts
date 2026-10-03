@@ -2,7 +2,14 @@
  * prefixed with `void`: awaiting them at the call site would serialize the suite. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { bitmaskToWeeks, isTokenExpired, isoWeek } from "./schoolsoft.ts";
+import {
+  bitmaskToWeeks,
+  bootstrapSchoolsoftSession,
+  cookieSessionFocus,
+  isTokenExpired,
+  isoWeek,
+} from "./schoolsoft.ts";
+import { clearSessionCaches } from "../lib/session-caches.ts";
 
 void test("bitmaskToWeeks decodes low bits", () => {
   assert.deepEqual(bitmaskToWeeks(0), []);
@@ -61,4 +68,53 @@ void test("isTokenExpired applies the five-minute safety margin", () => {
 void test("isoWeek matches known ISO week numbers", () => {
   assert.equal(isoWeek(new Date(2026, 0, 1)), 1);
   assert.equal(isoWeek(new Date(2026, 11, 31)), 53);
+});
+
+void test("bootstrapSchoolsoftSession runs re-focus exchanges one at a time", async () => {
+  const realFetch = globalThis.fetch;
+  const order: string[] = [];
+  const pending: Array<() => void> = [];
+  globalThis.fetch = ((_url: string, init?: RequestInit) => {
+    const child = (init!.headers as Record<string, string>).childInFocus!;
+    order.push(`start ${child}`);
+    return new Promise<Response>((resolve) => {
+      pending.push(() => {
+        order.push(`end ${child}`);
+        resolve(new Response(null, { status: 200 }));
+      });
+    });
+  }) as typeof fetch;
+  try {
+    clearSessionCaches();
+    const a = bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    const b = bootstrapSchoolsoftSession("s", "t", 1, 2, 200);
+    await Promise.resolve();
+    /* B must not start before A has finished. */
+    assert.deepEqual(order, ["start 100"]);
+    pending.shift()!();
+    await a;
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual(order, ["start 100", "end 100", "start 200"]);
+    pending.shift()!();
+    await b;
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+void test("cookieSessionFocus changes on every re-focus, even back to the same child", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (() => Promise.resolve(new Response(null, { status: 200 }))) as typeof fetch;
+  try {
+    clearSessionCaches();
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    const first = cookieSessionFocus();
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    assert.equal(cookieSessionFocus(), first, "same focus reuses the token");
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 200);
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    assert.notEqual(cookieSessionFocus(), first, "A → B → A yields a new token");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });

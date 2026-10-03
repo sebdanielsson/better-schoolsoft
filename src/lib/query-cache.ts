@@ -11,7 +11,7 @@
  *  registers with `session-caches` and is dropped on logout or account switch.
  *
  *  Framework-free on purpose so it can be unit tested under `node --test`; the
- *  React binding lives in `hooks/useQuery.tsx`. */
+ *  React binding lives in `hooks/useQuery.ts`. */
 
 import { registerSessionCache } from "./session-caches.ts";
 

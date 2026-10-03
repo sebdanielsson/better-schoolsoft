@@ -1,11 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useAuth } from "./useAuth.tsx";
 import { useHeroData } from "./useHeroData.tsx";
-import {
-  bootstrapSchoolsoftSession,
-  cookieFocusKey,
-  cookieSessionFocus,
-} from "../api/schoolsoft.ts";
+import { bootstrapSchoolsoftSession, cookieSessionFocus } from "../api/schoolsoft.ts";
 
 export interface SchoolsoftContext {
   school: string;
@@ -55,14 +51,16 @@ export function useSchoolsoftContext(): SchoolsoftContext | null {
   const withCookies = useCallback(
     async <T,>(fn: () => Promise<T>): Promise<T> => {
       await cookieSession();
-      const key = cookieFocusKey(school!, parentUserId!, orgId!, studentId!);
+      const focus = cookieSessionFocus();
       const result = await fn();
-      if (cookieSessionFocus() !== key) {
+      /* Any re-bootstrap since (even back to this same child) replaced the
+       * focus token, so the response may have been served for a sibling. */
+      if (focus === null || cookieSessionFocus() !== focus) {
         throw new Error("The child in focus changed while loading. Try again.");
       }
       return result;
     },
-    [cookieSession, school, parentUserId, orgId, studentId],
+    [cookieSession],
   );
 
   return useMemo(() => {
