@@ -129,10 +129,13 @@ export function lessonAttendance(lesson: AbsenceLesson, ended = true): Attendanc
   }
 }
 
+/* Keys carry the ISO week-year: week numbers alone repeat every year. Each
+ * week's keys share a prefix ending in ":" so week 1 never matches week 10. */
 export const absenceKeys = {
   permissions: (prefix: string) => `${prefix}absence:permissions`,
-  week: (prefix: string, week: number) => `${prefix}absence:week:${week}`,
-  day: (prefix: string, week: number, dayId: number) =>
-    `${prefix}absence:week:${week}:day:${dayId}`,
-  weekPrefix: (prefix: string, week: number) => `${prefix}absence:week:${week}`,
+  weekPrefix: (prefix: string, year: number, week: number) => `${prefix}absence:${year}-w${week}:`,
+  week: (prefix: string, year: number, week: number) =>
+    `${absenceKeys.weekPrefix(prefix, year, week)}summary`,
+  day: (prefix: string, year: number, week: number, dayId: number) =>
+    `${absenceKeys.weekPrefix(prefix, year, week)}day${dayId}`,
 };

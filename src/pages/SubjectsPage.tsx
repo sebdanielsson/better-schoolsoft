@@ -20,10 +20,9 @@ import { Skeleton } from "../components/ui/skeleton.tsx";
 
 export default function SubjectsPage() {
   const ctx = useSchoolsoftContext();
-  const rooms = useQuery(ctx && subjectRoomKeys.all(ctx), async () => {
-    await ctx!.cookieSession();
-    return fetchSubjectRooms(ctx!.school);
-  });
+  const rooms = useQuery(ctx && subjectRoomKeys.all(ctx), () =>
+    ctx!.withCookies(() => fetchSubjectRooms(ctx!.school)),
+  );
 
   const visible = rooms.data
     ?.filter((r) => r.isSubjectRoom && !r.hiddenForStudents)
@@ -62,16 +61,10 @@ function SubjectCard({ ctx, room }: { ctx: SchoolsoftContext; room: SubjectRoom 
   /* Per-card enrichment goes through the shared scheduler so 17 subjects × 2
    * requests don't monopolise the connection pool. */
   const teachers = useQuery(subjectRoomKeys.teachers(ctx, id), () =>
-    schedule("high", async () => {
-      await ctx.cookieSession();
-      return fetchSubjectRoomTeachers(ctx.school, id);
-    }),
+    schedule("high", () => ctx.withCookies(() => fetchSubjectRoomTeachers(ctx.school, id))),
   );
   const assignments = useQuery(subjectRoomKeys.assignments(ctx, id), () =>
-    schedule("high", async () => {
-      await ctx.cookieSession();
-      return fetchSubjectRoomAssignments(ctx.school, id);
-    }),
+    schedule("high", () => ctx.withCookies(() => fetchSubjectRoomAssignments(ctx.school, id))),
   );
 
   const next = assignments.data ? partitionAssignments(assignments.data).upcoming[0] : undefined;

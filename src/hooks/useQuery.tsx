@@ -47,13 +47,17 @@ export function useQuery<T>(
     getQueryEntry<T>(key ?? NO_KEY),
   );
 
+  /* Re-run when the entry is invalidated (updatedAt drops to 0), so pages
+   * already on screen pick up changes after a mutation. A failed fetch leaves
+   * updatedAt alone, so errors don't retry in a loop. */
+  const updatedAt = entry.updatedAt;
   useEffect(() => {
     if (!key) return;
     const current = getQueryEntry<T>(key);
     if (current.promise || !isStale(current, staleMs)) return;
     /* Errors land in the entry; nothing to do with the rejection here. */
     fetchQuery(key, () => fnRef.current()).catch(() => {});
-  }, [key, staleMs]);
+  }, [key, staleMs, updatedAt]);
 
   const refetch = useCallback(async () => {
     if (!key) return undefined;

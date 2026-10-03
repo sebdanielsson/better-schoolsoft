@@ -8,6 +8,7 @@ import {
   fetchEvaAbsencePermissions,
   fetchEvaAbsenceWeek,
   isoWeek,
+  isoWeekYear,
   saveEvaAbsenceLessonComment,
   saveEvaAbsenceWeekComment,
   setEvaFullDayAbsence,
@@ -54,6 +55,7 @@ export default function AbsencePage() {
   const ctx = useSchoolsoftContext();
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const week = isoWeek(monday);
+  const year = isoWeekYear(monday);
   const thisMonday = mondayOf(new Date());
   const isThisWeek = monday.getTime() === thisMonday.getTime();
 
@@ -63,7 +65,7 @@ export default function AbsencePage() {
       fetchEvaAbsencePermissions(ctx!.school, await ctx!.token(), ctx!.orgId, ctx!.studentId),
     { staleMs: 10 * 60_000 },
   );
-  const weekData = useQuery(ctx && absenceKeys.week(ctx.keyPrefix, week), async () =>
+  const weekData = useQuery(ctx && absenceKeys.week(ctx.keyPrefix, year, week), async () =>
     fetchEvaAbsenceWeek(
       ctx!.school,
       await ctx!.token(),
@@ -110,7 +112,7 @@ export default function AbsencePage() {
         );
       }
       setPending(null);
-      invalidateQueries(absenceKeys.weekPrefix(ctx.keyPrefix, week));
+      invalidateQueries(absenceKeys.weekPrefix(ctx.keyPrefix, year, week));
       void weekData.refetch();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Something went wrong.");
@@ -174,8 +176,9 @@ export default function AbsencePage() {
         {DAYS.map((dayId) =>
           ctx ? (
             <DayColumn
-              key={`${week}-${dayId}`}
+              key={`${year}-${week}-${dayId}`}
               ctx={ctx}
+              year={year}
               week={week}
               dayId={dayId}
               date={addDays(monday, dayId)}
@@ -193,8 +196,9 @@ export default function AbsencePage() {
 
       {ctx && p?.enabled && p.allowComment && (
         <WeekComment
-          key={week}
+          key={`${year}-${week}`}
           ctx={ctx}
+          year={year}
           week={week}
           initial={weekData.data?.parentComment ?? ""}
           loading={weekData.loading}
@@ -249,6 +253,7 @@ function confirmBody(p: Pending) {
 
 function DayColumn({
   ctx,
+  year,
   week,
   dayId,
   date,
@@ -256,13 +261,14 @@ function DayColumn({
   onAsk,
 }: {
   ctx: SchoolsoftContext;
+  year: number;
   week: number;
   dayId: number;
   date: Date;
   perms: AbsencePermissions | undefined;
   onAsk: (p: Pending) => void;
 }) {
-  const day = useQuery(absenceKeys.day(ctx.keyPrefix, week, dayId), async () =>
+  const day = useQuery(absenceKeys.day(ctx.keyPrefix, year, week, dayId), async () =>
     fetchEvaAbsenceDay(
       ctx.school,
       await ctx.token(),
@@ -317,6 +323,7 @@ function DayColumn({
             <LessonRow
               key={l.lessonId}
               ctx={ctx}
+              year={year}
               week={week}
               lesson={l}
               ended={lessonEnded(date, l, now)}
@@ -358,6 +365,7 @@ function DayColumn({
 
 function LessonRow({
   ctx,
+  year,
   week,
   lesson,
   ended,
@@ -368,6 +376,7 @@ function LessonRow({
   onWithdraw,
 }: {
   ctx: SchoolsoftContext;
+  year: number;
   week: number;
   lesson: AbsenceLesson;
   ended: boolean;
@@ -398,7 +407,7 @@ function LessonRow({
         draft.trim(),
       );
       setEditing(false);
-      invalidateQueries(absenceKeys.weekPrefix(ctx.keyPrefix, week));
+      invalidateQueries(absenceKeys.weekPrefix(ctx.keyPrefix, year, week));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save the note.");
     } finally {
@@ -502,11 +511,13 @@ function LessonRow({
 
 function WeekComment({
   ctx,
+  year,
   week,
   initial,
   loading,
 }: {
   ctx: SchoolsoftContext;
+  year: number;
   week: number;
   initial: string;
   loading: boolean;
@@ -531,7 +542,7 @@ function WeekComment({
       );
       setStatus("Saved.");
       setDraft(null);
-      invalidateQueries(absenceKeys.weekPrefix(ctx.keyPrefix, week));
+      invalidateQueries(absenceKeys.weekPrefix(ctx.keyPrefix, year, week));
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Could not save the comment.");
     } finally {

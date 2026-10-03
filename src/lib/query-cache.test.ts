@@ -103,3 +103,26 @@ void test("is cleared with the other session caches on logout", () => {
   clearSessionCaches();
   assert.equal(getQueryEntry("k").data, undefined);
 });
+
+void test("invalidating during a fetch discards that fetch's result", async () => {
+  clearQueryCache();
+  setQueryData("k", "before");
+  let resolveOld!: (v: string) => void;
+  const old = fetchQuery("k", () => new Promise<string>((r) => (resolveOld = r)));
+  invalidateQueries("k");
+  /* A refetch after the mutation must start a new request, not reuse the old one. */
+  const fresh = fetchQuery("k", () => Promise.resolve("after"));
+  resolveOld("stale");
+  await Promise.all([old, fresh]);
+  assert.equal(getQueryEntry("k").data, "after");
+});
+
+void test("setQueryData wins over a fetch that was already in flight", async () => {
+  clearQueryCache();
+  let resolveOld!: (v: string) => void;
+  const old = fetchQuery("k", () => new Promise<string>((r) => (resolveOld = r)));
+  setQueryData("k", "patched");
+  resolveOld("stale");
+  await old;
+  assert.equal(getQueryEntry("k").data, "patched");
+});

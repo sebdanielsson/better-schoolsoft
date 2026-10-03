@@ -1365,6 +1365,20 @@ export interface HolisticAssessmentRow {
  *  the cookies were last minted for, and share the in-flight exchange so a
  *  burst of parallel requests triggers one bootstrap rather than dozens. */
 let sessionFocus: { key: string; promise: Promise<void> } | null = null;
+
+/** Key of the focus the cookie session was last minted for. */
+export function cookieSessionFocus(): string | null {
+  return sessionFocus?.key ?? null;
+}
+
+export function cookieFocusKey(
+  school: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): string {
+  return `${school}:${userId}:${orgId}:${studentId}`;
+}
 registerSessionCache(() => {
   sessionFocus = null;
 });
@@ -1379,7 +1393,7 @@ export function bootstrapSchoolsoftSession(
   orgId: number,
   studentId: number,
 ): Promise<void> {
-  const key = `${school}:${userId}:${orgId}:${studentId}`;
+  const key = cookieFocusKey(school, userId, orgId, studentId);
   if (sessionFocus?.key === key) return sessionFocus.promise;
   const promise = (async () => {
     const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {

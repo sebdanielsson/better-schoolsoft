@@ -488,7 +488,7 @@ function NewsQuestion({
         value.trim(),
       );
       setStatus("Your answer was sent.");
-      setDraft(null);
+      /* Keep showing what was sent until the refetched feed carries it. */
       invalidateQueries(newsKeys.feeds(ctx.keyPrefix));
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Could not send your answer.");

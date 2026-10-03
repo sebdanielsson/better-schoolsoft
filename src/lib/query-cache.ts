@@ -31,6 +31,14 @@ const listeners = new Map<string, Set<Listener>>();
 /** Bumped on `clearQueryCache` so a fetch that started before a logout cannot
  *  write its result into the next session's cache. */
 let generation = 0;
+/** Per-key write counter. `setQueryData` and `invalidateQueries` bump it, so a
+ *  fetch that was already in flight (and so reflects pre-mutation state)
+ *  can't overwrite the newer data or mark the entry fresh again. */
+const versions = new Map<string, number>();
+
+function bump(key: string): void {
+  versions.set(key, (versions.get(key) ?? 0) + 1);
+}
 
 const EMPTY: QueryEntry<never> = Object.freeze({
   data: undefined,
@@ -81,16 +89,20 @@ export function fetchQuery<T>(key: string, fn: () => Promise<T>): Promise<T> {
   if (current.promise) return current.promise;
 
   const startedIn = generation;
+  const startedAt = versions.get(key) ?? 0;
+  /* Only the latest fetch for a key may write. Anything that bumped the
+   * version since (a mutation, an invalidation, a newer fetch) wins. */
+  const isLatest = () => startedIn === generation && (versions.get(key) ?? 0) === startedAt;
   const promise = fn().then(
     (data) => {
-      if (startedIn === generation) {
+      if (isLatest()) {
         setEntry(key, { data, error: undefined, updatedAt: Date.now(), promise: undefined });
       }
       return data;
     },
     (err: unknown) => {
       const error = err instanceof Error ? err : new Error(String(err));
-      if (startedIn === generation) {
+      if (isLatest()) {
         const prev = getQueryEntry<T>(key);
         setEntry(key, { ...prev, error, promise: undefined });
       }
@@ -104,14 +116,19 @@ export function fetchQuery<T>(key: string, fn: () => Promise<T>): Promise<T> {
 /** Overwrite the cached data for `key`, e.g. after a mutation whose response
  *  already contains the new state. */
 export function setQueryData<T>(key: string, data: T): void {
+  bump(key);
   setEntry(key, { data, error: undefined, updatedAt: Date.now(), promise: undefined });
 }
 
-/** Mark every entry whose key starts with `prefix` as stale so the next read
- *  refetches. Data stays visible in the meantime. */
+/** Mark every entry whose key starts with `prefix` as stale. Mounted queries
+ *  refetch straight away (see `useQuery`); data stays visible meanwhile. An
+ *  in-flight fetch is abandoned, since it may predate the change. */
 export function invalidateQueries(prefix: string): void {
   for (const [key, entry] of entries) {
-    if (key.startsWith(prefix)) setEntry(key, { ...entry, updatedAt: 0 });
+    if (key.startsWith(prefix)) {
+      bump(key);
+      setEntry(key, { ...entry, updatedAt: 0, promise: undefined });
+    }
   }
 }
 
@@ -119,6 +136,7 @@ export function clearQueryCache(): void {
   generation++;
   const keys = [...entries.keys()];
   entries.clear();
+  versions.clear();
   for (const key of keys) notify(key);
 }
 

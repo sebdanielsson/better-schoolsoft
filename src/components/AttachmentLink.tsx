@@ -38,8 +38,10 @@ export default function AttachmentLink({
   );
 }
 
-/** Inline preview for image attachments. `<img>` never executes script, so
- *  rendering the blob here is safe whatever the server claims the type is. */
+const RASTER_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+
+/** Inline preview for image attachments; the download link stays available
+ *  for anything that isn't a plain raster image. */
 export function AttachmentImage({
   ctx,
   attachment,
@@ -55,7 +57,11 @@ export function AttachmentImage({
       try {
         const blob = await fetchEvaAttachment(ctx.school, await ctx.token(), attachment.fileId);
         if (cancelled) return;
-        url = URL.createObjectURL(blob);
+        /* Raster formats only. An SVG is a document, and as a same-origin
+         * blob URL ("open image in new tab") its script would run. */
+        const type = blob.type.split(";")[0]?.trim().toLowerCase() ?? "";
+        if (!RASTER_TYPES.has(type)) return;
+        url = URL.createObjectURL(new Blob([blob], { type }));
         setSrc(url);
       } catch {
         /* Fall back to nothing; the download link is still there. */

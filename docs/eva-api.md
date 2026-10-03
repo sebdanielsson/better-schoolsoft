@@ -83,7 +83,7 @@ Status codes (from the app's constants module):
 | day `status`, `absenceStatusFullDay`, lesson `lessonStatusStudent` | `0` NO_STATUS, `1` ATTENDANCE, `2` ABSENT, `3` EXPLAINED_ABSENCE, `4` PRE_REPORTED_ABSENCE (guardian report), `750` APPLICATION_OF_LEAVE_APPROVED |
 | lesson `lessonStatus`                                              | `1` LESSON_UNREPORTED, `2` LESSON_REPORTED (teacher has taken attendance), `3` LESSON_CANCELLED                                                   |
 
-The app only enables "report full day" when at least one lesson of the day starts after "now" (`canReportFullDay`), and disables per-lesson buttons for cancelled lessons or when a full-day report exists.
+The app enables "report full day" only while no lesson of the day has started yet: `canReportFullDay` is `!lessons.some(lesson => isAfter(now, lessonStart))`. Per-lesson buttons are disabled once the lesson has ended (`isBefore(date + endTime, now)`), for cancelled lessons, for lessons where the teacher has already taken attendance, and when a full-day report exists.
 
 ### Report / remove full-day absence
 

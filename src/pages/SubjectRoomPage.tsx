@@ -36,10 +36,7 @@ const rowMetaClass = "truncate text-[0.78rem] text-slate-500";
 
 /** Wraps a fetcher so it first ensures the cookie session `/rest-api` needs. */
 function withSession<T>(ctx: SchoolsoftContext | null, fn: (ctx: SchoolsoftContext) => Promise<T>) {
-  return async () => {
-    await ctx!.cookieSession();
-    return fn(ctx!);
-  };
+  return () => ctx!.withCookies(() => fn(ctx!));
 }
 
 export default function SubjectRoomPage() {

@@ -20,8 +20,9 @@ export default function SchoolPage() {
   const info = useQuery(
     ctx && schoolKeys.info(ctx.keyPrefix),
     async () => {
-      await ctx!.cookieSession();
-      const html = await fetchLegacyPage(ctx!.school, "right_student_school.jsp");
+      const html = await ctx!.withCookies(() =>
+        fetchLegacyPage(ctx!.school, "right_student_school.jsp"),
+      );
       return html ? parseSchoolInfo(html) : [];
     },
     { staleMs: 60 * 60_000 },
@@ -29,8 +30,9 @@ export default function SchoolPage() {
   const library = useQuery(
     ctx && schoolKeys.library(ctx.keyPrefix),
     async () => {
-      await ctx!.cookieSession();
-      const html = await fetchLegacyPage(ctx!.school, "right_student_library.jsp");
+      const html = await ctx!.withCookies(() =>
+        fetchLegacyPage(ctx!.school, "right_student_library.jsp"),
+      );
       return html ? parseLibrary(html) : [];
     },
     { staleMs: 30 * 60_000 },
