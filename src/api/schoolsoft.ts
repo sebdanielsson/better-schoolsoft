@@ -1,3 +1,5 @@
+import { decodeLegacyBody } from "../lib/legacy-pages.ts";
+
 const BASE = "/schoolsoft";
 
 const APP_HEADERS = {
@@ -1732,6 +1734,27 @@ export interface MaterialFile {
  *  file(s) attached to a material (name + id), not the binary itself. */
 export function fetchMaterialFiles(school: string, materialId: number): Promise<MaterialFile[]> {
   return cookieGetList(`${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`);
+}
+
+/* ---------- Legacy JSP pages (cookie session) ---------- */
+
+/** Fetch a server-rendered guardian page as text. Needs the cookie session.
+ *  Returns null when SchoolSoft bounces app sessions to its "blocked" page. */
+export async function fetchLegacyPage(school: string, page: string): Promise<string | null> {
+  const res = await fetch(`${BASE}/${school}/jsp/student/${page}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status})`);
+  if (res.url.includes("app_blocked")) return null;
+  return decodeLegacyBody(await res.arrayBuffer(), res.headers.get("content-type"));
+}
+
+/** Download a "Files & links" document. */
+export async function fetchLibraryFile(school: string, requestId: number): Promise<Blob> {
+  const res = await fetch(
+    `${BASE}/${school}/jsp/student/right_student_library_download.jsp?requestid=${encodeURIComponent(String(requestId))}`,
+    { credentials: "include" },
+  );
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  return res.blob();
 }
 
 /* ---------- Subject rooms (cookie session, /rest-api/parent/ps/subjectroom) ---------- */

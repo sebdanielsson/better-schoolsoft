@@ -26,8 +26,8 @@ Ordered by priority. Each item ships on its own branch with `pnpm run check` and
 - [x] **Report absence**: week overview of per-day and per-lesson status, report a full day or single lessons with a comment, gated by school parameters (web `right_student_absence.jsp`, iOS `ABSENCE`). The write calls follow the iOS app but have not been exercised against the live server; first real use should be watched.
 - [x] **Messages**: sent folder, trash, compose, reply, delete and restore, mark as unread, attachments. Read/unread and trash/restore were verified live. Compose and reply follow the school's `message-usage-level-allow-all` setting and the message's `replyTo` flag. Both are off at the reference school, so sending is untested.
 - [x] **News**: read state, answering questions where asked, archived and older news, attachments with inline images. Read marking and archive/unarchive were verified live. Answering is untested because no open question was available.
-- [ ] **Files & links**: school library of documents and links (web `right_student_library.jsp`).
-- [ ] **School information**: address, homepage, contact (web `right_student_school.jsp`).
+- [x] **Files & links**: school library of documents and links (web `right_student_library.jsp`).
+- [x] **School information**: address, homepage, contact (web `right_student_school.jsp`). Both live on `/school`. The JSP is parsed with `DOMParser` and only vetted text and links are kept.
 - [x] **Assignment results**: results per subject (web legacy "Assignments & results"), covered by the Results card on each subject page.
 - [ ] **Multiple children**: child switcher for guardians with more than one child.
 

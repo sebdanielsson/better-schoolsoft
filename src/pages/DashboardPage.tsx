@@ -24,6 +24,7 @@ const SubjectRoomPage = lazy(() => import("./SubjectRoomPage.tsx"));
 const BookingsPage = lazy(() => import("./BookingsPage.tsx"));
 const BookingDetailPage = lazy(() => import("./BookingDetailPage.tsx"));
 const AbsencePage = lazy(() => import("./AbsencePage.tsx"));
+const SchoolPage = lazy(() => import("./SchoolPage.tsx"));
 
 export default function DashboardPage() {
   return (
@@ -49,6 +50,7 @@ export default function DashboardPage() {
               <Route path="/bookings" element={<BookingsPage />} />
               <Route path="/bookings/:id" element={<BookingDetailPage />} />
               <Route path="/absence" element={<AbsencePage />} />
+              <Route path="/school" element={<SchoolPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

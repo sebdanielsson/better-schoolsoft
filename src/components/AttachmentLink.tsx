@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { Paperclip } from "lucide-react";
 import type { SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { fetchEvaAttachment, type EvaMessageAttachment } from "../api/schoolsoft.ts";
-import { safeDownloadName } from "../lib/messages.ts";
+import { saveBlob } from "../lib/download.ts";
 
-/** Downloads an Eva attachment on click. Always saves it as a file rather
- *  than opening it: a blob URL shares our origin, so an HTML attachment
- *  opened in a tab could read the stored session. */
+/** Downloads an Eva attachment on click (saved, never opened inline). */
 export default function AttachmentLink({
   ctx,
   attachment,
@@ -19,12 +17,7 @@ export default function AttachmentLink({
     setState("loading");
     try {
       const blob = await fetchEvaAttachment(ctx.school, await ctx.token(), attachment.fileId);
-      const url = URL.createObjectURL(new Blob([blob], { type: "application/octet-stream" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = safeDownloadName(attachment.name);
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      saveBlob(blob, attachment.name);
       setState("idle");
     } catch {
       setState("error");

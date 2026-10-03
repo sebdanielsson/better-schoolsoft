@@ -12,6 +12,7 @@ const SECTIONS: { to: string; label: string }[] = [
   { to: "/bookings", label: "Bookings" },
   { to: "/assessments", label: "Assessments" },
   { to: "/staff", label: "Staff" },
+  { to: "/school", label: "School" },
 ];
 
 /** One-row section switcher under the hero. Scrolls horizontally on narrow
