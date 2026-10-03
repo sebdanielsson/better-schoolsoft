@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Leaf, Utensils } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useChildOrgId } from "../hooks/useHeroData.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import {
   DAY_NAMES_FULL,
@@ -81,6 +82,7 @@ const LUNCH_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as c
 
 export default function LunchCard() {
   const { session, getEvaToken, getToken } = useAuth();
+  const orgId = useChildOrgId();
 
   const [weekMonday, setWeekMonday] = useState<Date>(() => activeLunchMonday(new Date()));
   const [lunch, setLunch] = useState<LunchWeek | null>(null);
@@ -101,7 +103,12 @@ export default function LunchCard() {
       let data: LunchWeek | null = null;
       if (evaToken) {
         try {
-          const days = await fetchEvaLunchWeek(session.school, evaToken, session.orgId, week);
+          const days = await fetchEvaLunchWeek(
+            session.school,
+            evaToken,
+            orgId ?? session.orgId,
+            week,
+          );
           data = evaLunchToWeek(days);
         } catch {
           /* fall through to legacy */
@@ -111,6 +118,7 @@ export default function LunchCard() {
         try {
           const legacyToken = await getToken().catch(() => "");
           if (legacyToken) {
+            /* The legacy app-key API is tied to the login's own school. */
             const weeks = await fetchLunch(session.school, legacyToken, session.orgId);
             data = weeks.find((w) => w.week === week) ?? null;
           }
@@ -126,7 +134,7 @@ export default function LunchCard() {
     return () => {
       cancelled = true;
     };
-  }, [session, getEvaToken, getToken, week]);
+  }, [session, getEvaToken, getToken, week, orgId]);
 
   if (!session) return null;
 

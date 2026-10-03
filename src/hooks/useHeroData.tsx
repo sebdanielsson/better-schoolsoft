@@ -135,3 +135,13 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
 export function useHeroData(): HeroData {
   return useContext(HeroDataContext);
 }
+
+/** Org of the child in focus, falling back to the session's own org (non-
+ *  guardian logins). Anything that shows school-specific data (lunch, staff,
+ *  school parameters) must use this, not `session.orgId`: siblings can attend
+ *  different schools. */
+export function useChildOrgId(): number | null {
+  const { session } = useAuth();
+  const { child } = useHeroData();
+  return child?.schools[0]?.orgId ?? session?.orgId ?? null;
+}

@@ -1940,6 +1940,7 @@ export interface SchoolsoftParameters {
 }
 
 const parametersCache = new Map<string, SchoolsoftParameters>();
+registerSessionCache(() => parametersCache.clear());
 
 /** Fetch /rest-api/parameters once per school + per session-load and cache the
  *  result. Bootstraps the cookie session if needed so callers don't have to
@@ -1951,11 +1952,13 @@ export async function getSchoolsoftParameters(
   orgId: number,
   studentId: number,
 ): Promise<SchoolsoftParameters> {
-  const cached = parametersCache.get(school);
+  /* Parameters are per school org; siblings can attend different ones. */
+  const cacheKey = `${school}:${orgId}`;
+  const cached = parametersCache.get(cacheKey);
   if (cached) return cached;
   await bootstrapSchoolsoftSession(school, evaToken, userId, orgId, studentId);
   const params = await cookieGet<SchoolsoftParameters>(`${BASE}/${school}/rest-api/parameters`);
-  parametersCache.set(school, params);
+  parametersCache.set(cacheKey, params);
   return params;
 }
 
