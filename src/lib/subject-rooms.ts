@@ -109,6 +109,7 @@ export const subjectRoomKeys = {
   results: (ctx: SchoolsoftContext, id: number) => `${ctx.keyPrefix}subjectroom:${id}:results`,
   plannings: (ctx: SchoolsoftContext, id: number) => `${ctx.keyPrefix}subjectroom:${id}:plannings`,
   information: (ctx: SchoolsoftContext, id: number) => `${ctx.keyPrefix}subjectroom:${id}:info`,
+  unread: (ctx: SchoolsoftContext, id: number) => `${ctx.keyPrefix}subjectroom:${id}:unread`,
 };
 
 /** When-label for an assignment row: its start while that is still ahead,

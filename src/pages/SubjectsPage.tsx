@@ -4,6 +4,7 @@ import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchool
 import { useQuery } from "../hooks/useQuery.ts";
 import {
   fetchSubjectRoomAssignments,
+  fetchSubjectRoomUnread,
   fetchSubjectRoomTeachers,
   fetchSubjectRooms,
   type SubjectRoom,
@@ -68,7 +69,11 @@ function SubjectCard({ ctx, room }: { ctx: SchoolsoftContext; room: SubjectRoom 
   );
 
   const next = assignments.data ? partitionAssignments(assignments.data).upcoming[0] : undefined;
-  const unread = assignments.data?.filter((a) => !a.read).length ?? 0;
+  /* Combined count (assignments, results and plannings), as the web app uses. */
+  const unreadQ = useQuery(subjectRoomKeys.unread(ctx, id), () =>
+    schedule("high", () => ctx.withCookies(() => fetchSubjectRoomUnread(ctx.school, id))),
+  );
+  const unread = unreadQ.data?.sum ?? assignments.data?.filter((a) => !a.read).length ?? 0;
   const teacherNames = teachers.data?.map((t) => `${t.firstName} ${t.lastName}`).join(", ");
 
   return (

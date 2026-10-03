@@ -77,6 +77,14 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
       /* private mode: selection just won't persist */
     }
     setSelected(studentId);
+    /* Switch immediately from the list we already have instead of showing the
+     * previous child until /parent comes back. Counts belong to the old child,
+     * so clear them; the effect below re-fetches everything for the new one. */
+    setState((prev) => {
+      const next = prev.children.find((c) => c.studentId === studentId);
+      if (!next || next.studentId === prev.child?.studentId) return prev;
+      return { ...prev, child: next, unread: 0, badges: {}, loading: true };
+    });
   }, []);
 
   useEffect(() => {

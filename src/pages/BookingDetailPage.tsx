@@ -108,7 +108,12 @@ export default function BookingDetailPage() {
             ? e.message
             : "Something went wrong.",
       );
-      if (e instanceof EvaWriteError && e.status === 409) void detail.refetch();
+      if (e instanceof EvaWriteError && e.status === 409) {
+        /* The slot is gone: drop the selection so its "Book" button doesn't
+         * linger, and reload the times so it shows as taken. */
+        setSelected(undefined);
+        void detail.refetch();
+      }
     } finally {
       setBusy(false);
     }
