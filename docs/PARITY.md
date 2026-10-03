@@ -23,7 +23,7 @@ Ordered by priority. Each item ships on its own branch with `pnpm run check` and
 
 - [x] **Subject rooms**: subject list with teachers, assignments and plannings per subject, unread markers (web `/react/#/parent/subjectrooms`, iOS `SUBJECT_ROOMS`). The hero pill links here.
 - [x] **Bookings**: time-booking list and detail, reserve, confirm and cancel a slot, next booking on the home page (web `right_student_timebooking.jsp`, iOS `BOOKINGS`). The write calls (reserve, confirm, cancel) were verified against mocked responses only, because the account had no open booking. Past bookings appear only on the web page.
-- [ ] **Report absence**: week overview of per-day and per-lesson status, report a full day or single lessons with a comment, gated by school parameters (web `right_student_absence.jsp`, iOS `ABSENCE`).
+- [x] **Report absence**: week overview of per-day and per-lesson status, report a full day or single lessons with a comment, gated by school parameters (web `right_student_absence.jsp`, iOS `ABSENCE`). The write calls follow the iOS app but have not been exercised against the live server; first real use should be watched.
 - [ ] **Messages**: sent folder, trash, compose, reply, delete and restore, mark as unread, attachments.
 - [ ] **News**: read state, confirm ("I have read this") where required, archived and older news, attachments.
 - [ ] **Files & links**: school library of documents and links (web `right_student_library.jsp`).

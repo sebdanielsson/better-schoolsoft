@@ -815,6 +815,196 @@ export function markEvaTimebookingRead(
   );
 }
 
+/* ---------- Report absence (Eva) ---------- */
+
+/** Student-level status of a day or lesson. */
+export const ABSENCE_STATUS = {
+  NO_STATUS: 0,
+  ATTENDANCE: 1,
+  ABSENT: 2,
+  EXPLAINED_ABSENCE: 3,
+  /** Reported in advance by a guardian. */
+  PRE_REPORTED_ABSENCE: 4,
+  APPLICATION_OF_LEAVE_APPROVED: 750,
+} as const;
+
+/** Whether the teacher has taken attendance for a lesson. */
+export const LESSON_STATUS = {
+  UNREPORTED: 1,
+  REPORTED: 2,
+  CANCELLED: 3,
+} as const;
+
+export interface AbsenceWeekDay {
+  /** 0 = Monday … 4 = Friday. */
+  dayId: number;
+  status: number;
+  hasAbsenceReportFullDay: boolean;
+  nrOfLessonsAbsent: number;
+}
+
+export interface AbsenceWeek {
+  studentAbsenceDays: AbsenceWeekDay[];
+  parentComment: string;
+}
+
+export interface AbsenceLesson {
+  lessonId: number;
+  subject: string;
+  /** "HH:mm" */
+  startTime: string;
+  endTime: string;
+  lessonStatus: number;
+  lessonStatusStudent: number;
+  hasAbsenceReportForLesson: boolean;
+  comment: string;
+  nrOfMinutesAbsent: number;
+}
+
+export interface AbsenceDay {
+  dayId: number;
+  hasAbsenceReportFullDay: boolean;
+  absenceStatusFullDay: number;
+  lessons: AbsenceLesson[];
+}
+
+export interface AbsencePermissions {
+  enabled: boolean;
+  allowComment: boolean;
+  allowChange: boolean;
+  isPreSchool: boolean;
+}
+
+const absenceBase = (
+  school: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+) =>
+  `${BASE}/${school}/eva/api/v1/schools/${orgId}/student/${studentId}/parent/${userId}/student-absence/week/${week}`;
+
+export async function fetchEvaAbsencePermissions(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+): Promise<AbsencePermissions> {
+  const params = `${BASE}/${school}/eva/api/v1/schools/${orgId}/parameters`;
+  const [enabled, allowComment, allowChange, isPreSchool] = await Promise.all([
+    evaGet<boolean>(`${params}/report-absence-parent`, accessToken),
+    evaGet<boolean>(`${params}/student-absence-allow-parent-comment-absence`, accessToken),
+    evaGet<boolean>(`${params}/student-absence-allow-parent-change-absence`, accessToken),
+    evaGet<boolean>(
+      `${BASE}/${school}/eva/api/v1/student/${studentId}/school/${orgId}/is-pre-school`,
+      accessToken,
+    ),
+  ]);
+  return {
+    enabled: enabled === true,
+    allowComment: allowComment === true,
+    allowChange: allowChange === true,
+    isPreSchool: isPreSchool === true,
+  };
+}
+
+export function fetchEvaAbsenceWeek(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+): Promise<AbsenceWeek | null> {
+  return evaGet(absenceBase(school, orgId, studentId, userId, week), accessToken);
+}
+
+export function fetchEvaAbsenceDay(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  dayId: number,
+): Promise<AbsenceDay | null> {
+  return evaGet(`${absenceBase(school, orgId, studentId, userId, week)}/day/${dayId}`, accessToken);
+}
+
+/** Report (or with `remove`, withdraw) absence for a whole day. `dayStartMs`
+ *  is the day's midnight in Swedish time as epoch millis, which is what the
+ *  official app puts in the path. */
+export function setEvaFullDayAbsence(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  dayId: number,
+  dayStartMs: number,
+  remove: boolean,
+): Promise<void> {
+  return evaSend(
+    remove ? "DELETE" : "PUT",
+    `${absenceBase(school, orgId, studentId, userId, week)}/day/${dayId}/date/${dayStartMs}`,
+    accessToken,
+  );
+}
+
+/** Report (or with `remove`, withdraw) absence for one lesson. */
+export function setEvaLessonAbsence(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  lessonId: number,
+  remove: boolean,
+): Promise<void> {
+  return evaSend(
+    remove ? "DELETE" : "POST",
+    `${absenceBase(school, orgId, studentId, userId, week)}/lesson/${lessonId}`,
+    accessToken,
+  );
+}
+
+export function saveEvaAbsenceWeekComment(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  comment: string,
+): Promise<void> {
+  return evaSend(
+    "POST",
+    `${absenceBase(school, orgId, studentId, userId, week)}/comment`,
+    accessToken,
+    { comment },
+  );
+}
+
+export function saveEvaAbsenceLessonComment(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  lessonId: number,
+  comment: string,
+): Promise<void> {
+  return evaSend(
+    "POST",
+    `${absenceBase(school, orgId, studentId, userId, week)}/lesson/${lessonId}/comment`,
+    accessToken,
+    { comment },
+  );
+}
+
 export function updateEvaProfileAddress(
   school: string,
   accessToken: string,

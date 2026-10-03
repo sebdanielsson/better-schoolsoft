@@ -22,6 +22,7 @@ const SubjectsPage = lazy(() => import("./SubjectsPage.tsx"));
 const SubjectRoomPage = lazy(() => import("./SubjectRoomPage.tsx"));
 const BookingsPage = lazy(() => import("./BookingsPage.tsx"));
 const BookingDetailPage = lazy(() => import("./BookingDetailPage.tsx"));
+const AbsencePage = lazy(() => import("./AbsencePage.tsx"));
 
 export default function DashboardPage() {
   const location = useLocation();
@@ -56,6 +57,7 @@ export default function DashboardPage() {
               <Route path="/subjects/:activityId" element={<SubjectRoomPage />} />
               <Route path="/bookings" element={<BookingsPage />} />
               <Route path="/bookings/:id" element={<BookingDetailPage />} />
+              <Route path="/absence" element={<AbsencePage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
