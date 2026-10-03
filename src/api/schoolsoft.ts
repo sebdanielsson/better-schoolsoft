@@ -1,4 +1,5 @@
 import { decodeLegacyBody } from "../lib/legacy-pages.ts";
+import { registerSessionCache } from "../lib/session-caches.ts";
 
 const BASE = "/schoolsoft";
 
@@ -1354,41 +1355,54 @@ export interface HolisticAssessmentRow {
   read: boolean;
 }
 
-/** Cache of schools we've already exchanged an Eva JWT for cookies on. The
- *  cookies live on the browser; this just avoids re-running the bootstrap. */
-const bootstrappedSchools = new Set<string>();
+/** The cookie session carries a single "child in focus", so it is valid for
+ *  exactly one (school, guardian, org, child) at a time. Remember which one
+ *  the cookies were last minted for, and share the in-flight exchange so a
+ *  burst of parallel requests triggers one bootstrap rather than dozens. */
+let sessionFocus: { key: string; promise: Promise<void> } | null = null;
+registerSessionCache(() => {
+  sessionFocus = null;
+});
 
 /** Trade the Eva JWT for JSESSIONID + hash cookies on the SchoolSoft React
- *  webview's session. Cheap, idempotent on the client (we deduplicate per
- *  school), and required before any /rest-api/* call. */
-export async function bootstrapSchoolsoftSession(
+ *  webview's session. Required before any /rest-api/* or JSP call. Cheap
+ *  after the first call for the same focus; switching child re-runs it. */
+export function bootstrapSchoolsoftSession(
   school: string,
   evaToken: string,
   userId: number,
   orgId: number,
   studentId: number,
 ): Promise<void> {
-  if (bootstrappedSchools.has(school)) return;
-  const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
-    method: "GET",
-    credentials: "include",
-    redirect: "manual",
-    headers: {
-      token: evaToken,
-      userId: String(userId),
-      orgId: String(orgId),
-      childInFocus: String(studentId),
-      userOS: "android",
-      language: "sw",
-    },
+  const key = `${school}:${userId}:${orgId}:${studentId}`;
+  if (sessionFocus?.key === key) return sessionFocus.promise;
+  const promise = (async () => {
+    const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
+      method: "GET",
+      credentials: "include",
+      redirect: "manual",
+      headers: {
+        token: evaToken,
+        userId: String(userId),
+        orgId: String(orgId),
+        childInFocus: String(studentId),
+        userOS: "android",
+        language: "sw",
+      },
+    });
+    /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
+     * Cookies are applied regardless. Any non-redirect status that isn't 2xx
+     * means the bootstrap failed. */
+    if (res.type !== "opaqueredirect" && !res.ok) {
+      throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
+    }
+  })();
+  sessionFocus = { key, promise };
+  /* Don't cache a failure: the next caller should try again. */
+  promise.catch(() => {
+    if (sessionFocus?.promise === promise) sessionFocus = null;
   });
-  /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
-   * Cookies are applied regardless. Any non-redirect status that isn't 2xx
-   * means the bootstrap failed and we shouldn't mark the school as ready. */
-  if (res.type !== "opaqueredirect" && !res.ok) {
-    throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
-  }
-  bootstrappedSchools.add(school);
+  return promise;
 }
 
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {

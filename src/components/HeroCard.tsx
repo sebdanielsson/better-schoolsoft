@@ -6,6 +6,7 @@ import { useEvaResourceBlob } from "../hooks/useEvaResourceBlob.tsx";
 import { isoWeek } from "../api/schoolsoft.ts";
 import { colorFromName, initials } from "../lib/avatar-helpers.ts";
 import SettingsPill from "./SettingsPill.tsx";
+import ChildSwitcher from "./ChildSwitcher.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar.tsx";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
@@ -89,7 +90,6 @@ export default function HeroCard() {
   if (!session) return null;
 
   const displayName = child ? `${child.firstName} ${child.lastName}` : session.name;
-  const childClass = child?.schools[0]?.className;
   const isGuardian = session.userType === "2";
 
   return (
@@ -138,10 +138,7 @@ export default function HeroCard() {
         <div className="relative z-[1] flex flex-col-reverse items-center gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-[0.6rem]">
           <span className="min-w-0 text-right text-base leading-[1.1] font-bold tracking-[-0.02em] sm:text-[1.2rem] md:min-w-[9rem] md:text-[1.6rem]">
             {child ? (
-              <>
-                {child.firstName}
-                {childClass ? ` · ${childClass}` : ""}
-              </>
+              <ChildSwitcher />
             ) : (
               /* Non-breaking space preserves the line-box so the row keeps the
                * same height as when it contains the child's first name + class. */

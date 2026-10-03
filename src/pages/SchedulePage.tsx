@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
+import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
   fetchLessons,
   fetchEvaLessonsWeek,
-  fetchEvaParent,
   bitmaskToWeeks,
   formatLessonTime,
   isoDay,
@@ -58,6 +58,9 @@ function evaToRow(l: EvaLessonTile, idx: number): ScheduleRow {
 
 export default function SchedulePage() {
   const { session, getToken, getEvaToken } = useAuth();
+  const { child } = useHeroData();
+  const childStudentId = child?.studentId ?? null;
+  const childOrgId = child?.schools[0]?.orgId ?? null;
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,15 +82,14 @@ export default function SchedulePage() {
       const evaToken = await getEvaToken().catch(() => null);
       if (evaToken) {
         try {
-          /* We need a studentId for the Eva endpoint — pull it from the parent record we
-           * already loaded into the session (Eva sessions populate `name` from parent.firstName
-           * but not the studentId). The Eva fetcher accepts the orgId from the session. */
-          const studentId = await getStudentId(session!, evaToken);
+          /* The Eva endpoint needs the child in focus, which the hero data
+           * resolves (and lets the guardian switch). */
+          const studentId = childStudentId;
           if (studentId) {
             const tiles = await fetchEvaLessonsWeek(
               session!.school,
               evaToken,
-              session!.orgId,
+              childOrgId ?? session!.orgId,
               studentId,
               selectedWeek,
             );
@@ -130,7 +132,7 @@ export default function SchedulePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, selectedWeek]);
+  }, [session, getToken, getEvaToken, selectedWeek, childStudentId, childOrgId]);
 
   const byDay = useMemo(() => {
     const map: Record<number, ScheduleRow[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
@@ -278,23 +280,4 @@ export default function SchedulePage() {
       )}
     </div>
   );
-}
-
-/** Pull the student id from the cached Eva /parent response or refetch if needed. */
-async function getStudentId(
-  session: { school: string },
-  accessToken: string,
-): Promise<number | null> {
-  /* Cache on window so we don't hit /parent on every week-change. */
-  const cache = (globalThis as unknown as { __bss_student?: number | null }).__bss_student;
-  if (typeof cache === "number") return cache;
-
-  try {
-    const parent = await fetchEvaParent(session.school, accessToken);
-    const studentId = parent.children[0]?.studentId ?? null;
-    (globalThis as unknown as { __bss_student?: number | null }).__bss_student = studentId;
-    return studentId;
-  } catch {
-    return null;
-  }
 }

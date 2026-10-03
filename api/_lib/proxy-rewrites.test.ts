@@ -48,6 +48,10 @@ test("moves absolute upstream redirects under /schoolsoft", () => {
     "/schoolsoft/files/x/tmp_file_1.tmp?md5=a&expires=1",
   );
   assert.equal(rewriteLocation("https://sms.schoolsoft.se"), "/schoolsoft/");
+  assert.equal(
+    rewriteLocation("http://sms.schoolsoft.se/school/eva-apps/auth/null?error=other"),
+    "/schoolsoft/school/eva-apps/auth/null?error=other",
+  );
 });
 
 test("moves root-relative redirects under /schoolsoft once", () => {

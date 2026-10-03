@@ -29,7 +29,7 @@ Ordered by priority. Each item ships on its own branch with `pnpm run check` and
 - [x] **Files & links**: school library of documents and links (web `right_student_library.jsp`).
 - [x] **School information**: address, homepage, contact (web `right_student_school.jsp`). Both live on `/school`. The JSP is parsed with `DOMParser` and only vetted text and links are kept.
 - [x] **Assignment results**: results per subject (web legacy "Assignments & results"), covered by the Results card on each subject page.
-- [ ] **Multiple children**: child switcher for guardians with more than one child.
+- [x] **Multiple children**: child switcher for guardians with more than one child. Untested live because the account has one child. The cookie session now re-bootstraps when the child in focus changes.
 
 ## Blocked for app sessions (needs a decision)
 

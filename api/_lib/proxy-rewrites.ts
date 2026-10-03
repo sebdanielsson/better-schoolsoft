@@ -28,8 +28,11 @@ export function rewriteCookiePath(cookie: string): string {
  *  upstream origin and root-relative paths are moved under the `/schoolsoft`
  *  mount; anything pointing at another host is left alone. */
 export function rewriteLocation(location: string): string {
-  if (location.startsWith(UPSTREAM_ORIGIN + "/") || location === UPSTREAM_ORIGIN) {
-    return MOUNT + (location.slice(UPSTREAM_ORIGIN.length) || "/");
+  /* Upstream sometimes emits its own origin as plain http. */
+  for (const origin of [UPSTREAM_ORIGIN, UPSTREAM_ORIGIN.replace("https:", "http:")]) {
+    if (location.startsWith(origin + "/") || location === origin) {
+      return MOUNT + (location.slice(origin.length) || "/");
+    }
   }
   if (location.startsWith("/") && !location.startsWith("//") && !location.startsWith(MOUNT + "/")) {
     return MOUNT + location;
