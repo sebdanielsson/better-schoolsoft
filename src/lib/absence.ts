@@ -139,3 +139,23 @@ export const absenceKeys = {
   day: (prefix: string, year: number, week: number, dayId: number) =>
     `${absenceKeys.weekPrefix(prefix, year, week)}day${dayId}`,
 };
+
+/** Monday of ISO week `week` in ISO week-year `year`. */
+export function mondayOfIsoWeek(year: number, week: number): Date {
+  /* ISO week 1 is the week containing 4 January. */
+  return addDays(mondayOf(new Date(year, 0, 4)), (week - 1) * 7);
+}
+
+/** The absence endpoint takes a bare week number, so it can only address one
+ *  school year. Mirror the web app's week picker (w27 … w26): navigation is
+ *  limited to the school year containing `today`, where each number is
+ *  unambiguous. Returns the first and last Monday. */
+export function schoolYearWeeks(today: Date): { first: Date; last: Date } {
+  const thisMonday = mondayOf(today);
+  let startYear = today.getFullYear();
+  if (thisMonday < mondayOfIsoWeek(startYear, 27)) startYear -= 1;
+  return {
+    first: mondayOfIsoWeek(startYear, 27),
+    last: mondayOfIsoWeek(startYear + 1, 26),
+  };
+}

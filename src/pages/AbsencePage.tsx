@@ -27,6 +27,7 @@ import {
   lessonEnded,
   mondayOf,
   schoolMidnightMs,
+  schoolYearWeeks,
   type AttendanceTone,
 } from "../lib/absence.ts";
 import { invalidateQueries } from "../lib/query-cache.ts";
@@ -56,8 +57,13 @@ export default function AbsencePage() {
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const week = isoWeek(monday);
   const year = isoWeekYear(monday);
-  const thisMonday = mondayOf(useNow());
+  const today = useNow();
+  const thisMonday = mondayOf(today);
   const isThisWeek = monday.getTime() === thisMonday.getTime();
+  /* The endpoint only knows week numbers, so stay inside one school year. */
+  const bounds = schoolYearWeeks(today);
+  const atFirst = monday.getTime() <= bounds.first.getTime();
+  const atLast = monday.getTime() >= bounds.last.getTime();
 
   const perms = useQuery(
     ctx && absenceKeys.permissions(ctx.keyPrefix),
@@ -146,7 +152,8 @@ export default function AbsencePage() {
           <button
             type="button"
             onClick={() => setMonday((m) => addDays(m, -7))}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            disabled={atFirst}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
             aria-label="Previous week"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -157,7 +164,8 @@ export default function AbsencePage() {
           <button
             type="button"
             onClick={() => setMonday((m) => addDays(m, 7))}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            disabled={atLast}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-30"
             aria-label="Next week"
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />

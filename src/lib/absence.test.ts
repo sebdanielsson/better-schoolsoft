@@ -10,7 +10,9 @@ import {
   mondayOf,
   schoolMidnightMs,
   schoolTimeMs,
+  schoolYearWeeks,
 } from "./absence.ts";
+import { isoWeek } from "../api/schoolsoft.ts";
 import type { AbsenceLesson } from "../api/schoolsoft.ts";
 
 void test("schoolMidnightMs is Swedish midnight in summer and winter time", () => {
@@ -100,4 +102,17 @@ void test("lessonAttendance labels", () => {
       .label,
     /late/,
   );
+});
+
+void test("schoolYearWeeks spans week 27 to week 26 of the school year", () => {
+  const autumn = schoolYearWeeks(new Date(2026, 9, 3));
+  assert.equal(isoWeek(autumn.first), 27);
+  assert.equal(autumn.first.getFullYear(), 2026);
+  assert.equal(isoWeek(autumn.last), 26);
+  assert.equal(autumn.last.getFullYear(), 2027);
+  const spring = schoolYearWeeks(new Date(2027, 2, 15));
+  assert.equal(spring.first.getTime(), autumn.first.getTime());
+  const summer = schoolYearWeeks(new Date(2027, 6, 20));
+  assert.equal(summer.first.getFullYear(), 2027);
+  assert.equal(isoWeek(summer.first), 27);
 });
