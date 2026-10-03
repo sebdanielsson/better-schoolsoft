@@ -136,10 +136,30 @@ export interface EvaNewsItem {
   category?: string;
   author?: EvaNewsAuthor;
   read?: boolean;
+  /** The item asks guardians a question (see `responseLabel` on the detail). */
   response?: boolean;
   hasAttachment?: boolean;
-  newsConfirm?: unknown;
+  /** The guardian's answer, when one has been given. */
+  newsConfirm?: EvaNewsConfirm | null;
 }
+
+export interface EvaNewsConfirm {
+  responseText: string;
+  confirmDate: string | null;
+}
+
+export interface EvaNewsDetail extends EvaNewsItem {
+  fromDate?: string;
+  /** The question, when `response` is true. */
+  responseLabel?: string;
+  attachments?: EvaMessageAttachment[];
+  toParent?: boolean;
+  toStudent?: boolean;
+  toTeacher?: boolean;
+  groupRecipients?: string[];
+}
+
+export type EvaNewsFeed = "current" | "old" | "archived";
 
 /** A message sender. id = -1 indicates a system message from SchoolSoft itself. */
 export interface EvaMessageSender {
@@ -400,6 +420,36 @@ export function fetchEvaNews(
 ): Promise<EvaNewsItem[]> {
   return evaGetList(
     `${BASE}/${school}/eva/api/v2/parent/${userId}/schools/${orgId}/news?studentId=${studentId}&langId=${langId}`,
+    accessToken,
+  );
+}
+
+/** Current, older (expired) or archived news. */
+export function fetchEvaNewsFeed(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+  feed: EvaNewsFeed,
+  langId = 1,
+): Promise<EvaNewsItem[]> {
+  const path = feed === "current" ? "news" : `news/${feed}`;
+  return evaGetList(
+    `${BASE}/${school}/eva/api/v2/parent/${userId}/schools/${orgId}/${path}?studentId=${studentId}&langId=${langId}`,
+    accessToken,
+  );
+}
+
+export function fetchEvaNewsDetail(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  newsId: number,
+): Promise<EvaNewsDetail | null> {
+  return evaGet(
+    `${BASE}/${school}/eva/api/v2/parent/${userId}/schools/${orgId}/news/${newsId}`,
     accessToken,
   );
 }
@@ -774,6 +824,54 @@ export async function fetchEvaAttachment(
   );
   if (!res.ok) throw new Error(`Attachment download failed (${res.status})`);
   return res.blob();
+}
+
+/* ---------- News: writes (Eva) ---------- */
+
+/** Mark a news item read, as the official app does when the detail opens. */
+export function markEvaNewsRead(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  newsId: number,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/news/read/${newsId}`,
+    accessToken,
+  );
+}
+
+/** Archive (hide) a news item, or bring it back. */
+export function setEvaNewsArchived(
+  school: string,
+  accessToken: string,
+  userId: number,
+  newsId: number,
+  archived: boolean,
+): Promise<void> {
+  return evaSend(
+    archived ? "POST" : "DELETE",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/news-hidden/${newsId}`,
+    accessToken,
+  );
+}
+
+/** Answer (or update the answer to) a news item's question. */
+export function saveEvaNewsResponse(
+  school: string,
+  accessToken: string,
+  userId: number,
+  newsId: number,
+  responseText: string,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/newsconfirm/${newsId}`,
+    accessToken,
+    { responseText },
+  );
 }
 
 /* ---------- Time bookings (Eva) ---------- */

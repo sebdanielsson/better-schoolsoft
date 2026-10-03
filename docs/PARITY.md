@@ -25,7 +25,7 @@ Ordered by priority. Each item ships on its own branch with `pnpm run check` and
 - [x] **Bookings**: time-booking list and detail, reserve, confirm and cancel a slot, next booking on the home page (web `right_student_timebooking.jsp`, iOS `BOOKINGS`). The write calls (reserve, confirm, cancel) were verified against mocked responses only, because the account had no open booking. Past bookings appear only on the web page.
 - [x] **Report absence**: week overview of per-day and per-lesson status, report a full day or single lessons with a comment, gated by school parameters (web `right_student_absence.jsp`, iOS `ABSENCE`). The write calls follow the iOS app but have not been exercised against the live server; first real use should be watched.
 - [x] **Messages**: sent folder, trash, compose, reply, delete and restore, mark as unread, attachments. Read/unread and trash/restore were verified live. Compose and reply follow the school's `message-usage-level-allow-all` setting and the message's `replyTo` flag. Both are off at the reference school, so sending is untested.
-- [ ] **News**: read state, confirm ("I have read this") where required, archived and older news, attachments.
+- [x] **News**: read state, answering questions where asked, archived and older news, attachments with inline images. Read marking and archive/unarchive were verified live. Answering is untested because no open question was available.
 - [ ] **Files & links**: school library of documents and links (web `right_student_library.jsp`).
 - [ ] **School information**: address, homepage, contact (web `right_student_school.jsp`).
 - [x] **Assignment results**: results per subject (web legacy "Assignments & results"), covered by the Results card on each subject page.

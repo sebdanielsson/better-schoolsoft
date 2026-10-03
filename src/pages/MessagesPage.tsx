@@ -3,20 +3,19 @@ import { MailOpen, Paperclip, PenSquare, RotateCcw, Search, Send, Trash2 } from 
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.tsx";
 import {
-  fetchEvaAttachment,
   fetchEvaMessage,
   fetchEvaMessages,
   fetchEvaMessagingAllowAll,
   moveEvaMessages,
   setEvaMessageRead,
-  type EvaMessageAttachment,
   type EvaMessageDetail,
   type EvaMessageFolder,
   type EvaMessageMove,
 } from "../api/schoolsoft.ts";
-import { filterMessages, messageKeys, safeDownloadName, senderName } from "../lib/messages.ts";
+import { filterMessages, messageKeys, senderName } from "../lib/messages.ts";
 import { getQueryEntry, invalidateQueries, setQueryData } from "../lib/query-cache.ts";
 import Avatar from "../components/Avatar.tsx";
+import AttachmentLink from "../components/AttachmentLink.tsx";
 import ComposeMessageDialog, { type ComposeTarget } from "../components/ComposeMessageDialog.tsx";
 import ConfirmDialog, { btnPrimaryClass } from "../components/ConfirmDialog.tsx";
 import { ErrorBanner } from "../components/DashCard.tsx";
@@ -506,46 +505,6 @@ function MessageBody({ ctx, message: d }: { ctx: SchoolsoftContext; message: Eva
         </div>
       )}
     </>
-  );
-}
-
-function AttachmentLink({
-  ctx,
-  attachment,
-}: {
-  ctx: SchoolsoftContext;
-  attachment: EvaMessageAttachment;
-}) {
-  const [state, setState] = useState<"idle" | "loading" | "error">("idle");
-  async function download() {
-    setState("loading");
-    try {
-      const blob = await fetchEvaAttachment(ctx.school, await ctx.token(), attachment.fileId);
-      /* Always save, never open inline: a blob URL shares our origin, so an
-       * HTML attachment opened in a tab could read the stored session. */
-      const url = URL.createObjectURL(new Blob([blob], { type: "application/octet-stream" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = safeDownloadName(attachment.name);
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      setState("idle");
-    } catch {
-      setState("error");
-    }
-  }
-  return (
-    <button
-      type="button"
-      onClick={() => void download()}
-      disabled={state === "loading"}
-      className="inline-flex items-center gap-1.5 text-[0.9rem] text-blue-600 hover:underline disabled:opacity-60"
-    >
-      <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
-      {attachment.name || "Attachment"}
-      {state === "loading" && <span className="text-slate-500"> · downloading…</span>}
-      {state === "error" && <span className="text-red-700"> · download failed</span>}
-    </button>
   );
 }
 
