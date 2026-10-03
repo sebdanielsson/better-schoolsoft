@@ -16,13 +16,13 @@ const LIBRARY = `
 <div id="library_con_content" class="h2_innerno_pad">
   <div class="h3_bold">Utan kategori</div>
   <table class="table"><tr><td>
-    <a href="https://www.uppsala.se/skadeanmalan/" target="_blank"><img src="x.png" alt="" />&nbsp;Accident form</a>
+    <a href="https://www.example-kommun.se/skadeanmalan/" target="_blank"><img src="x.png" alt="" />&nbsp;Accident form</a>
     <div>Blankett för skadeanmälan.</div>
   </td></tr><tr><td>
     <a href="javascript:alert(1)">Evil link</a>
   </td></tr><tr><td>
     <div class="heading_bold">Locker Policy</div><div>Please find locker policy of school.</div>
-    <a href="right_student_library_download.jsp?requestid=16414" title = "Locker Policy IESU.pdf"><img alt="" src="pdf.png"/>Locker P...pdf</a> (60&nbsp;KB)<br />
+    <a href="right_student_library_download.jsp?requestid=16414" title = "Locker Policy.pdf"><img alt="" src="pdf.png"/>Locker P...pdf</a> (60&nbsp;KB)<br />
   </td></tr><tr><td>
     <div class="heading_bold">Broken</div>
     <a href="right_student_library_download.jsp?requestid=abc" title="x.pdf">x</a>
@@ -43,14 +43,14 @@ void test("parseLibrary reads categories, links and files", () => {
       kind: "link",
       title: "Accident form",
       description: "Blankett för skadeanmälan.",
-      href: "https://www.uppsala.se/skadeanmalan/",
+      href: "https://www.example-kommun.se/skadeanmalan/",
     },
     {
       kind: "file",
       title: "Locker Policy",
       description: "Please find locker policy of school.",
       requestId: 16414,
-      fileName: "Locker Policy IESU.pdf",
+      fileName: "Locker Policy.pdf",
       size: "60 KB",
     },
   ]);
@@ -65,18 +65,18 @@ void test("parseLibrary drops unsafe links and non-numeric downloads", () => {
 
 /* Trimmed from right_student_school.jsp. */
 const SCHOOL = `<div class="formtable"><table>
-<tr><td>Adress</td><td>IES Uppsala</td></tr>
-<tr><td></td><td>Genetikvägen 6</td></tr>
+<tr><td>Adress</td><td>Exempelskolan</td></tr>
+<tr><td></td><td>Skolvägen 1</td></tr>
 <tr><td></td><td></td></tr>
-<tr><td></td><td>75659 Uppsala</td></tr>
-<tr><td>Hemsida</td><td><a href="http://www.engelska.se">http://www.engelska.se</a></td></tr>
+<tr><td></td><td>123 45 Exempelstad</td></tr>
+<tr><td>Hemsida</td><td><a href="http://www.exempelskolan.se">http://www.exempelskolan.se</a></td></tr>
 <tr><td>E-post</td><td></td></tr>
 </table></div>`;
 
 void test("parseSchoolInfo joins continuation rows and drops empty fields", () => {
   assert.deepEqual(parseSchoolInfo(SCHOOL), [
-    { label: "Adress", lines: ["IES Uppsala", "Genetikvägen 6", "75659 Uppsala"] },
-    { label: "Hemsida", lines: ["http://www.engelska.se"], href: "http://www.engelska.se/" },
+    { label: "Adress", lines: ["Exempelskolan", "Skolvägen 1", "123 45 Exempelstad"] },
+    { label: "Hemsida", lines: ["http://www.exempelskolan.se"], href: "http://www.exempelskolan.se/" },
   ]);
 });
 
