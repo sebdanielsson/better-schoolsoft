@@ -3,7 +3,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
-import { createElement, act } from "react";
+import { createElement, act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { clearQueryCache, invalidateQueries } from "../lib/query-cache.ts";
 import { useQuery, type QueryResult } from "./useQuery.ts";
@@ -21,9 +21,12 @@ void test("a query whose first fetch is abandoned by invalidation refetches inst
     calls++;
     return new Promise<string>((r) => resolvers.push(r));
   };
-  let latest: QueryResult<string> | undefined;
+  const seen: { latest?: QueryResult<string> } = {};
   function Probe() {
-    latest = useQuery("q", fn);
+    const result = useQuery("q", fn);
+    useEffect(() => {
+      seen.latest = result;
+    });
     return null;
   }
   const root = createRoot(document.getElementById("root")!);
@@ -31,7 +34,7 @@ void test("a query whose first fetch is abandoned by invalidation refetches inst
     root.render(createElement(Probe));
   });
   assert.equal(calls, 1);
-  assert.equal(latest?.loading, true);
+  assert.equal(seen.latest?.loading, true);
 
   /* Invalidate while the very first fetch is still in flight. */
   await act(async () => {
@@ -43,8 +46,8 @@ void test("a query whose first fetch is abandoned by invalidation refetches inst
     resolvers[0]!("stale");
     resolvers[1]!("fresh");
   });
-  assert.equal(latest?.loading, false);
-  assert.equal(latest?.data, "fresh");
+  assert.equal(seen.latest?.loading, false);
+  assert.equal(seen.latest?.data, "fresh");
   await act(async () => root.unmount());
 });
 
@@ -55,9 +58,12 @@ void test("an errored query does not retry in a loop", async () => {
     calls++;
     return Promise.reject(new Error("boom"));
   };
-  let latest: QueryResult<string> | undefined;
+  const seen: { latest?: QueryResult<string> } = {};
   function Probe() {
-    latest = useQuery("e", fn);
+    const result = useQuery("e", fn);
+    useEffect(() => {
+      seen.latest = result;
+    });
     return null;
   }
   const root = createRoot(document.getElementById("root")!);
@@ -67,7 +73,7 @@ void test("an errored query does not retry in a loop", async () => {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 20));
   });
-  assert.equal(latest?.error?.message, "boom");
+  assert.equal(seen.latest?.error?.message, "boom");
   assert.ok(calls <= 2, `retried ${calls} times`);
   await act(async () => root.unmount());
 });
