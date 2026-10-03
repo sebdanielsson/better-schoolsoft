@@ -55,7 +55,7 @@ These web pages redirect app-type sessions (ours, created via `/eva-apps/auth/lo
 
 ## Tech debt found along the way
 
-- [ ] Profile name edit calls `PUT …/profile/name`, which the iOS app never uses. The app uses `PUT …/profile/personal` with `{fName, lName}`. Verify which one works.
+- [x] Profile name edit called `PUT …/profile/name`, which returns 404, so editing names was broken. It now uses `PUT …/profile/personal`, verified with a no-op update.
 - [x] `EvaMessageDetail.attachments` is typed `{id, size}`, but the API returns `{fileId, name}`, downloaded via `v1/resource/attachment/{fileId}`.
 - [ ] `sanitizeStaffHtml` is a hand-rolled sanitizer. Consider DOMPurify, given that the refresh token lives in `localStorage`.
 - [ ] `api/schoolsoft/[...path].ts` uses `runtime: "edge"`, which Vercel has deprecated. Move it to the default Node.js runtime.

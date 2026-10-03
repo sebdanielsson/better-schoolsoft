@@ -1247,7 +1247,12 @@ export function updateEvaProfileName(
   userId: number,
   body: { fName: string; lName: string },
 ): Promise<void> {
-  return evaPut(`${BASE}/${school}/eva/api/v1/parent/${userId}/profile/name`, accessToken, body);
+  /* `/profile/name` 404s; the official app uses `/profile/personal`. */
+  return evaPut(
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/profile/personal`,
+    accessToken,
+    body,
+  );
 }
 
 export function updateEvaProfileContact(
