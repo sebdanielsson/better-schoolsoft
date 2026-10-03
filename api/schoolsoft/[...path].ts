@@ -6,7 +6,11 @@
  * `/schoolsoft` to every Set-Cookie `Path` attribute so the browser sends
  * the cookies back on subsequent proxied requests. School-agnostic.
  */
-import { rewriteCookiePath, rewriteLocation } from "../_lib/proxy-rewrites.ts";
+import {
+  PROXY_SECURITY_HEADERS,
+  rewriteCookiePath,
+  rewriteLocation,
+} from "../_lib/proxy-rewrites.ts";
 
 export const config = { runtime: "edge" } as const;
 
@@ -68,6 +72,8 @@ export default async function handler(request: Request): Promise<Response> {
   for (const h of HOP_BY_HOP) resHeaders.delete(h);
   resHeaders.delete("content-encoding");
   resHeaders.delete("content-length");
+
+  for (const [k, v] of Object.entries(PROXY_SECURITY_HEADERS)) resHeaders.set(k, v);
 
   const location = upstream.headers.get("location");
   if (location) resHeaders.set("location", rewriteLocation(location));

@@ -39,3 +39,13 @@ export function rewriteLocation(location: string): string {
   }
   return location;
 }
+
+/** Headers added to every proxied response. Upstream content is served from
+ *  our origin, where the Eva token lives in localStorage; if SchoolSoft ever
+ *  serves an uploaded HTML/SVG file inline, a sandboxed, script-less document
+ *  can't reach it. The SPA only reads these responses with fetch(), which the
+ *  CSP doesn't affect. */
+export const PROXY_SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  "Content-Security-Policy": "sandbox; default-src 'none'",
+  "X-Content-Type-Options": "nosniff",
+};
