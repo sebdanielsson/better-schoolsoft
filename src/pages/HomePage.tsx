@@ -31,6 +31,7 @@ import {
 import AssignmentsCard from "../components/AssignmentsCard.tsx";
 import LunchCard from "../components/LunchCard.tsx";
 import PlanningsCard from "../components/PlanningsCard.tsx";
+import NextBookingCard from "../components/NextBookingCard.tsx";
 import Avatar from "../components/Avatar.tsx";
 import { expandSubjectCode } from "../lib/subject-codes.ts";
 import NewsPopover, { type NewsPopoverData } from "../components/NewsPopover.tsx";
@@ -474,6 +475,8 @@ export default function HomePage() {
       )}
 
       <div className={dashGridClass}>
+        <NextBookingCard />
+
         {/* Combined schedule card — toggle between days with prev/next */}
         <section className={cn(cardClass, accentClasses.primary, "md:col-span-6")}>
           <header className={cardHeaderClass}>

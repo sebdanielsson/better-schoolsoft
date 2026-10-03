@@ -620,6 +620,201 @@ async function evaPut(url: string, accessToken: string, body: unknown): Promise<
   if (!res.ok) throw new Error(`PUT ${url} failed (${res.status})`);
 }
 
+/** Write call for Eva endpoints that answer with an empty body (or one we
+ *  don't need). Omits the body and its Content-Type when `body` is undefined:
+ *  several report/read-marker endpoints take no payload at all. */
+async function evaSend(
+  method: "POST" | "PUT" | "DELETE",
+  url: string,
+  accessToken: string,
+  body?: unknown,
+): Promise<void> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new EvaWriteError(method, res.status);
+}
+
+/** A rejected Eva write. Keeps the status so callers can tell "slot already
+ *  taken" (409) from other failures without parsing message strings. */
+export class EvaWriteError extends Error {
+  readonly status: number;
+  constructor(method: string, status: number) {
+    super(`${method} request failed (${status})`);
+    this.name = "EvaWriteError";
+    this.status = status;
+  }
+}
+
+/* ---------- Time bookings (Eva) ---------- */
+
+export type TimebookingStatus =
+  | "AVAILABLE"
+  | "NEEDS_CONFIRMATION"
+  | "NOT_AVAILABLE"
+  | "BOOKED"
+  | "FOR_INFORMATION"
+  | (string & {});
+
+export interface TimebookingTeacher {
+  fName: string;
+  lName: string;
+  picture?: string;
+}
+
+export interface TimebookingSummary {
+  timebookingId: number;
+  name: string;
+  status: TimebookingStatus;
+  isRead: boolean;
+  creDate?: string;
+  /** Last day a time can be booked. */
+  bookableTo?: string | null;
+  firstTimebookingTime?: string | null;
+  lastTimebookingTime?: string | null;
+  studentBookedDate?: string | null;
+  timebookingTimeAmount?: number;
+  teacher?: TimebookingTeacher | null;
+}
+
+/** Identifies one slot. Field casing is lowercase on purpose — it is sent
+ *  back verbatim as the reserve/confirm/cancel body. */
+export interface TimebookingTimeKey {
+  timebookingid: number;
+  sequence: number;
+}
+
+export interface TimebookingTime {
+  timebookingTimeKey: TimebookingTimeKey;
+  /** Timestamp or "HH:mm"; the app formats both. */
+  startTime: string | number;
+  endTime: string | number;
+  date?: string | number;
+  /** Slot length in minutes. */
+  length?: number;
+  comment?: string | null;
+  location?: string | null;
+  /** Taken by someone (possibly this student). */
+  booked?: boolean;
+  bookedByStudent?: boolean;
+  confirmed?: boolean;
+}
+
+export interface TimebookingDate {
+  date: string | number;
+  timebookingTimes: TimebookingTime[];
+}
+
+export interface TimebookingDetail extends TimebookingSummary {
+  description?: string | null;
+  meetingLink?: string | null;
+  bookable?: boolean;
+  /** Only the student (not a guardian) may book. */
+  onlyStudent?: boolean;
+  bookedByStudent?: boolean;
+  timebookingDates?: TimebookingDate[];
+}
+
+export interface TimebookingStartpageItem {
+  timebookingId: number;
+  name: string;
+  teacherName?: string;
+  startTime: string | number;
+  endTime: string | number;
+}
+
+const timebookingsBase = (school: string, userId: number, studentId: number, orgId: number) =>
+  `${BASE}/${school}/eva/api/v1/parents/${userId}/students/${studentId}/schools/${orgId}/timebookings`;
+
+export function fetchEvaTimebookingsEnabled(
+  school: string,
+  accessToken: string,
+  orgId: number,
+): Promise<boolean> {
+  return evaGet<boolean>(
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/parameters/time-bookings`,
+    accessToken,
+  ).then((v) => v === true);
+}
+
+export function fetchEvaTimebookings(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+): Promise<TimebookingSummary[]> {
+  return evaGetList(timebookingsBase(school, userId, studentId, orgId), accessToken);
+}
+
+export function fetchEvaTimebooking(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+  timebookingId: number,
+): Promise<TimebookingDetail | null> {
+  return evaGet(
+    `${timebookingsBase(school, userId, studentId, orgId)}/${timebookingId}`,
+    accessToken,
+  );
+}
+
+/** Next upcoming booked time for the home page; null when there is none. */
+export async function fetchEvaTimebookingStartpage(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+): Promise<TimebookingStartpageItem | null> {
+  const data = await evaGet<TimebookingStartpageItem | TimebookingStartpageItem[] | null>(
+    `${timebookingsBase(school, userId, studentId, orgId)}/startpage`,
+    accessToken,
+  );
+  if (Array.isArray(data)) return data[0] ?? null;
+  return data && typeof data === "object" ? data : null;
+}
+
+export type TimebookingAction = "reserve" | "confirm" | "cancel";
+
+/** Reserve a free slot, confirm a teacher-proposed slot, or cancel the
+ *  student's slot. Reserve answers 409 when someone else took it first. */
+export function updateEvaTimebookingTime(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+  action: TimebookingAction,
+  key: TimebookingTimeKey,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/parents/${userId}/students/${studentId}/timebookingtimes/${action}`,
+    accessToken,
+    { timebookingid: key.timebookingid, sequence: key.sequence },
+  );
+}
+
+export function markEvaTimebookingRead(
+  school: string,
+  accessToken: string,
+  userId: number,
+  timebookingId: number,
+): Promise<void> {
+  return evaSend(
+    "POST",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/timebooking-read/${timebookingId}`,
+    accessToken,
+  );
+}
+
 export function updateEvaProfileAddress(
   school: string,
   accessToken: string,
