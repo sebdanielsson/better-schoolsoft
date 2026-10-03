@@ -131,7 +131,7 @@ export default function NewsPage() {
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
     for (const n of items) {
-      const c = n.category ?? "Other";
+      const c = n.category?.trim() || "Other";
       counts.set(c, (counts.get(c) ?? 0) + 1);
     }
     return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
@@ -139,7 +139,7 @@ export default function NewsPage() {
 
   const filtered = useMemo(() => {
     if (!selectedCategory) return items;
-    return items.filter((n) => (n.category ?? "Other") === selectedCategory);
+    return items.filter((n) => (n.category?.trim() || "Other") === selectedCategory);
   }, [items, selectedCategory]);
 
   const unanswered = items.filter((n) => n.response && !n.newsConfirm).length;
