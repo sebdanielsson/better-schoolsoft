@@ -2,7 +2,7 @@
 // promise the runner owns; awaiting it at the call site would serialize the suite.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rewriteCookiePath } from "./[...path].ts";
+import { rewriteCookiePath, rewriteLocation } from "./proxy-rewrites.ts";
 
 test("re-scopes the upstream cookie path under /schoolsoft", () => {
   assert.equal(
@@ -40,4 +40,31 @@ test("leaves a cookie without a Path untouched", () => {
   /* No Path attribute means the browser defaults to the request's directory,
    * which is already under /schoolsoft. */
   assert.equal(rewriteCookiePath("a=b; HttpOnly"), "a=b; HttpOnly");
+});
+
+test("moves absolute upstream redirects under /schoolsoft", () => {
+  assert.equal(
+    rewriteLocation("https://sms.schoolsoft.se/files/x/tmp_file_1.tmp?md5=a&expires=1"),
+    "/schoolsoft/files/x/tmp_file_1.tmp?md5=a&expires=1",
+  );
+  assert.equal(rewriteLocation("https://sms.schoolsoft.se"), "/schoolsoft/");
+});
+
+test("moves root-relative redirects under /schoolsoft once", () => {
+  assert.equal(
+    rewriteLocation("/mock-school/jsp/Login.jsp"),
+    "/schoolsoft/mock-school/jsp/Login.jsp",
+  );
+  assert.equal(rewriteLocation("/schoolsoft/mock-school/x"), "/schoolsoft/mock-school/x");
+});
+
+test("leaves other hosts and relative paths alone", () => {
+  assert.equal(rewriteLocation("https://example.com/a"), "https://example.com/a");
+  /* Look-alike host must not be treated as upstream. */
+  assert.equal(
+    rewriteLocation("https://sms.schoolsoft.se.evil.example/a"),
+    "https://sms.schoolsoft.se.evil.example/a",
+  );
+  assert.equal(rewriteLocation("//evil.example/a"), "//evil.example/a");
+  assert.equal(rewriteLocation("right_student_app_blocked.jsp"), "right_student_app_blocked.jsp");
 });

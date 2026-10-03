@@ -6,6 +6,8 @@
  * `/schoolsoft` to every Set-Cookie `Path` attribute so the browser sends
  * the cookies back on subsequent proxied requests. School-agnostic.
  */
+import { rewriteCookiePath, rewriteLocation } from "../_lib/proxy-rewrites.ts";
+
 export const config = { runtime: "edge" } as const;
 
 const UPSTREAM = "https://sms.schoolsoft.se";
@@ -67,6 +69,9 @@ export default async function handler(request: Request): Promise<Response> {
   resHeaders.delete("content-encoding");
   resHeaders.delete("content-length");
 
+  const location = upstream.headers.get("location");
+  if (location) resHeaders.set("location", rewriteLocation(location));
+
   const setCookies = upstream.headers.getSetCookie?.() ?? [];
   if (setCookies.length) {
     resHeaders.delete("set-cookie");
@@ -80,18 +85,4 @@ export default async function handler(request: Request): Promise<Response> {
     statusText: upstream.statusText,
     headers: resHeaders,
   });
-}
-
-/** Re-scope an upstream `Set-Cookie` onto our own origin.
- *
- *  Exported for tests. Two rewrites are needed:
- *  - `Path=/<school>` becomes `Path=/schoolsoft/<school>` so the browser sends
- *    the cookie back on our proxied requests rather than only on paths that
- *    exist on sms.schoolsoft.se.
- *  - `Domain=` is dropped entirely. Upstream scopes cookies to its own domain,
- *    which never matches the SPA's origin, so the browser would reject the
- *    cookie outright. Without the attribute the cookie becomes host-only on our
- *    origin, which is what we want. */
-export function rewriteCookiePath(cookie: string): string {
-  return cookie.replace(/(\bPath=)(\/[^;]*)/i, "$1/schoolsoft$2").replace(/;\s*Domain=[^;]*/i, "");
 }
