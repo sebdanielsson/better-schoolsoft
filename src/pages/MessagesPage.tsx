@@ -193,13 +193,12 @@ export default function MessagesPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="Folders" className="flex gap-1.5">
+        <div role="group" aria-label="Folders" className="flex gap-1.5">
           {FOLDERS.map((f) => (
             <button
               key={f.id}
               type="button"
-              role="tab"
-              aria-selected={folder === f.id}
+              aria-pressed={folder === f.id}
               onClick={() => {
                 setFolder(f.id);
                 setSelectedId(null);

@@ -127,7 +127,7 @@ export function invalidateQueries(prefix: string): void {
   for (const [key, entry] of entries) {
     if (key.startsWith(prefix)) {
       bump(key);
-      setEntry(key, { ...entry, updatedAt: 0, promise: undefined });
+      setEntry(key, { ...entry, updatedAt: 0, error: undefined, promise: undefined });
     }
   }
 }

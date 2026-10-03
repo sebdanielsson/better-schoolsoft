@@ -126,3 +126,14 @@ void test("setQueryData wins over a fetch that was already in flight", async () 
   await old;
   assert.equal(getQueryEntry("k").data, "patched");
 });
+
+void test("invalidating an unfinished first fetch leaves the entry ready to refetch", () => {
+  clearQueryCache();
+  void fetchQuery("k", () => new Promise<string>(() => {}));
+  invalidateQueries("k");
+  const entry = getQueryEntry("k");
+  /* useQuery refetches when nothing is in flight and the entry is stale. */
+  assert.equal(entry.promise, undefined);
+  assert.equal(entry.error, undefined);
+  assert.equal(isStale(entry, 60_000), true);
+});

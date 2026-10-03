@@ -165,9 +165,11 @@ export default function AbsencePage() {
         </div>
       </div>
 
-      {p && !p.enabled && (
+      {p && (!p.enabled || p.isPreSchool) && (
         <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          Your school doesn't let guardians report absence online. Attendance is shown read-only.
+          {p.isPreSchool
+            ? "Preschool absence is reported in the official SchoolSoft app. Attendance is shown read-only."
+            : "Your school doesn't let guardians report absence online. Attendance is shown read-only."}
         </div>
       )}
       {weekData.error && <ErrorBanner>{weekData.error.message}</ErrorBanner>}
@@ -219,6 +221,11 @@ export default function AbsencePage() {
         }}
       >
         {pending && confirmBody(pending)}
+        {pending && !pending.remove && p && !p.allowChange && (
+          <p className="mt-2 font-medium text-slate-700">
+            Your school doesn't allow withdrawing a report afterwards.
+          </p>
+        )}
       </ConfirmDialog>
     </div>
   );
@@ -284,7 +291,11 @@ function DayColumn({
   const d: AbsenceDay | null | undefined = day.data;
   const lessons = d?.lessons ?? [];
   const fullDay = d?.hasAbsenceReportFullDay ?? false;
-  const canWrite = perms?.enabled === true;
+  /* Preschool children report through a different flow (preschoolschedule)
+   * that isn't implemented here, so their attendance is read-only. */
+  const canWrite = perms?.enabled === true && perms.isPreSchool === false;
+  /* Withdrawing a report is a "change", which schools can switch off. */
+  const canChange = canWrite && perms.allowChange;
   const absent = lessons.filter((l) => lessonAttendance(l).tone === "absent").length;
 
   return (
@@ -328,7 +339,7 @@ function DayColumn({
               lesson={l}
               ended={lessonEnded(date, l, now)}
               canReport={canWrite && canReportLesson(date, l, fullDay, now)}
-              canWithdraw={canWrite && canWithdrawLesson(date, l, now)}
+              canWithdraw={canChange && canWithdrawLesson(date, l, now)}
               canComment={canWrite && perms?.allowComment === true}
               onReport={() => onAsk({ kind: "lesson", lesson: l, date, remove: false })}
               onWithdraw={() => onAsk({ kind: "lesson", lesson: l, date, remove: true })}
@@ -338,7 +349,8 @@ function DayColumn({
         {canWrite && d && (
           <div className="mt-auto pt-2">
             {fullDay
-              ? canReportFullDay(date, lessons, now) && (
+              ? canChange &&
+                canReportFullDay(date, lessons, now) && (
                   <button
                     type="button"
                     className={cn(btnSecondaryClass, "w-full")}

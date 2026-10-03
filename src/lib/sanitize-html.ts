@@ -7,8 +7,8 @@
  *
  *  DOMPurify does the heavy lifting (event handlers, mXSS, namespace
  *  confusion, DOM clobbering). On top of its defaults we keep this app's
- *  stricter policy: no styles or forms at all, and links limited to
- *  http(s)/mailto/tel. */
+ *  stricter policy: no `<style>` elements or forms, inline styles limited to
+ *  plain visual properties, and links limited to http(s)/mailto/tel. */
 
 import createDOMPurify, { type DOMPurify } from "dompurify";
 
@@ -57,6 +57,41 @@ function splitUrlList(value: string): string[] {
 
 const SAFE_SCHEME = /^(?:https?|mailto|tel):/;
 
+/** Inline styles staff use for emphasis. Anything that can move content out
+ *  of its box (position, z-index, transforms, negative margins) or fetch a
+ *  resource (url()) could overlay and spoof the app's own UI, so only plain
+ *  visual properties survive. */
+const ALLOWED_STYLE_PROPERTIES = new Set([
+  "color",
+  "background-color",
+  "font-weight",
+  "font-style",
+  "font-size",
+  "text-decoration",
+  "text-decoration-line",
+  "text-align",
+  "vertical-align",
+]);
+const UNSAFE_STYLE_VALUE = /url\s*\(|expression\s*\(|image-set|@import|javascript:|[<>\\]/i;
+
+/** Keep only allowlisted declarations from a `style` attribute. */
+export function filterStyle(style: string): string {
+  return style
+    .split(";")
+    .map((decl) => {
+      const i = decl.indexOf(":");
+      if (i < 0) return null;
+      const prop = decl.slice(0, i).trim().toLowerCase();
+      const value = decl.slice(i + 1).trim();
+      if (!ALLOWED_STYLE_PROPERTIES.has(prop) || !value || UNSAFE_STYLE_VALUE.test(value)) {
+        return null;
+      }
+      return `${prop}: ${value}`;
+    })
+    .filter((d): d is string => d !== null)
+    .join("; ");
+}
+
 /** Same allowlist as `SAFE_SCHEME`, in DOMPurify's form: an allowed scheme,
  *  or a value with no scheme at all (relative path, `#anchor`, `?query`). */
 const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i;
@@ -93,6 +128,12 @@ function getPurifier(): DOMPurify | null {
   if (!p.isSupported) return null;
   p.addHook("uponSanitizeAttribute", (_node, data) => {
     const name = data.attrName.toLowerCase();
+    if (name === "style") {
+      const kept = filterStyle(data.attrValue);
+      if (kept) data.attrValue = kept;
+      else data.keepAttr = false;
+      return;
+    }
     if (URL_ATTRIBUTES.has(name) && isUnsafeUrl(data.attrValue)) data.keepAttr = false;
     if (URL_LIST_ATTRIBUTES.has(name) && splitUrlList(data.attrValue).some(isUnsafeUrl)) {
       data.keepAttr = false;

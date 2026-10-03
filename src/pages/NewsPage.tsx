@@ -166,13 +166,12 @@ export default function NewsPage() {
         )}
       </div>
 
-      <div role="tablist" aria-label="News feeds" className="mb-4 flex gap-1.5">
+      <div role="group" aria-label="News feeds" className="mb-4 flex gap-1.5">
         {FEEDS.map((f) => (
           <button
             key={f.id}
             type="button"
-            role="tab"
-            aria-selected={feed === f.id}
+            aria-pressed={feed === f.id}
             onClick={() => {
               setFeed(f.id);
               setSelectedCategory(null);

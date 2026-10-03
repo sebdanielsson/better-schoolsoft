@@ -1395,7 +1395,12 @@ export function bootstrapSchoolsoftSession(
 ): Promise<void> {
   const key = cookieFocusKey(school, userId, orgId, studentId);
   if (sessionFocus?.key === key) return sessionFocus.promise;
-  const promise = (async () => {
+  /* Run exchanges one after another: if two overlapped and the older one
+   * landed last, the cookies would point at the old child while
+   * sessionFocus named the new one. Chaining keeps "last started" equal to
+   * "last applied". */
+  const previous = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
+  const promise = previous.then(async () => {
     const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
       method: "GET",
       credentials: "include",
@@ -1415,7 +1420,7 @@ export function bootstrapSchoolsoftSession(
     if (res.type !== "opaqueredirect" && !res.ok) {
       throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
     }
-  })();
+  });
   sessionFocus = { key, promise };
   /* Don't cache a failure: the next caller should try again. */
   promise.catch(() => {

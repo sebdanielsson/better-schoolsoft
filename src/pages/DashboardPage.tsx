@@ -1,9 +1,9 @@
-import { lazy, Suspense } from "react";
+import { Fragment, lazy, Suspense, type ReactNode } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./HomePage.tsx";
 import HeroCard from "../components/HeroCard.tsx";
 import SectionNav from "../components/SectionNav.tsx";
-import { HeroDataProvider } from "../hooks/useHeroData.tsx";
+import { HeroDataProvider, useHeroData } from "../hooks/useHeroData.tsx";
 
 /* HomePage stays eager — it is the landing route, so lazy-loading it would only
  * add a round trip. The rest are reached by navigation and cost nothing until
@@ -33,28 +33,30 @@ export default function DashboardPage() {
         <main className="mx-auto w-full max-w-[1400px] flex-1 p-4 md:p-7">
           <HeroCard />
           <SectionNav />
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/news" element={<NewsPage />} />
-              <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/staff" element={<StaffPage />} />
-              <Route path="/assessments" element={<AssessmentsPage />} />
-              <Route path="/assessments/:id" element={<AssessmentDetailPage />} />
-              <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
-              <Route path="/plannings/:planningId/:partId" element={<PlanningDetailPage />} />
-              <Route path="/subjects" element={<SubjectsPage />} />
-              <Route path="/subjects/:activityId" element={<SubjectRoomPage />} />
-              <Route path="/bookings" element={<BookingsPage />} />
-              <Route path="/bookings/:id" element={<BookingDetailPage />} />
-              <Route path="/absence" element={<AbsencePage />} />
-              <Route path="/school" element={<SchoolPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <ChildScope>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/schedule" element={<SchedulePage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/news" element={<NewsPage />} />
+                <Route path="/messages" element={<MessagesPage />} />
+                <Route path="/staff" element={<StaffPage />} />
+                <Route path="/assessments" element={<AssessmentsPage />} />
+                <Route path="/assessments/:id" element={<AssessmentDetailPage />} />
+                <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
+                <Route path="/plannings/:planningId/:partId" element={<PlanningDetailPage />} />
+                <Route path="/subjects" element={<SubjectsPage />} />
+                <Route path="/subjects/:activityId" element={<SubjectRoomPage />} />
+                <Route path="/bookings" element={<BookingsPage />} />
+                <Route path="/bookings/:id" element={<BookingDetailPage />} />
+                <Route path="/absence" element={<AbsencePage />} />
+                <Route path="/school" element={<SchoolPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ChildScope>
         </main>
       </div>
     </HeroDataProvider>
@@ -72,4 +74,12 @@ function RouteFallback() {
       aria-label="Loading page"
     />
   );
+}
+
+/** Remount every page when the guardian switches child, so in-progress UI
+ *  state (an open booking dialog, an absence note, a message draft) can't be
+ *  carried over and then submitted against a sibling. */
+function ChildScope({ children }: { children: ReactNode }) {
+  const { child } = useHeroData();
+  return <Fragment key={child?.studentId ?? "none"}>{children}</Fragment>;
 }

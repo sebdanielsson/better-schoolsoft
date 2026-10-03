@@ -47,17 +47,28 @@ export function useQuery<T>(
     getQueryEntry<T>(key ?? NO_KEY),
   );
 
-  /* Re-run when the entry is invalidated (updatedAt drops to 0), so pages
-   * already on screen pick up changes after a mutation. A failed fetch leaves
-   * updatedAt alone, so errors don't retry in a loop. */
-  const updatedAt = entry.updatedAt;
+  /* Fetch whenever nothing is in flight and the entry is stale, without a
+   * standing error. Depending on this flag (rather than on updatedAt) also
+   * covers an invalidation that abandoned the very first fetch: the promise
+   * is cleared, the flag flips back to true, and the effect runs again. An
+   * error keeps the flag false, so failures don't retry in a loop. */
+  const needsFetch = !!key && !entry.promise && !entry.error && isStale(entry, staleMs);
+  useEffect(() => {
+    if (!key || !needsFetch) return;
+    /* Errors land in the entry; nothing to do with the rejection here. */
+    fetchQuery(key, () => fnRef.current()).catch(() => {});
+  }, [key, needsFetch]);
+
+  /* On mount (or key change) also retry an entry that previously failed, so
+   * navigating back to a page recovers from a transient error. Runs once per
+   * mount, so it can't loop. */
   useEffect(() => {
     if (!key) return;
     const current = getQueryEntry<T>(key);
-    if (current.promise || !isStale(current, staleMs)) return;
-    /* Errors land in the entry; nothing to do with the rejection here. */
-    fetchQuery(key, () => fnRef.current()).catch(() => {});
-  }, [key, staleMs, updatedAt]);
+    if (current.error && !current.promise && isStale(current, staleMs)) {
+      fetchQuery(key, () => fnRef.current()).catch(() => {});
+    }
+  }, [key, staleMs]);
 
   const refetch = useCallback(async () => {
     if (!key) return undefined;
