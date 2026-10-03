@@ -21,7 +21,7 @@ import {
   sortResults,
   subjectRoomKeys,
 } from "../lib/subject-rooms.ts";
-import { sanitizeStaffHtml } from "../lib/sanitize-html.ts";
+import StaffHtml from "../components/StaffHtml.tsx";
 import { SubmissionIcon } from "../components/AssignmentsCard.tsx";
 import DashCard, { DashCardEmpty, ErrorBanner, UnreadDot } from "../components/DashCard.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
@@ -258,10 +258,7 @@ function InformationCard({
         <div className="flex flex-col gap-4">
           {items.map((info) => (
             <article key={info.id}>
-              <div
-                className="text-[0.92rem] leading-[1.55] text-slate-800 [&_a]:text-blue-600 [&_a]:underline [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:empty]:hidden [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5"
-                dangerouslySetInnerHTML={{ __html: sanitizeStaffHtml(info.information) }}
-              />
+              <StaffHtml html={info.information} className="text-[0.92rem]" />
               <div className="mt-2 text-[0.78rem] text-slate-500">
                 {info.createdBy} · {info.updatedAt}
               </div>

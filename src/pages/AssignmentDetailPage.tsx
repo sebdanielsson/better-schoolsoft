@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, FileText, HandCoins, Link2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
@@ -19,7 +19,7 @@ import {
   type MaterialFile,
 } from "../api/schoolsoft.ts";
 import { Skeleton } from "../components/ui/skeleton.tsx";
-import { sanitizeStaffHtml } from "../lib/sanitize-html.ts";
+import StaffHtml from "../components/StaffHtml.tsx";
 import { cn } from "../lib/utils.ts";
 
 interface State {
@@ -119,13 +119,7 @@ export default function AssignmentDetailPage() {
     };
   }, [session, getEvaToken, parentUserId, child, id]);
 
-  /* Depend on state.view rather than state.view?.description: the narrower array is
-   * more precise, but React Compiler infers state.view and bails out of optimizing the
-   * whole component when the two disagree. Re-sanitizing on an identity change is cheap. */
-  const sanitizedDescription = useMemo(
-    () => (state.view?.description ? sanitizeStaffHtml(state.view.description) : ""),
-    [state.view],
-  );
+  const description = state.view?.description ?? "";
 
   if (!session) return null;
 
@@ -171,12 +165,9 @@ export default function AssignmentDetailPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
           <div className="flex flex-col gap-4 md:col-span-2">
-            {sanitizedDescription && (
+            {description.trim() && (
               <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
-                <div
-                  className="text-[0.95rem] leading-[1.55] text-slate-800 [&_a]:text-blue-600 [&_a]:underline [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5"
-                  dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-                />
+                <StaffHtml html={description} />
               </section>
             )}
             {hasSubmission && state.submission && <SubmissionPanel submission={state.submission} />}
