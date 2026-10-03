@@ -21,7 +21,7 @@ Sources: web sidebar (`/rest-api/parent/sidebar/sectiongroups`), iOS menu (`/eva
 
 Ordered by priority. Each item ships on its own branch with `pnpm run check` and `pnpm test` green.
 
-- [ ] **Subject rooms**: subject list with teachers, assignments and plannings per subject, unread markers (web `/react/#/parent/subjectrooms`, iOS `SUBJECT_ROOMS`). The hero pill already shows a count but links nowhere.
+- [x] **Subject rooms**: subject list with teachers, assignments and plannings per subject, unread markers (web `/react/#/parent/subjectrooms`, iOS `SUBJECT_ROOMS`). The hero pill already shows a count but links nowhere.
 - [ ] **Bookings**: time-booking list and detail, reserve, confirm and cancel a slot, next booking on the home page (web `right_student_timebooking.jsp`, iOS `BOOKINGS`). The hero pill already shows a count but links nowhere.
 - [ ] **Report absence**: week overview of per-day and per-lesson status, report a full day or single lessons with a comment, gated by school parameters (web `right_student_absence.jsp`, iOS `ABSENCE`).
 - [ ] **Messages**: sent folder, trash, compose, reply, delete and restore, mark as unread, attachments.
@@ -54,5 +54,9 @@ These web pages redirect app-type sessions (ours, created via `/eva-apps/auth/lo
 - Push notification settings, delete account, custom server, superuser login
 
 ## Tech debt found along the way
+
+- [ ] Profile name edit calls `PUT …/profile/name`, which the iOS app never uses. The app uses `PUT …/profile/personal` with `{fName, lName}`. Verify which one works.
+- [ ] `EvaMessageDetail.attachments` is typed `{id, size}`, but the API returns `{fileId, name}`, downloaded via `v1/resource/attachment/{fileId}`.
+- [ ] `sanitizeStaffHtml` is a hand-rolled sanitizer. Consider DOMPurify, given that the refresh token lives in `localStorage`.
 
 - [ ] `api/schoolsoft/[...path].ts` uses `runtime: "edge"`, which Vercel has deprecated. Move it to the default Node.js runtime.
