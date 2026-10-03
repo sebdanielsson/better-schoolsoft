@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
 import {
+  fetchEvaTeacher,
   fetchEvaTeachers,
   sendEvaMessage,
   type EvaMessageDetail,
@@ -41,10 +42,22 @@ export default function ComposeMessageDialog({
   );
 
   const isReply = target.kind === "reply";
+  const senderId = target.kind === "reply" ? target.original.sender.id : null;
+  /* Resolve the reply recipient directly, as the official app does, so a
+   * reply works even when the sender isn't in (or the app couldn't load)
+   * the full staff list used by the picker. */
+  const sender = useQuery(
+    senderId !== null && senderId > 0 ? `${ctx.keyPrefix}teacher:${senderId}` : null,
+    async () => fetchEvaTeacher(ctx.school, await ctx.token(), ctx.orgId, senderId!),
+    { staleMs: 30 * 60_000 },
+  );
   const replyRecipient = useMemo(() => {
-    if (target.kind !== "reply") return undefined;
-    return teachers.data?.find((t) => t.teacherId === target.original.sender.id);
-  }, [target, teachers.data]);
+    if (senderId === null) return undefined;
+    return (
+      teachers.data?.find((t) => t.teacherId === senderId) ??
+      (sender.data && sender.data.teacherId === senderId ? sender.data : undefined)
+    );
+  }, [senderId, teachers.data, sender.data]);
 
   const [picked, setPicked] = useState<EvaTeacher[]>([]);
   const [search, setSearch] = useState("");
@@ -106,7 +119,7 @@ export default function ComposeMessageDialog({
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 {replyRecipient
                   ? `${replyRecipient.fname} ${replyRecipient.lname}`
-                  : teachers.loading
+                  : teachers.loading || sender.loading
                     ? "Looking up recipient…"
                     : `${senderName(target.original.sender)} can't receive replies here.`}
               </div>

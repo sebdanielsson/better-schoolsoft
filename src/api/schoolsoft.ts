@@ -802,6 +802,18 @@ export function fetchEvaTeachers(
   return evaGetList(`${BASE}/${school}/eva/api/v1/schools/${orgId}/teachers`, accessToken);
 }
 
+/** One staff member, e.g. the sender of a message being replied to. The
+ *  official app resolves reply recipients this way rather than from the
+ *  full `/teachers` list. */
+export function fetchEvaTeacher(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  teacherId: number,
+): Promise<EvaTeacher | null> {
+  return evaGet(`${BASE}/${school}/eva/api/v1/schools/${orgId}/teachers/${teacherId}`, accessToken);
+}
+
 /** Whether guardians may start new conversations. When false, they can only
  *  reply to messages that allow it (`replyTo`). */
 export function fetchEvaMessagingAllowAll(

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { CheckCircle2, Video } from "lucide-react";
 import { useSchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
+import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
   EvaWriteError,
   fetchEvaTimebooking,
@@ -45,6 +46,7 @@ export default function BookingDetailPage() {
   const id = Number(param);
   const valid = Number.isInteger(id) && id > 0;
   const ctx = useSchoolsoftContext();
+  const { refreshCounts } = useHeroData();
   const c = valid ? ctx : null;
 
   const detail = useQuery(c && bookingKeys.detail(c.keyPrefix, id), async () =>
@@ -65,12 +67,13 @@ export default function BookingDetailPage() {
     void (async () => {
       try {
         await markEvaTimebookingRead(c.school, await c.token(), c.parentUserId, id);
+        refreshCounts();
         invalidateQueries(bookingKeys.list(c.keyPrefix));
       } catch {
         /* ignore */
       }
     })();
-  }, [c, id, unread]);
+  }, [c, id, unread, refreshCounts]);
 
   if (!valid) return <ErrorBanner>That booking link is not valid.</ErrorBanner>;
 

@@ -104,3 +104,12 @@ test("upstreamUrlFor never leaves the upstream origin", () => {
     );
   }
 });
+
+test("upstreamUrlFor returns null instead of throwing on unparseable paths", () => {
+  for (const p of ["%5C%5B", "%5C%5C%5B", "%5C%5Cx%3A99999"]) {
+    assert.doesNotThrow(() =>
+      upstreamUrlFor(`https://app.example/api/schoolsoft?__proxy_path=${p}`),
+    );
+  }
+  assert.equal(upstreamUrlFor("https://app.example/api/schoolsoft?__proxy_path=%5C%5B"), null);
+});

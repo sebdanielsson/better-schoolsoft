@@ -25,13 +25,16 @@ export interface HeroData {
   children: EvaChild[];
   /** Switch the child in focus. Persisted per browser. */
   selectChild: (studentId: number) => void;
+  /** Re-fetch the unread count and badges, e.g. after a message or news
+   *  item was marked read or unread elsewhere in the app. */
+  refreshCounts: () => void;
   unread: number;
   badges: EvaBadgeCounts;
   /** True while the parent + unread + badges fetches are in flight. */
   loading: boolean;
 }
 
-type LoadedState = Omit<HeroData, "selectChild">;
+type LoadedState = Omit<HeroData, "selectChild" | "refreshCounts">;
 
 const emptyState: LoadedState = {
   parentUserId: null,
@@ -42,7 +45,11 @@ const emptyState: LoadedState = {
   loading: true,
 };
 
-const HeroDataContext = createContext<HeroData>({ ...emptyState, selectChild: () => {} });
+const HeroDataContext = createContext<HeroData>({
+  ...emptyState,
+  selectChild: () => {},
+  refreshCounts: () => {},
+});
 
 const CHILD_KEY = "bss_child";
 
@@ -128,7 +135,37 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
     };
   }, [session, getEvaToken, selected]);
 
-  const value = useMemo(() => ({ ...state, selectChild }), [state, selectChild]);
+  /* Counts only — no loading flag, so the hero pills update in place. A
+   * refresh that lands after a child switch is dropped (studentId check). */
+  const { parentUserId, child } = state;
+  const refreshCounts = useCallback(() => {
+    if (!session || !parentUserId) return;
+    const studentId = child?.studentId;
+    const orgId = child?.schools[0]?.orgId ?? session.orgId;
+    void (async () => {
+      const token = await getEvaToken().catch(() => null);
+      if (!token) return;
+      const [unreadRes, badgesRes] = await Promise.allSettled([
+        fetchEvaUnreadMessages(session.school, token, parentUserId, orgId),
+        studentId
+          ? fetchEvaBadgeCounts(session.school, token, parentUserId, orgId, studentId)
+          : Promise.resolve<EvaBadgeCounts>({}),
+      ]);
+      setState((prev) => {
+        if (prev.child?.studentId !== studentId) return prev;
+        return {
+          ...prev,
+          unread: unreadRes.status === "fulfilled" ? (unreadRes.value ?? 0) : prev.unread,
+          badges: badgesRes.status === "fulfilled" ? badgesRes.value : prev.badges,
+        };
+      });
+    })();
+  }, [session, getEvaToken, parentUserId, child]);
+
+  const value = useMemo(
+    () => ({ ...state, selectChild, refreshCounts }),
+    [state, selectChild, refreshCounts],
+  );
   return <HeroDataContext.Provider value={value}>{children}</HeroDataContext.Provider>;
 }
 

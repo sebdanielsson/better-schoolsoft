@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, ArchiveRestore, HelpCircle, Paperclip } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
+import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import {
   fetchEvaNewsDetail,
@@ -292,6 +293,7 @@ function NewsItem({
   onToggle: () => void;
   onArchived: () => void;
 }) {
+  const { refreshCounts } = useHeroData();
   const detail = useQuery(open ? newsKeys.detail(ctx.keyPrefix, n.id) : null, async () =>
     fetchEvaNewsDetail(ctx.school, await ctx.token(), ctx.parentUserId, ctx.orgId, n.id),
   );
@@ -306,6 +308,7 @@ function NewsItem({
     void (async () => {
       try {
         await markEvaNewsRead(ctx.school, await ctx.token(), ctx.parentUserId, ctx.orgId, n.id);
+        refreshCounts();
         const key = newsKeys.feed(ctx.keyPrefix, feed);
         const rows = getQueryEntry<EvaNewsItem[]>(key).data;
         if (rows)
@@ -317,7 +320,7 @@ function NewsItem({
         /* not worth surfacing */
       }
     })();
-  }, [ctx, feed, n.id, markRead]);
+  }, [ctx, feed, n.id, markRead, refreshCounts]);
 
   async function toggleArchive() {
     setArchiving(true);

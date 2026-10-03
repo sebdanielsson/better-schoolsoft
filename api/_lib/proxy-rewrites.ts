@@ -69,6 +69,12 @@ export function upstreamUrlFor(requestUrl: string): string | null {
       : url.pathname.replace(/^\/schoolsoft(?=\/|$)/, "") || "/";
   /* Resolve against the upstream and insist on its origin, so no crafted
    * path ("@evil.example", "//evil.example", "\\evil") can retarget us. */
-  const target = new URL(path + url.search, UPSTREAM_ORIGIN);
+  let target: URL;
+  try {
+    target = new URL(path + url.search, UPSTREAM_ORIGIN);
+  } catch {
+    /* e.g. "/\\[": backslashes count as slashes, leaving an invalid host. */
+    return null;
+  }
   return target.origin === UPSTREAM_ORIGIN ? target.href : null;
 }

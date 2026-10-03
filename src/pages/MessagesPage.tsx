@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MailOpen, Paperclip, PenSquare, RotateCcw, Search, Send, Trash2 } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
+import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
   fetchEvaMessage,
   fetchEvaMessages,
@@ -68,6 +69,7 @@ const FOLDERS: { id: EvaMessageFolder; label: string }[] = [
 
 export default function MessagesPage() {
   const ctx = useSchoolsoftContext();
+  const { refreshCounts } = useHeroData();
   const [folder, setFolder] = useState<EvaMessageFolder>("inbox");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -128,11 +130,12 @@ export default function MessagesPage() {
           true,
         );
         patchRead(ctx, openedUnread, true);
+        refreshCounts();
       } catch {
         /* A failed read marker is not worth an error banner. */
       }
     })();
-  }, [ctx, openedUnread]);
+  }, [ctx, openedUnread, refreshCounts]);
 
   async function act(
     fn: (c: SchoolsoftContext, token: string) => Promise<void>,
@@ -146,6 +149,8 @@ export default function MessagesPage() {
       after?.();
       invalidateQueries(messageKeys.lists(ctx.keyPrefix));
       void list.refetch();
+      /* Unread state may have changed (mark unread, trashing an unread one). */
+      refreshCounts();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
