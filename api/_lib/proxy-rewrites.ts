@@ -49,3 +49,26 @@ export const PROXY_SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "Content-Security-Policy": "sandbox; default-src 'none'",
   "X-Content-Type-Options": "nosniff",
 };
+
+/** Query parameter the Vercel rewrite uses to hand the proxied path to the
+ *  function (vercel.json: /schoolsoft/:path* -> /api/schoolsoft?…=:path*).
+ *  A plain file-system route can't do it: outside Next.js, Vercel treats
+ *  `api/x/[...path].ts` as a single-segment route. */
+export const PROXY_PATH_PARAM = "__proxy_path";
+
+/** Map an incoming request URL to the upstream URL, or null if the result
+ *  would not be on the upstream origin. Accepts both shapes: the rewritten
+ *  `/api/schoolsoft?__proxy_path=a/b` and the dev-style `/schoolsoft/a/b`. */
+export function upstreamUrlFor(requestUrl: string): string | null {
+  const url = new URL(requestUrl);
+  const fromParam = url.searchParams.get(PROXY_PATH_PARAM);
+  url.searchParams.delete(PROXY_PATH_PARAM);
+  const path =
+    fromParam !== null
+      ? "/" + fromParam.replace(/^\/+/, "")
+      : url.pathname.replace(/^\/schoolsoft(?=\/|$)/, "") || "/";
+  /* Resolve against the upstream and insist on its origin, so no crafted
+   * path ("@evil.example", "//evil.example", "\\evil") can retarget us. */
+  const target = new URL(path + url.search, UPSTREAM_ORIGIN);
+  return target.origin === UPSTREAM_ORIGIN ? target.href : null;
+}

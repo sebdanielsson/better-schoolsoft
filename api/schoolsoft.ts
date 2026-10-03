@@ -9,11 +9,10 @@
  */
 import {
   PROXY_SECURITY_HEADERS,
+  upstreamUrlFor,
   rewriteCookiePath,
   rewriteLocation,
-} from "../_lib/proxy-rewrites.ts";
-
-const UPSTREAM = "https://sms.schoolsoft.se";
+} from "./_lib/proxy-rewrites.ts";
 
 /** RFC 9110 hop-by-hop headers — scoped to a single connection, never forwarded. */
 const HOP_BY_HOP = [
@@ -30,9 +29,8 @@ const HOP_BY_HOP = [
 export default { fetch: handler };
 
 async function handler(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const upstreamPath = url.pathname.replace(/^\/schoolsoft/, "");
-  const upstreamUrl = `${UPSTREAM}${upstreamPath}${url.search}`;
+  const upstreamUrl = upstreamUrlFor(request.url);
+  if (!upstreamUrl) return new Response("Bad request", { status: 400 });
 
   const headers = new Headers(request.headers);
   /* fetch() derives Host from the upstream URL. Vercel's own request headers

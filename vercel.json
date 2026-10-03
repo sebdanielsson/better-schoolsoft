@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/schoolsoft/:path*",
-      "destination": "/api/schoolsoft/:path*"
+      "source": "/schoolsoft/:__proxy_path*",
+      "destination": "/api/schoolsoft?__proxy_path=:__proxy_path*"
     },
     {
       "source": "/(.*)",

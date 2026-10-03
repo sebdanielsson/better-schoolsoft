@@ -2,7 +2,7 @@
 // promise the runner owns; awaiting it at the call site would serialize the suite.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rewriteCookiePath, rewriteLocation } from "./proxy-rewrites.ts";
+import { rewriteCookiePath, rewriteLocation, upstreamUrlFor } from "./proxy-rewrites.ts";
 
 test("re-scopes the upstream cookie path under /schoolsoft", () => {
   assert.equal(
@@ -71,4 +71,36 @@ test("leaves other hosts and relative paths alone", () => {
   );
   assert.equal(rewriteLocation("//evil.example/a"), "//evil.example/a");
   assert.equal(rewriteLocation("right_student_app_blocked.jsp"), "right_student_app_blocked.jsp");
+});
+
+test("upstreamUrlFor reads the rewritten path parameter and drops it", () => {
+  assert.equal(
+    upstreamUrlFor("https://app.example/api/schoolsoft?__proxy_path=school/rest-api/x&week=40"),
+    "https://sms.schoolsoft.se/school/rest-api/x?week=40",
+  );
+});
+
+test("upstreamUrlFor also accepts the /schoolsoft/... shape", () => {
+  assert.equal(
+    upstreamUrlFor("https://app.example/schoolsoft/school/jsp/a.jsp?requestid=1"),
+    "https://sms.schoolsoft.se/school/jsp/a.jsp?requestid=1",
+  );
+  assert.equal(upstreamUrlFor("https://app.example/schoolsoft"), "https://sms.schoolsoft.se/");
+});
+
+test("upstreamUrlFor never leaves the upstream origin", () => {
+  for (const p of [
+    "@evil.example/x",
+    "//evil.example/x",
+    "/\\evil.example/x",
+    "%2F%2Fevil.example",
+  ]) {
+    const out = upstreamUrlFor(
+      `https://app.example/api/schoolsoft?__proxy_path=${encodeURIComponent(p)}`,
+    );
+    assert.ok(
+      out === null || new URL(out).origin === "https://sms.schoolsoft.se",
+      `${p} -> ${out}`,
+    );
+  }
 });
