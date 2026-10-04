@@ -7,14 +7,13 @@ import {
   fetchEvaLessonsWeek,
   bitmaskToWeeks,
   formatLessonTime,
-  isoDay,
-  isoWeek,
   lessonDayIndex,
   type EvaLessonTile,
   type Lesson,
 } from "../api/schoolsoft.ts";
 import { cn } from "../lib/utils.ts";
 import { schoolSoftUrl } from "../lib/safe-url.ts";
+import { isoDay, isoWeek } from "../lib/dates.ts";
 
 const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
   { idx: 1, label: "Monday" },

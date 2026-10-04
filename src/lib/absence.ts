@@ -1,6 +1,7 @@
 /** Pure helpers for absence reporting. Kept framework-free for `node --test`. */
 
 import { ABSENCE_STATUS, LESSON_STATUS, type AbsenceLesson } from "../api/schoolsoft.ts";
+import { addDays, mondayOf } from "./dates.ts";
 
 const SCHOOL_TZ = "Europe/Stockholm";
 
@@ -46,16 +47,6 @@ export function schoolTimeMs(year: number, monthIndex: number, day: number, hhmm
   const m = /^(\d{1,2}):(\d{2})/.exec(hhmm);
   const minutes = m ? Number(m[1]) * 60 + Number(m[2]) : 0;
   return schoolMidnightMs(year, monthIndex, day) + minutes * 60_000;
-}
-
-/** Monday 00:00 (local) of the ISO week containing `d`. */
-export function mondayOf(d: Date): Date {
-  const day = d.getDay() || 7;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - (day - 1));
-}
-
-export function addDays(d: Date, n: number): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 }
 
 /** A full day can be reported only before its first lesson starts, matching

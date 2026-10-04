@@ -2,14 +2,7 @@ import { type ReactNode } from "react";
 import Avatar from "./Avatar.tsx";
 import { Dialog, DialogContent } from "./ui/dialog.tsx";
 import { safeHttpUrl } from "../lib/safe-url.ts";
-
-/** Decode HTML entities (&eacute;, &bull;, &ndash;, &amp; …) using a throwaway textarea. */
-function decodeEntities(s: string): string {
-  if (typeof document === "undefined") return s;
-  const el = document.createElement("textarea");
-  el.innerHTML = s;
-  return el.value;
-}
+import { decodeEntities } from "../lib/text.ts";
 
 const URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 

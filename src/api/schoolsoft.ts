@@ -2191,28 +2191,8 @@ export function groupSchoolsBySlug(entries: SchoolListEntry[]): SchoolOption[] {
 
 /* ---------- Helpers shared by pages ---------- */
 
-/** ISO week number for a Date (1–53). */
-export function isoWeek(d: Date = new Date()): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
 /** ISO week-numbering year for a Date — usually equal to the calendar year,
  *  but differs in early Jan / late Dec when an ISO week straddles years. */
-export function isoWeekYear(d: Date = new Date()): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  return date.getUTCFullYear();
-}
-
-/** ISO day-of-week (Mon=1 … Sun=7). */
-export function isoDay(d: Date = new Date()): number {
-  return d.getDay() === 0 ? 7 : d.getDay();
-}
 
 /** Convert SchoolSoft lessons' bitmask of week numbers to an array. */
 export function bitmaskToWeeks(bitmask: number): number[] {

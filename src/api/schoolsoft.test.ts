@@ -9,9 +9,9 @@ import {
   cookieSessionFocus,
   fetchHolisticAssessments,
   isTokenExpired,
-  isoWeek,
 } from "./schoolsoft.ts";
 import { clearSessionCaches } from "../lib/session-caches.ts";
+import { isoWeek } from "../lib/dates.ts";
 
 void test("bitmaskToWeeks decodes low bits", () => {
   assert.deepEqual(bitmaskToWeeks(0), []);

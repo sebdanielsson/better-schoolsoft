@@ -3,13 +3,14 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useEvaResourceBlob } from "../hooks/useEvaResourceBlob.tsx";
-import { isoWeek } from "../api/schoolsoft.ts";
+
 import { colorFromName, initials } from "../lib/avatar-helpers.ts";
 import SettingsPill from "./SettingsPill.tsx";
 import ChildSwitcher from "./ChildSwitcher.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar.tsx";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
+import { isoWeek } from "../lib/dates.ts";
 
 const counterPillBase =
   "flex items-center justify-center gap-1 rounded-full pl-[0.3rem] pr-[0.5rem] py-[0.15rem] text-[11px] font-medium text-inherit no-underline backdrop-blur-[4px] bg-white/15 " +

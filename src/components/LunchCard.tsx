@@ -8,23 +8,11 @@ import {
   evaLunchToWeek,
   fetchEvaLunchWeek,
   fetchLunch,
-  isoDay,
-  isoWeek,
   type LunchWeek,
 } from "../api/schoolsoft.ts";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
-
-function startOfIsoWeek(d: Date): Date {
-  const day = d.getDay() || 7;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - (day - 1));
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setDate(d.getDate() + n);
-  return r;
-}
+import { addDays, isoDay, isoWeek, mondayOf } from "../lib/dates.ts";
 
 function firstLine(s: string): string {
   const i = s.indexOf("\n");
@@ -58,7 +46,7 @@ function parseLunchLines(text: string): LunchEntry[] {
 /* On Sat/Sun the "active" week shifts to next week (current week is done).
  * The Today button restores this anchor. */
 function activeLunchMonday(now: Date): Date {
-  const start = startOfIsoWeek(now);
+  const start = mondayOf(now);
   return isoDay(now) >= 6 ? addDays(start, 7) : start;
 }
 

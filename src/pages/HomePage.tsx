@@ -17,8 +17,6 @@ import {
   fetchScheduleLessons,
   bitmaskToWeeks,
   formatLessonTime,
-  isoDay,
-  isoWeek,
   lessonDayIndex,
   DAY_NAMES_FULL,
   type CalendarEvent,
@@ -37,13 +35,8 @@ import { expandSubjectCode } from "../lib/subject-codes.ts";
 import NewsPopover, { type NewsPopoverData } from "../components/NewsPopover.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
-
-function decodeEntities(s: string): string {
-  if (typeof document === "undefined") return s;
-  const el = document.createElement("textarea");
-  el.innerHTML = s;
-  return el.value;
-}
+import { addDays, isoDay, isoWeek, startOfDay } from "../lib/dates.ts";
+import { decodeEntities } from "../lib/text.ts";
 
 /** Preview text: take the first 5 non-empty lines so posts that open with a one-line
  *  greeting (e.g. "Kära vårdnadshavare,") still show meaningful content underneath. */
@@ -105,16 +98,6 @@ function relativeDay(ms: number): string {
 }
 
 /* ---------- Day-nav helpers for the combined schedule card ---------- */
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setDate(d.getDate() + n);
-  return r;
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
 
 function sameLocalDate(a: Date, b: Date): boolean {
   return startOfDay(a).getTime() === startOfDay(b).getTime();
