@@ -249,3 +249,23 @@ void test("lastIncludedMs treats a midnight end as the previous day", () => {
   const timed = item(new Date(2026, 9, 1, 9), new Date(2026, 9, 1, 10));
   assert.equal(lastIncludedMs(timed), timed.end);
 });
+
+void test("weekItems keeps a timed entry ending at midnight in its day column", () => {
+  const { allWeek, byDay } = weekItems(
+    [
+      {
+        name: "Evening event",
+        startDate: "2026-10-05T18:00",
+        endDate: "2026-10-06T00:00",
+        allDay: false,
+        category: "event",
+      },
+    ],
+    new Date(2026, 9, 5),
+  );
+  assert.deepEqual(
+    byDay[1]!.map((i) => i.title),
+    ["Evening event"],
+  );
+  assert.equal(allWeek.length, 0);
+});

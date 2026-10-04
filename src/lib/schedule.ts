@@ -132,7 +132,8 @@ export function weekItems(
       activityId: it.activityId || undefined,
     };
     const startDate = new Date(start);
-    const singleDay = sameLocalDate(startDate, new Date(end));
+    /* Exclusive end: 09:00 → next day 00:00 covers only the first day. */
+    const singleDay = sameLocalDate(startDate, new Date(lastIncludedMs(item)));
     if (!it.allDay && singleDay) {
       const day = isoDay(startDate);
       if (day <= 5) byDay[day]!.push(item);

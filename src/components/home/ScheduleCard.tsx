@@ -66,6 +66,8 @@ function currentAndNext(todayLessons: Lesson[], now: Date) {
   let current: Lesson | null = null;
   let next: Lesson | null = null;
   for (const l of todayLessons) {
+    /* A cancelled lesson is neither "now" nor "next up". */
+    if (l.cancelled) continue;
     const s = toMin(l.startTime);
     const e = l.endTime ? toMin(l.endTime) : s + 60;
     if (nowMin >= s && nowMin < e) current = l;
@@ -107,9 +109,22 @@ export default function ScheduleCard({
   const { showCurrent, showNext } = useMemo(() => {
     const todayLessons = isoDay(today) > 5 ? [] : scheduleLessonsForDate(scheduleLessons, today);
     const { current, next } = currentAndNext(todayLessons, today);
+    /* Eva's tiles don't know about cancellations; drop one that points at a
+     * lesson the schedule marks cancelled. */
+    const cancelledLessons = todayLessons.filter((l) => l.cancelled);
+    const cancelledIds = new Set(cancelledLessons.map((l) => l.id));
+    /* Match by start time too, in case Eva's lesson ids differ from the
+     * schedule's event ids. */
+    const cancelledStarts = new Set(cancelledLessons.map((l) => formatLessonTime(l.startTime)));
+    const live = (t: EvaLessonTile | null) =>
+      t &&
+      ((t.lessonId !== undefined && cancelledIds.has(t.lessonId)) ||
+        (t.startTime && cancelledStarts.has(formatLessonTime(t.startTime))))
+        ? null
+        : t;
     return {
-      showCurrent: mergeTile(currentTile, lessonToTile(current)),
-      showNext: mergeTile(nextTile, lessonToTile(next)),
+      showCurrent: mergeTile(live(currentTile), lessonToTile(current)),
+      showNext: mergeTile(live(nextTile), lessonToTile(next)),
     };
   }, [scheduleLessons, today, currentTile, nextTile]);
 
