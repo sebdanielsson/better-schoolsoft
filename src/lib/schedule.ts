@@ -167,13 +167,15 @@ function overlaps(item: WeekItem, from: number, to: number): boolean {
   return !endsBefore && item.start < to;
 }
 
-/** Upcoming entries for the Calendar page: those already under way at
- *  `from` (ongoing), then the ones starting in [from, to) grouped by the
- *  local day they start, in order. */
+/** Upcoming entries for the Calendar page: those started before `from`'s
+ *  day and still under way at `now` (ongoing), then the ones starting in
+ *  [from's day, to) grouped by the local day they start, in order. Entries
+ *  from earlier today stay in today's group even once over. */
 export function agenda(
   items: WeekItem[],
   from: Date,
   to: Date,
+  now: Date = from,
 ): { ongoing: WeekItem[]; days: Array<{ day: number; items: WeekItem[] }> } {
   const fromMs = startOfDay(from).getTime();
   const toMs = to.getTime();
@@ -182,7 +184,7 @@ export function agenda(
   for (const item of [...items].sort((a, b) => a.start - b.start)) {
     if (!overlaps(item, fromMs, toMs)) continue;
     if (item.start < fromMs) {
-      ongoing.push(item);
+      if (lastIncludedMs(item) >= now.getTime()) ongoing.push(item);
       continue;
     }
     const day = startOfDay(new Date(item.start)).getTime();
@@ -214,12 +216,20 @@ export function lastIncludedMs(item: WeekItem): number {
   return atMidnight && item.end > item.start ? item.end - 1 : item.end;
 }
 
-/** The next `n` entries for the Home card: starting today or later, not yet
- *  over, and not long-running (those would sit at the top all term). */
-export function nextEntries(items: WeekItem[], now: Date, n: number): WeekItem[] {
+/** The next `n` entries for the Home card: starting today or later but
+ *  before `to` (only the school-event feed is range-limited, so a distant
+ *  test mustn't jump an unfetched nearer event), not yet over, and not
+ *  long-running (those would sit at the top all term). */
+export function nextEntries(items: WeekItem[], now: Date, to: Date, n: number): WeekItem[] {
   const today = startOfDay(now).getTime();
   return items
-    .filter((it) => it.start >= today && lastIncludedMs(it) >= now.getTime() && !isLongRunning(it))
+    .filter(
+      (it) =>
+        it.start >= today &&
+        it.start < to.getTime() &&
+        lastIncludedMs(it) >= now.getTime() &&
+        !isLongRunning(it),
+    )
     .sort((a, b) => a.start - b.start)
     .slice(0, n);
 }

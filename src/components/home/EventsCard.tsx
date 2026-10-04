@@ -21,7 +21,10 @@ export default function EventsCard() {
   const from = useMemo(() => new Date(today), [today]);
   const to = useMemo(() => addDays(from, LOOKAHEAD_WEEKS * 7), [from]);
   const { items, incomplete, error } = useCalendarAgenda(from, to);
-  const next = useMemo(() => nextEntries(toWeekItems(items ?? []), now, SHOWN), [items, now]);
+  const next = useMemo(
+    () => nextEntries(toWeekItems(items ?? []), now, to, SHOWN),
+    [items, now, to],
+  );
 
   return (
     <DashboardCard

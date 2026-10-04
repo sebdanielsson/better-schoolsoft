@@ -31,8 +31,8 @@ export default function CalendarPage() {
   const [showLong, setShowLong] = useShowLongRunning();
 
   const { ongoing, days } = useMemo(
-    () => agenda(toWeekItems(items ?? []), from, to),
-    [items, from, to],
+    () => agenda(toWeekItems(items ?? []), from, to, now),
+    [items, from, to, now],
   );
   const longCount = ongoing.filter(isLongRunning).length;
   const shownOngoing = showLong ? ongoing : ongoing.filter((it) => !isLongRunning(it));

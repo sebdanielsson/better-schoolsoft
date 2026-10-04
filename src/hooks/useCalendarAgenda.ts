@@ -72,11 +72,13 @@ export function useCalendarAgenda(
         const token = await getEvaToken();
         if (!token) throw new Error("You are signed out. Sign in again to continue.");
         /* The calendar feeds read the cookie session's child in focus. */
-        await bootstrapSchoolsoftSession(school, token, parentUserId, orgId, studentId);
+        /* Only the three web-calendar feeds need the cookie session; the Eva
+         * tile goes ahead on the bearer token even if the bootstrap fails. */
+        const session = bootstrapSchoolsoftSession(school, token, parentUserId, orgId, studentId);
         const results = await Promise.allSettled([
-          fetchCalendarAgenda(school, fromDay, lastDay),
-          fetchCalendarTimeBookings(school),
-          fetchCalendarPsEntities(school),
+          session.then(() => fetchCalendarAgenda(school, fromDay, lastDay)),
+          session.then(() => fetchCalendarTimeBookings(school)),
+          session.then(() => fetchCalendarPsEntities(school)),
           fetchEvaNextCalendarEvent(school, token, parentUserId, orgId, studentId).then((e) =>
             e ? [evaEventToItem(e)] : [],
           ),

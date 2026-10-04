@@ -357,8 +357,12 @@ void test("nextEntries picks the next upcoming, unfinished, short entries", () =
       entry("Term task", "2026-10-05", "2026-12-19T00:00", true),
       entry("Started last week", "2026-09-30T00:00", "2026-10-07T00:00", true),
       entry("Tomorrow", "2026-10-06T08:30", "2026-10-06T09:30"),
-    ]),
+      entry("Beyond range", "2026-10-05T12:30", "2026-10-05T12:45"),
+    ]).map((i) =>
+      i.title === "Beyond range" ? { ...i, start: new Date(2026, 11, 1).getTime() } : i,
+    ),
     now,
+    new Date(2026, 10, 30),
     3,
   );
   assert.deepEqual(
@@ -376,4 +380,66 @@ void test("toLocalStamp converts zoned timestamps to local time", () => {
   assert.equal(toLocalStamp("2026-10-05T00:00:00+02:00"), local, "same instant, other offset");
   assert.equal(toLocalStamp("2026-10-05T09:30:00"), "2026-10-05T09:30", "zone-less passes through");
   assert.equal(toLocalStamp("2026-10-05"), "2026-10-05", "date-only passes through");
+});
+
+void test("agenda drops prior-day entries that have already ended from Ongoing", () => {
+  const now = new Date(2026, 9, 5, 15, 0);
+  const { ongoing } = agenda(
+    toWeekItems([
+      {
+        name: "Ended at nine",
+        startDate: "2026-10-04T18:00",
+        endDate: "2026-10-05T09:00",
+        allDay: false,
+        category: "event",
+      },
+      {
+        name: "Still running",
+        startDate: "2026-10-04T18:00",
+        endDate: "2026-10-05T18:00",
+        allDay: false,
+        category: "event",
+      },
+    ]),
+    startOfDayLocal(now),
+    new Date(2026, 10, 30),
+    now,
+  );
+  assert.deepEqual(
+    ongoing.map((i) => i.title),
+    ["Still running"],
+  );
+});
+
+function startOfDayLocal(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+void test("nextEntries ignores entries starting at or after the range end", () => {
+  const now = new Date(2026, 9, 5, 12, 0);
+  const picked = nextEntries(
+    toWeekItems([
+      {
+        name: "In range",
+        startDate: "2026-10-06T08:30",
+        endDate: "2026-10-06T09:30",
+        allDay: false,
+        category: "test",
+      },
+      {
+        name: "Past the range",
+        startDate: "2026-12-07T08:30",
+        endDate: "2026-12-07T09:30",
+        allDay: false,
+        category: "test",
+      },
+    ]),
+    now,
+    new Date(2026, 10, 30),
+    10,
+  );
+  assert.deepEqual(
+    picked.map((i) => i.title),
+    ["In range"],
+  );
 });
