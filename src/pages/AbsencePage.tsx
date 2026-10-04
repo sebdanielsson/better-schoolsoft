@@ -180,6 +180,12 @@ export default function AbsencePage() {
             : "Your school doesn't let guardians report absence online. Attendance is shown read-only."}
         </div>
       )}
+      {perms.error && (
+        <ErrorBanner>
+          Couldn't check what your school allows, so reporting is unavailable right now. Reload to
+          try again. ({perms.error.message})
+        </ErrorBanner>
+      )}
       {weekData.error && <ErrorBanner>{weekData.error.message}</ErrorBanner>}
 
       <div className="grid grid-cols-1 gap-[0.85rem] md:grid-cols-3 lg:grid-cols-5">

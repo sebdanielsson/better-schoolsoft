@@ -52,11 +52,15 @@ async function handler(request: Request): Promise<Response> {
    * everything in the query string and send no body — passing `body` +
    * `duplex: "half"` for those made the runtime answer 500. */
   const contentLength = request.headers.get("content-length");
+  /* A body arrives either with a non-zero Content-Length or streamed
+   * (Transfer-Encoding: chunked, no length). Neither is true for the
+   * query-string-only POSTs above. */
+  const chunked = /\bchunked\b/i.test(request.headers.get("transfer-encoding") ?? "");
   const hasBody =
     request.method !== "GET" &&
     request.method !== "HEAD" &&
-    contentLength !== null &&
-    contentLength !== "0";
+    request.body !== null &&
+    ((contentLength !== null && contentLength !== "0") || chunked);
   if (hasBody) {
     init.body = request.body;
     // @ts-expect-error — duplex is required for streaming request bodies

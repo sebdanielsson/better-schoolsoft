@@ -121,7 +121,9 @@ export default function ComposeMessageDialog({
                   ? `${replyRecipient.fname} ${replyRecipient.lname}`
                   : teachers.loading || sender.loading
                     ? "Looking up recipient…"
-                    : `${senderName(target.original.sender)} can't receive replies here.`}
+                    : sender.error
+                      ? `Couldn't look up ${senderName(target.original.sender)}. Close and try again.`
+                      : `${senderName(target.original.sender)} can't receive replies here.`}
               </div>
             ) : (
               <>
