@@ -132,8 +132,6 @@ test("isAllowedUpstreamPath accepts every path shape the SPA calls", () => {
     "/engelska/eva-apps/auth/login/parent",
     "/engelska/rest-api/login/token?grant_type=refresh_token",
     "/engelska/rest-api/parent/calendar/lessons/week/40",
-    "/engelska/rest/app/token",
-    "/engelska/api/lessons/student/1",
     "/engelska/jsp/student/right_student_library_download.jsp?requestid=1",
     "/files/abc/report.pdf",
   ]) {
@@ -147,7 +145,8 @@ test("isAllowedUpstreamPath refuses everything else", () => {
     "/engelska",
     "/engelska/react/",
     "/engelska/jsp/admin/start.jsp",
-    "/engelska/rest/app/token/x",
+    "/engelska/rest/app/token",
+    "/engelska/api/lessons/student/1",
     "/Engelska/eva/api/v1/parent",
   ]) {
     assert.ok(!isAllowedUpstreamPath(UP + p), p);

@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
-import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
-import {
-  fetchCalendar,
-  fetchEvaNextCalendarEvent,
-  fetchEvaParent,
-  type CalendarEvent,
-} from "../api/schoolsoft.ts";
+import { useHeroData } from "../hooks/useHeroData.tsx";
+import { fetchEvaNextCalendarEvent, fetchEvaParent } from "../api/schoolsoft.ts";
+import { formatTime } from "../lib/dates.ts";
 
 interface UnifiedEvent {
   id: string;
@@ -30,41 +26,18 @@ function formatDateHeading(ms: number): string {
   });
 }
 
-function formatTime(ms: number): string {
-  return new Date(ms).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function legacyToUnified(e: CalendarEvent): UnifiedEvent {
-  return {
-    id: `legacy-${e.id}`,
-    start: e.eventStart,
-    end: e.eventEnd,
-    title: e.title,
-    description: e.description,
-    typeInfo: e.eventTypeInfo,
-  };
-}
-
 export default function CalendarPage() {
   const { child } = useHeroData();
   const childStudentId = child?.studentId;
-  /* The legacy notices fallback can only describe the login's default child. */
-  const isDefaultChild = useIsDefaultChild();
-  const { session, getToken, getEvaToken } = useAuth();
+  const { session, getEvaToken } = useAuth();
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<"eva" | "legacy" | "empty">("empty");
+  const [source, setSource] = useState<"eva" | "empty">("empty");
 
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
     setLoading(true);
-    setError(null);
 
     async function load(): Promise<void> {
       /* Try Eva first. */
@@ -107,36 +80,12 @@ export default function CalendarPage() {
             return;
           }
         } catch {
-          /* fall through to legacy */
+          /* fall through to empty */
         }
       }
-      /* Legacy /api/notices — scoped to the login's default child, so never
-       * shown while a sibling is selected. */
-      if (!isDefaultChild) {
-        if (!cancelled) {
-          setEvents([]);
-          setSource("empty");
-        }
-        return;
-      }
-      try {
-        const token = await getToken();
-        if (!token) throw new Error("No session token");
-        const list = await fetchCalendar(session!.school, token, session!.orgId, 60);
-        if (!cancelled) {
-          setEvents(list.map(legacyToUnified));
-          setSource(list.length ? "legacy" : "empty");
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setEvents([]);
-          setSource("empty");
-          /* The legacy notices endpoint returns 410 Gone for some schools. We don't surface
-           * that as an error since the page works (just with limited data). */
-          if (e instanceof Error && !e.message.includes("(401)") && !e.message.includes("(410)")) {
-            setError(e.message);
-          }
-        }
+      if (!cancelled) {
+        setEvents([]);
+        setSource("empty");
       }
     }
 
@@ -147,7 +96,7 @@ export default function CalendarPage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, childStudentId, isDefaultChild]);
+  }, [session, getEvaToken, childStudentId]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, UnifiedEvent[]>();
@@ -172,15 +121,8 @@ export default function CalendarPage() {
         <span className="text-[0.85rem] text-slate-500">
           {events.length} event{events.length === 1 ? "" : "s"}
           {source === "eva" && events.length > 0 && " · next upcoming"}
-          {source === "legacy" && " · next 60 days"}
         </span>
       </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
-        </div>
-      )}
 
       {events.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">

@@ -84,7 +84,7 @@ export function upstreamUrlFor(requestUrl: string): string | null {
  *  origin. Everything else — the React webview, JSP admin pages, arbitrary
  *  probing — is refused, so the proxy isn't a general relay to SchoolSoft. */
 const ALLOWED_PATH =
-  /^\/(?:files\/|[a-z0-9][a-z0-9-]*\/(?:eva\/api\/|eva-apps\/auth\/|rest-api\/|rest\/app\/token$|api\/|jsp\/student\/|files\/))/;
+  /^\/(?:files\/|[a-z0-9][a-z0-9-]*\/(?:eva\/api\/|eva-apps\/auth\/|rest-api\/|jsp\/student\/|files\/))/;
 
 /** True when the upstream URL's path is one the SPA uses. */
 export function isAllowedUpstreamPath(upstreamUrl: string): boolean {

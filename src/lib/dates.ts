@@ -52,3 +52,32 @@ export function formatWeekRange(monday: Date): string {
   const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" };
   return `${monday.toLocaleDateString(undefined, opts)} – ${addDays(monday, 6).toLocaleDateString(undefined, opts)}`;
 }
+
+/** "Mon, 6 Oct" by default; pass `opts` for another shape. */
+export function formatDate(ms: number, opts?: Intl.DateTimeFormatOptions): string {
+  return new Date(ms).toLocaleDateString(
+    undefined,
+    opts ?? { weekday: "short", month: "short", day: "numeric" },
+  );
+}
+
+/** 24-hour "HH:MM". */
+export function formatTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+/** "Today", "Tomorrow", "Yesterday", "In 3 days", else a short date. */
+export function relativeDay(ms: number, now: Date = new Date()): string {
+  const diff = Math.round(
+    (startOfDay(new Date(ms)).getTime() - startOfDay(now).getTime()) / 86_400_000,
+  );
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff > 1 && diff < 7) return `In ${diff} days`;
+  return formatDate(ms);
+}

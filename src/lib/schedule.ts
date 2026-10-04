@@ -2,8 +2,8 @@ import type { Lesson, ScheduleLesson } from "../api/schoolsoft.ts";
 import { sameLocalDate } from "./dates.ts";
 import { expandSubjectCode } from "./subject-codes.ts";
 
-/** Map a `ScheduleLesson` from the rest-api schedule onto the legacy `Lesson`
- *  shape the lesson rows render.
+/** Map a `ScheduleLesson` from the rest-api schedule onto the `Lesson` shape
+ *  the lesson rows render.
  *  - Standard Skolverket subject codes ("Ma", "SO", …) expanded to long names.
  *  - Teacher fields come back as "A,B" without a space — normalize so the row
  *    reads "A, B" cleanly.
@@ -20,7 +20,6 @@ export function scheduleLessonToLesson(l: ScheduleLesson): Lesson {
     subjectName: name,
     teacherName: l.teacher ? l.teacher.replace(/,\s*/g, ", ") : undefined,
     location: l.room || undefined,
-    weeks: 0,
   };
 }
 

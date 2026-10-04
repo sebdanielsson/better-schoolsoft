@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Leaf, Utensils } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
-import { useChildOrgId, useIsDefaultChild } from "../hooks/useHeroData.tsx";
+import { useChildOrgId } from "../hooks/useHeroData.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import {
   DAY_NAMES_FULL,
   evaLunchToWeek,
   fetchEvaLunchWeek,
-  fetchLunch,
   type LunchWeek,
 } from "../api/schoolsoft.ts";
 import { Skeleton } from "./ui/skeleton.tsx";
@@ -69,9 +68,8 @@ const lunchWeekMealClass = "min-w-0 break-words text-[0.85rem] leading-[1.35]";
 const LUNCH_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 
 export default function LunchCard() {
-  const { session, getEvaToken, getToken } = useAuth();
+  const { session, getEvaToken } = useAuth();
   const orgId = useChildOrgId();
-  const isDefaultChild = useIsDefaultChild();
 
   const [weekMonday, setWeekMonday] = useState<Date>(() => activeLunchMonday(new Date()));
   const [lunch, setLunch] = useState<LunchWeek | null>(null);
@@ -100,20 +98,7 @@ export default function LunchCard() {
           );
           data = evaLunchToWeek(days);
         } catch {
-          /* fall through to legacy */
-        }
-      }
-      /* The legacy menu belongs to the login's default child's school. */
-      if (!data && isDefaultChild) {
-        try {
-          const legacyToken = await getToken().catch(() => "");
-          if (legacyToken) {
-            /* The legacy app-key API is tied to the login's own school. */
-            const weeks = await fetchLunch(session.school, legacyToken, session.orgId);
-            data = weeks.find((w) => w.week === week) ?? null;
-          }
-        } catch {
-          /* swallow */
+          /* no menu for this week */
         }
       }
       if (!cancelled) {
@@ -124,7 +109,7 @@ export default function LunchCard() {
     return () => {
       cancelled = true;
     };
-  }, [session, getEvaToken, getToken, week, orgId, isDefaultChild]);
+  }, [session, getEvaToken, week, orgId]);
 
   if (!session) return null;
 

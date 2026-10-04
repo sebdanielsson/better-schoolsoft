@@ -8,14 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  endCookieSession,
-  fetchToken,
-  isTokenExpired,
-  refreshEvaToken,
-  type TokenResponse,
-  type UserType,
-} from "../api/schoolsoft.ts";
+import { endCookieSession, refreshEvaToken, type UserType } from "../api/schoolsoft.ts";
 import { clearPkce } from "../api/pkce.ts";
 import { clearSessionCaches } from "../lib/session-caches.ts";
 
@@ -28,9 +21,6 @@ interface EvaSession {
 
 interface Session {
   school: string;
-  appKey: string;
-  token: string;
-  expiryDate: string;
   orgId: number;
   orgName?: string;
   name: string;
@@ -48,7 +38,6 @@ interface AuthContextValue {
   session: Session | null;
   isAuthenticated: boolean;
   logout: () => void;
-  getToken: () => Promise<string>;
   /** Get a fresh Eva access token (auto-refresh), or null if no Eva session. */
   getEvaToken: () => Promise<string | null>;
   /** Save an Eva refresh token (and optional initial access token) into the session. */
@@ -99,16 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSessionCaches();
     clearPkce();
   }, [school]);
-
-  const getToken = useCallback(async (): Promise<string> => {
-    if (!session) throw new Error("Not authenticated");
-    if (!isTokenExpired(session.expiryDate)) return session.token;
-    const tokenResp: TokenResponse = await fetchToken(session.school, session.appKey);
-    setSession((prev) =>
-      prev ? { ...prev, token: tokenResp.token, expiryDate: tokenResp.expiryDate } : prev,
-    );
-    return tokenResp.token;
-  }, [session]);
 
   /* Coalesce concurrent Eva-token refreshes into one network call. */
   const evaRefreshInFlight = useRef<Promise<string> | null>(null);
@@ -162,12 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isAuthenticated: session !== null,
       logout,
-      getToken,
       getEvaToken,
       setEvaTokens,
       clearEvaTokens,
     }),
-    [session, logout, getToken, getEvaToken, setEvaTokens, clearEvaTokens],
+    [session, logout, getEvaToken, setEvaTokens, clearEvaTokens],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

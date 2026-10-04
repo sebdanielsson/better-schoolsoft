@@ -3,19 +3,6 @@ import { registerSessionCache } from "../lib/session-caches.ts";
 
 const BASE = "/schoolsoft";
 
-const APP_HEADERS = {
-  appversion: "2.3.2",
-  appos: "android",
-} as const;
-
-/* ---------- Legacy app token (used by the older REST endpoints below;
- * issued during OAuth-bootstrapped sessions via fetchToken). ---------- */
-
-export interface TokenResponse {
-  token: string;
-  expiryDate: string;
-}
-
 export type UserType = "0" | "1" | "2";
 const USER_LABEL: Record<UserType, string> = {
   "0": "Staff",
@@ -25,28 +12,6 @@ const USER_LABEL: Record<UserType, string> = {
 
 export function userTypeLabel(t: UserType): string {
   return USER_LABEL[t];
-}
-
-export async function fetchToken(school: string, appKey: string): Promise<TokenResponse> {
-  const res = await fetch(`${BASE}/${school}/rest/app/token`, {
-    headers: { ...APP_HEADERS, appkey: appKey, deviceid: "" },
-  });
-  if (!res.ok) throw new Error(`Token refresh failed (${res.status})`);
-  return res.json() as Promise<TokenResponse>;
-}
-
-export function isTokenExpired(expiryDate: string): boolean {
-  const clean = expiryDate.replace(/\.\d+$/, "");
-  const expiry = new Date(clean.replace(" ", "T"));
-  /* An unparseable date yields NaN, and every comparison against NaN is false —
-   * which previously reported the token as *valid* and sent it anyway. Treat
-   * anything we cannot read as expired so the caller refreshes instead. */
-  if (Number.isNaN(expiry.getTime())) return true;
-  return Date.now() + 5 * 60 * 1000 > expiry.getTime();
-}
-
-function authHeaders(token: string): HeadersInit {
-  return { ...APP_HEADERS, token };
 }
 
 /* ---------- Data types ---------- */
@@ -72,17 +37,6 @@ export interface Lesson {
   teacherName?: string;
   groupName?: string;
   location?: string;
-  weeks?: number;
-}
-
-export interface CalendarEvent {
-  id: number;
-  eventStart: number;
-  eventEnd?: number;
-  title: string;
-  description?: string;
-  eventTypeInfo?: string;
-  noticeType?: string;
 }
 
 /** New-style "Eva" types (mirrors the captured iOS API). */
@@ -226,48 +180,6 @@ export interface EvaTokenResponse {
   expires: number;
 }
 
-/* ---------- Data fetchers (legacy app API — works with appKey/token auth) ---------- */
-
-export function fetchLunch(school: string, token: string, orgId: number): Promise<LunchWeek[]> {
-  return getJsonList(`${BASE}/${school}/api/lunchmenus/student/${orgId}`, token);
-}
-
-export function fetchLessons(school: string, token: string, orgId: number): Promise<Lesson[]> {
-  return getJsonList(`${BASE}/${school}/api/lessons/student/${orgId}`, token);
-}
-
-const NOTICE_TYPES = "calendar,schoolcalendar,privatecalendar";
-
-export function fetchCalendar(
-  school: string,
-  token: string,
-  orgId: number,
-  days = 30,
-): Promise<CalendarEvent[]> {
-  const now = Date.now();
-  const end = now + days * 24 * 60 * 60 * 1000;
-  const url = `${BASE}/${school}/api/notices/student/${orgId}/${now}/${end}/${NOTICE_TYPES}`;
-  return getJsonList(url, token);
-}
-
-/** Fetch all kinds of notices over a window — useful for "news" feed.
- *  Mirrors the iOS app's news/latest endpoint by accepting flexible types.
- */
-export function fetchNotices(
-  school: string,
-  token: string,
-  orgId: number,
-  types: string,
-  daysBack = 14,
-  daysAhead = 30,
-): Promise<CalendarEvent[]> {
-  const now = Date.now();
-  const start = now - daysBack * 24 * 60 * 60 * 1000;
-  const end = now + daysAhead * 24 * 60 * 60 * 1000;
-  const url = `${BASE}/${school}/api/notices/student/${orgId}/${start}/${end}/${types}`;
-  return getJsonList(url, token);
-}
-
 /* ---------- Eva (modern OAuth) API ---------- */
 
 /** Refresh an Eva access token using a refresh token. */
@@ -316,7 +228,7 @@ export function fetchEvaLunchWeek(
   return evaGetList(`${BASE}/${school}/eva/api/v1/schools/${orgId}/lunchmenu/${week}`, accessToken);
 }
 
-/** Convert Eva lunch days (Mon=1…Fri=5) into the legacy LunchWeek shape so existing UI works. */
+/** Convert Eva lunch days (Mon=1…Fri=5) into the per-weekday LunchWeek shape the card renders. */
 export function evaLunchToWeek(days: EvaLunchDay[]): LunchWeek | null {
   if (!days.length) return null;
   const week = days[0]?.week ?? 0;
@@ -2075,20 +1987,6 @@ async function cookieGet<T>(url: string): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-/** Array-safe JSON fetch for the legacy app API. The object-returning helpers
- *  return `null as T` on
- *  an empty body, which is a lie for every fetcher whose return type is an
- *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
- *  reached the UI. An absent or non-array body means "no rows" here. */
-async function getJsonList<T>(url: string, token: string): Promise<T[]> {
-  const res = await fetch(url, { headers: authHeaders(token) });
-  if (!res.ok) throw new Error(`Request failed (${res.status}) ${url}`);
-  const text = await res.text();
-  if (!text) return [];
-  const data: unknown = JSON.parse(text);
-  return Array.isArray(data) ? (data as T[]) : [];
-}
-
 /** Array-returning sibling of `evaGet`. It returns `null as T` on
  *  an empty body, which is a lie for every fetcher whose return type is an
  *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
@@ -2190,23 +2088,6 @@ export function groupSchoolsBySlug(entries: SchoolListEntry[]): SchoolOption[] {
 }
 
 /* ---------- Helpers shared by pages ---------- */
-
-/** ISO week-numbering year for a Date — usually equal to the calendar year,
- *  but differs in early Jan / late Dec when an ISO week straddles years. */
-
-/** Convert SchoolSoft lessons' bitmask of week numbers to an array. */
-export function bitmaskToWeeks(bitmask: number): number[] {
-  const weeks: number[] = [];
-  /* Bitwise operators coerce to int32, and `1 << i` wraps at i === 32 (`1 << 32`
-   * is 1, not 2**32). The old `bitmask & (1 << i)` therefore made weeks 33+
-   * unreachable and aliased them onto weeks 1-21. A 53-week mask needs more
-   * than 32 bits, so test each bit arithmetically instead — Number is exact
-   * well past 2**53. */
-  for (let i = 0; i < 53; i++) {
-    if (Math.floor(bitmask / 2 ** i) % 2 === 1) weeks.push(i + 1);
-  }
-  return weeks;
-}
 
 /** Format a SchoolSoft start/end time string ("1970-01-01 08:20:00.0") → "08:20". */
 export function formatLessonTime(s: string): string {
