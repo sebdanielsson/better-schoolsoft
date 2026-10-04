@@ -1,8 +1,9 @@
-import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
+import { Fragment, lazy, Suspense, type ReactNode } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./HomePage.tsx";
 import HeroCard from "../components/HeroCard.tsx";
-import { HeroDataProvider } from "../hooks/useHeroData.tsx";
+import SectionNav from "../components/SectionNav.tsx";
+import { HeroDataProvider, useHeroData } from "../hooks/useHeroData.tsx";
 
 /* HomePage stays eager — it is the landing route, so lazy-loading it would only
  * add a round trip. The rest are reached by navigation and cost nothing until
@@ -18,40 +19,44 @@ const AssessmentsPage = lazy(() => import("./AssessmentsPage.tsx"));
 const AssessmentDetailPage = lazy(() => import("./AssessmentDetailPage.tsx"));
 const AssignmentDetailPage = lazy(() => import("./AssignmentDetailPage.tsx"));
 const PlanningDetailPage = lazy(() => import("./PlanningDetailPage.tsx"));
+const SubjectsPage = lazy(() => import("./SubjectsPage.tsx"));
+const SubjectRoomPage = lazy(() => import("./SubjectRoomPage.tsx"));
+const BookingsPage = lazy(() => import("./BookingsPage.tsx"));
+const BookingDetailPage = lazy(() => import("./BookingDetailPage.tsx"));
+const AbsencePage = lazy(() => import("./AbsencePage.tsx"));
+const SchoolPage = lazy(() => import("./SchoolPage.tsx"));
 
 export default function DashboardPage() {
-  const location = useLocation();
-  const isHome = location.pathname === "/";
-
   return (
     <HeroDataProvider>
       <div className="flex min-h-dvh flex-col">
         <main className="mx-auto w-full max-w-[1400px] flex-1 p-4 md:p-7">
           <HeroCard />
-          {!isHome && (
-            <Link
-              to="/"
-              className="mb-4 inline-flex items-center gap-[0.4rem] rounded-full border border-slate-200 bg-white px-[0.85rem] py-[0.4rem] text-[0.85rem] font-medium text-slate-500 no-underline transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <span aria-hidden="true">←</span> Home
-            </Link>
-          )}
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/news" element={<NewsPage />} />
-              <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/staff" element={<StaffPage />} />
-              <Route path="/assessments" element={<AssessmentsPage />} />
-              <Route path="/assessments/:id" element={<AssessmentDetailPage />} />
-              <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
-              <Route path="/plannings/:planningId/:partId" element={<PlanningDetailPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <SectionNav />
+          <ChildScope>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/schedule" element={<SchedulePage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/news" element={<NewsPage />} />
+                <Route path="/messages" element={<MessagesPage />} />
+                <Route path="/staff" element={<StaffPage />} />
+                <Route path="/assessments" element={<AssessmentsPage />} />
+                <Route path="/assessments/:id" element={<AssessmentDetailPage />} />
+                <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
+                <Route path="/plannings/:planningId/:partId" element={<PlanningDetailPage />} />
+                <Route path="/subjects" element={<SubjectsPage />} />
+                <Route path="/subjects/:activityId" element={<SubjectRoomPage />} />
+                <Route path="/bookings" element={<BookingsPage />} />
+                <Route path="/bookings/:id" element={<BookingDetailPage />} />
+                <Route path="/absence" element={<AbsencePage />} />
+                <Route path="/school" element={<SchoolPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ChildScope>
         </main>
       </div>
     </HeroDataProvider>
@@ -69,4 +74,17 @@ function RouteFallback() {
       aria-label="Loading page"
     />
   );
+}
+
+/** Remount every page when the guardian switches child, so in-progress UI
+ *  state (an open booking dialog, an absence note, a message draft) can't be
+ *  carried over and then submitted against a sibling. */
+function ChildScope({ children }: { children: ReactNode }) {
+  const { child, loading } = useHeroData();
+  /* Until the (possibly remembered) child is known, pages would fall back to
+   * the login's default school and could flash a sibling's data. Wait on the
+   * route placeholder; logins without children still render once loading
+   * ends, and later switches set the child synchronously. */
+  if (!child && loading) return <RouteFallback />;
+  return <Fragment key={child?.studentId ?? "none"}>{children}</Fragment>;
 }

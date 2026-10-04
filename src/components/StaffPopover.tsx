@@ -4,7 +4,8 @@ import Avatar from "./Avatar.tsx";
 import { Dialog, DialogContent } from "./ui/dialog.tsx";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { type EvaStaffDetail } from "../api/schoolsoft.ts";
-import { preloadStaffDetail, staffDetailCache } from "../lib/staff-cache.ts";
+import { getCachedStaffDetail, preloadStaffDetail } from "../lib/staff-cache.ts";
+import { useChildOrgId } from "../hooks/useHeroData.tsx";
 
 /* Same palette as the StaffPage chips so the avatar header colour matches the group. */
 const TYPE_COLORS: Record<string, string> = {
@@ -30,18 +31,19 @@ interface Props {
 
 export default function StaffPopover({ open, teacherId, onClose }: Props) {
   const { session, getEvaToken } = useAuth();
+  const orgId = useChildOrgId();
   const [detail, setDetail] = useState<EvaStaffDetail | null>(() =>
-    teacherId !== null ? (staffDetailCache.get(teacherId) ?? null) : null,
+    teacherId !== null && orgId !== null ? (getCachedStaffDetail(orgId, teacherId) ?? null) : null,
   );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || teacherId === null || !session) {
+    if (!open || teacherId === null || !session || orgId === null) {
       setError(null);
       return;
     }
     /* Hit (the common case after StaffPage's preload pass): paint instantly. */
-    const cached = staffDetailCache.get(teacherId);
+    const cached = getCachedStaffDetail(orgId, teacherId);
     if (cached) {
       setDetail(cached);
       setError(null);
@@ -56,7 +58,7 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
-        const data = await preloadStaffDetail(session.school, token, session.orgId, teacherId);
+        const data = await preloadStaffDetail(session.school, token, orgId, teacherId);
         if (cancelled) return;
         setDetail(data);
       } catch (e: unknown) {
@@ -66,7 +68,7 @@ export default function StaffPopover({ open, teacherId, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, teacherId, session, getEvaToken]);
+  }, [open, teacherId, session, getEvaToken, orgId]);
 
   if (teacherId === null) return null;
 

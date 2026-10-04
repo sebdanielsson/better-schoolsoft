@@ -12,6 +12,9 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    /* Vercel's Node.js builder transpiles api/ file by file instead of
+     * bundling, so `./x.ts` specifiers must become `./x.js` in its output. */
+    "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -29,7 +32,7 @@
       "@/*": ["./src/*"]
     }
   },
-  /* `api/` holds the Vercel Edge proxy. It was excluded, so the one piece of
+  /* `api/` holds the Vercel proxy function. It was excluded, so the one piece of
    * server-side code in the repo was never typechecked. */
   "include": ["src", "api"]
 }

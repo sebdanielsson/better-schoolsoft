@@ -1,26 +1,44 @@
-/** Minimal sanitizer for HTML content authored by school staff (assignment
- *  and planning descriptions). Strips scripts, event handlers, and unsafe URL
- *  schemes; everything else passes through. NOT a substitute for DOMPurify in a
- *  hostile context — this is a defense-in-depth pass on data we already trust
- *  upstream from SchoolSoft's editor.
+/** Sanitizer for HTML authored by school staff (assignment and planning
+ *  descriptions, subject-room information), backed by DOMPurify.
  *
- *  It still matters: the output goes through `dangerouslySetInnerHTML`, and the
- *  app keeps the Eva refresh token in localStorage, so a single successful
- *  injection is durable account takeover rather than a one-off popup. */
+ *  It matters: the output goes through `dangerouslySetInnerHTML`, and the app
+ *  keeps the Eva refresh token in localStorage, so a single successful
+ *  injection is durable account takeover rather than a one-off popup.
+ *
+ *  DOMPurify does the heavy lifting (event handlers, mXSS, namespace
+ *  confusion, DOM clobbering). On top of its defaults we keep this app's
+ *  stricter policy: no `<style>` elements or forms, inline styles limited to
+ *  plain visual properties, and links limited to http(s)/mailto/tel. */
 
-/** Elements removed outright. Beyond the obvious script hosts this includes
- *  `base` (rehomes every relative URL on the page), `meta` (an http-equiv
- *  refresh inside body is honored and forces navigation), `link` (can pull in
- *  external stylesheets), and `form`/`noscript`. */
-const FORBIDDEN_ELEMENTS =
-  "script,style,iframe,object,embed,base,link,meta,form,noscript,frame,frameset";
+import createDOMPurify, { type DOMPurify } from "dompurify";
 
-/** Attributes holding exactly one URL. */
+/** Elements removed outright, beyond DOMPurify's defaults. `style` tags can
+ *  restyle the whole app; forms can post anywhere. */
+const FORBID_TAGS = [
+  "style",
+  "form",
+  "input",
+  "button",
+  "textarea",
+  "select",
+  "iframe",
+  "frame",
+  "frameset",
+  "object",
+  "embed",
+  "base",
+  "link",
+  "meta",
+  "noscript",
+];
+
+const FORBID_ATTR = ["srcdoc", "formaction", "action", "ping"];
+
+/** Attributes holding URLs, re-checked with `isUnsafeUrl` after DOMPurify as
+ *  a second, independent guard. */
 const URL_ATTRIBUTES = new Set([
   "href",
   "src",
-  "action",
-  "formaction",
   "poster",
   "background",
   "cite",
@@ -28,23 +46,55 @@ const URL_ATTRIBUTES = new Set([
   "data",
   "xlink:href",
 ]);
+const URL_LIST_ATTRIBUTES = new Set(["srcset"]);
 
-/** Attributes holding a *list* of URLs, which need every candidate checked.
- *  Testing the raw attribute value would only ever see the first one, so an
- *  unsafe scheme in a later candidate slipped through behind a safe leading
- *  URL. `srcset` is comma-separated with an optional descriptor after each URL
- *  ("a.png 2x"); `ping` is whitespace-separated. */
-const URL_LIST_ATTRIBUTES = new Set(["srcset", "ping"]);
-
-function splitUrlList(name: string, value: string): string[] {
-  const candidates = name === "srcset" ? value.split(",") : value.split(/\s+/);
-  return candidates.map((c) => c.trim().split(/\s+/)[0] ?? "").filter((c) => c.length > 0);
+function splitUrlList(value: string): string[] {
+  return value
+    .split(",")
+    .map((c) => c.trim().split(/\s+/)[0] ?? "")
+    .filter((c) => c.length > 0);
 }
 
-/** Attributes dropped unconditionally — they embed a whole document. */
-const FORBIDDEN_ATTRIBUTES = new Set(["srcdoc"]);
-
 const SAFE_SCHEME = /^(?:https?|mailto|tel):/;
+
+/** Inline styles staff use for emphasis. Anything that can move content out
+ *  of its box (position, z-index, transforms, negative margins) or fetch a
+ *  resource (url()) could overlay and spoof the app's own UI, so only plain
+ *  visual properties survive. */
+const ALLOWED_STYLE_PROPERTIES = new Set([
+  "color",
+  "background-color",
+  "font-weight",
+  "font-style",
+  "font-size",
+  "text-decoration",
+  "text-decoration-line",
+  "text-align",
+  "vertical-align",
+]);
+const UNSAFE_STYLE_VALUE = /url\s*\(|expression\s*\(|image-set|@import|javascript:|[<>\\]/i;
+
+/** Keep only allowlisted declarations from a `style` attribute. */
+export function filterStyle(style: string): string {
+  return style
+    .split(";")
+    .map((decl) => {
+      const i = decl.indexOf(":");
+      if (i < 0) return null;
+      const prop = decl.slice(0, i).trim().toLowerCase();
+      const value = decl.slice(i + 1).trim();
+      if (!ALLOWED_STYLE_PROPERTIES.has(prop) || !value || UNSAFE_STYLE_VALUE.test(value)) {
+        return null;
+      }
+      return `${prop}: ${value}`;
+    })
+    .filter((d): d is string => d !== null)
+    .join("; ");
+}
+
+/** Same allowlist as `SAFE_SCHEME`, in DOMPurify's form: an allowed scheme,
+ *  or a value with no scheme at all (relative path, `#anchor`, `?query`). */
+const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i;
 
 /** True if `value` carries a scheme we don't want to hand to the browser.
  *
@@ -59,43 +109,56 @@ const SAFE_SCHEME = /^(?:https?|mailto|tel):/;
  *  so `data:`, `blob:`, `vbscript:` and friends are rejected without needing to
  *  be enumerated. */
 export function isUnsafeUrl(value: string): boolean {
-  /* Stripping C0 controls is the whole point — it is what makes `java\0script:` resolve to
-   * `javascript:` and get rejected (see the "sees through control characters" test). These are
-   * already Unicode escapes, which is what the rule suggests; it objects to matching control
-   * characters at all, so there is nothing to rewrite. */
   // oxlint-disable-next-line no-control-regex -- matching C0 controls is the security behaviour
-  const normalized = value.replace(/[\u0000-\u0020\u007f]/g, "").toLowerCase();
+  const normalized = value.replace(/[\u0000- \u007f]/g, "").toLowerCase();
   if (!/^[a-z][a-z0-9+.-]*:/.test(normalized)) return false;
   return !SAFE_SCHEME.test(normalized);
 }
 
+let purifier: DOMPurify | null = null;
+let purifierWindow: unknown = null;
+
+/** One configured DOMPurify instance per window. Built lazily so the module
+ *  can be imported where no DOM exists yet (tests install one first). */
+function getPurifier(): DOMPurify | null {
+  const win = (globalThis as { window?: unknown }).window;
+  if (!win) return null;
+  if (purifier && purifierWindow === win) return purifier;
+  const p = createDOMPurify(win as Window & typeof globalThis);
+  if (!p.isSupported) return null;
+  p.addHook("uponSanitizeAttribute", (_node, data) => {
+    const name = data.attrName.toLowerCase();
+    if (name === "style") {
+      const kept = filterStyle(data.attrValue);
+      if (kept) data.attrValue = kept;
+      else data.keepAttr = false;
+      return;
+    }
+    if (URL_ATTRIBUTES.has(name) && isUnsafeUrl(data.attrValue)) data.keepAttr = false;
+    if (URL_LIST_ATTRIBUTES.has(name) && splitUrlList(data.attrValue).some(isUnsafeUrl)) {
+      data.keepAttr = false;
+    }
+  });
+  p.addHook("afterSanitizeAttributes", (node) => {
+    if (node.tagName === "A") {
+      node.setAttribute("target", "_blank");
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+  purifier = p;
+  purifierWindow = win;
+  return p;
+}
+
 export function sanitizeStaffHtml(html: string): string {
-  if (typeof DOMParser === "undefined") return html;
-  const doc = new DOMParser().parseFromString(html, "text/html");
-
-  for (const el of Array.from(doc.querySelectorAll(FORBIDDEN_ELEMENTS))) {
-    el.remove();
-  }
-
-  for (const el of Array.from(doc.body.querySelectorAll<HTMLElement>("*"))) {
-    for (const attr of Array.from(el.attributes)) {
-      const name = attr.name.toLowerCase();
-      if (name.startsWith("on") || FORBIDDEN_ATTRIBUTES.has(name)) {
-        el.removeAttribute(attr.name);
-      } else if (URL_ATTRIBUTES.has(name) && isUnsafeUrl(attr.value)) {
-        el.removeAttribute(attr.name);
-      } else if (
-        URL_LIST_ATTRIBUTES.has(name) &&
-        splitUrlList(name, attr.value).some(isUnsafeUrl)
-      ) {
-        el.removeAttribute(attr.name);
-      }
-    }
-    if (el.tagName === "A") {
-      el.setAttribute("target", "_blank");
-      el.setAttribute("rel", "noopener noreferrer");
-    }
-  }
-
-  return doc.body.innerHTML;
+  const p = getPurifier();
+  /* No DOM means nothing can render the markup either; fail closed. */
+  if (!p) return "";
+  return p.sanitize(html, {
+    FORBID_TAGS,
+    FORBID_ATTR,
+    ADD_ATTR: ["target"],
+    ALLOWED_URI_REGEXP,
+    ALLOW_DATA_ATTR: false,
+  });
 }

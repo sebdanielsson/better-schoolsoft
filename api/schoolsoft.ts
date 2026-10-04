@@ -1,4 +1,5 @@
-/** Edge-function proxy to https://sms.schoolsoft.se.
+/** Vercel Function (Node.js runtime, Web `fetch` handler) proxying to
+ *  https://sms.schoolsoft.se.
  *
  * Mirrors the Vite dev proxy in vite.config.ts, with one important addition:
  * upstream sets cookies with `Path=/<school>` (or `Path=/`), which won't
@@ -6,9 +7,12 @@
  * `/schoolsoft` to every Set-Cookie `Path` attribute so the browser sends
  * the cookies back on subsequent proxied requests. School-agnostic.
  */
-export const config = { runtime: "edge" } as const;
-
-const UPSTREAM = "https://sms.schoolsoft.se";
+import {
+  PROXY_SECURITY_HEADERS,
+  upstreamUrlFor,
+  rewriteCookiePath,
+  rewriteLocation,
+} from "./_lib/proxy-rewrites.ts";
 
 /** RFC 9110 hop-by-hop headers — scoped to a single connection, never forwarded. */
 const HOP_BY_HOP = [
@@ -22,14 +26,18 @@ const HOP_BY_HOP = [
   "upgrade",
 ] as const;
 
-export default async function handler(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const upstreamPath = url.pathname.replace(/^\/schoolsoft/, "");
-  const upstreamUrl = `${UPSTREAM}${upstreamPath}${url.search}`;
+export default { fetch: handler };
+
+async function handler(request: Request): Promise<Response> {
+  const upstreamUrl = upstreamUrlFor(request.url);
+  if (!upstreamUrl) return new Response("Bad request", { status: 400 });
 
   const headers = new Headers(request.headers);
+  /* fetch() derives Host from the upstream URL. Vercel's own request headers
+   * (x-vercel-*) are platform-internal and have no business upstream. */
   headers.delete("host");
-  headers.set("host", "sms.schoolsoft.se");
+  const internal = Array.from(headers.keys()).filter((n) => n.startsWith("x-vercel-"));
+  for (const name of internal) headers.delete(name);
   /* Hop-by-hop headers describe the client<->proxy connection and must not be
    * relayed onto the proxy<->upstream one. */
   for (const h of HOP_BY_HOP) headers.delete(h);
@@ -42,16 +50,19 @@ export default async function handler(request: Request): Promise<Response> {
   /* Only attach a body for methods that actually have one. Several of our
    * POSTs (the OAuth code/refresh exchange, subject-warning confirm) carry
    * everything in the query string and send no body — passing `body` +
-   * `duplex: "half"` for those crashes the Edge runtime with a 500. */
-  const contentLength = request.headers.get("content-length");
+   * `duplex: "half"` for those made the runtime answer 500. */
+  /* A Web Request knows whether it carries a body: `request.body` is null
+   * for the query-string-only POSTs above, and non-null for any payload,
+   * whether it arrived with Content-Length, chunked, or with the framing
+   * headers stripped by an adapter. An explicit zero length is no body. */
   const hasBody =
     request.method !== "GET" &&
     request.method !== "HEAD" &&
-    contentLength !== null &&
-    contentLength !== "0";
+    request.body !== null &&
+    request.headers.get("content-length") !== "0";
   if (hasBody) {
     init.body = request.body;
-    // @ts-expect-error — duplex is required by Edge runtime for streaming bodies
+    // @ts-expect-error — duplex is required for streaming request bodies
     init.duplex = "half";
   }
 
@@ -67,6 +78,11 @@ export default async function handler(request: Request): Promise<Response> {
   resHeaders.delete("content-encoding");
   resHeaders.delete("content-length");
 
+  for (const [k, v] of Object.entries(PROXY_SECURITY_HEADERS)) resHeaders.set(k, v);
+
+  const location = upstream.headers.get("location");
+  if (location) resHeaders.set("location", rewriteLocation(location));
+
   const setCookies = upstream.headers.getSetCookie?.() ?? [];
   if (setCookies.length) {
     resHeaders.delete("set-cookie");
@@ -80,18 +96,4 @@ export default async function handler(request: Request): Promise<Response> {
     statusText: upstream.statusText,
     headers: resHeaders,
   });
-}
-
-/** Re-scope an upstream `Set-Cookie` onto our own origin.
- *
- *  Exported for tests. Two rewrites are needed:
- *  - `Path=/<school>` becomes `Path=/schoolsoft/<school>` so the browser sends
- *    the cookie back on our proxied requests rather than only on paths that
- *    exist on sms.schoolsoft.se.
- *  - `Domain=` is dropped entirely. Upstream scopes cookies to its own domain,
- *    which never matches the SPA's origin, so the browser would reject the
- *    cookie outright. Without the attribute the cookie becomes host-only on our
- *    origin, which is what we want. */
-export function rewriteCookiePath(cookie: string): string {
-  return cookie.replace(/(\bPath=)(\/[^;]*)/i, "$1/schoolsoft$2").replace(/;\s*Domain=[^;]*/i, "");
 }
