@@ -193,8 +193,10 @@ test("LOGOUT_PATH matches only the school-scoped logout route", () => {
 test("logoutCookies expires each sent cookie on both upstream path shapes", () => {
   assert.deepEqual(logoutCookies("JSESSIONID=abc; hash=x=y", "engelska"), [
     "JSESSIONID=; Path=/schoolsoft/engelska; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "JSESSIONID=; Path=/schoolsoft/engelska/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
     "JSESSIONID=; Path=/schoolsoft/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
     "hash=; Path=/schoolsoft/engelska; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "hash=; Path=/schoolsoft/engelska/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
     "hash=; Path=/schoolsoft/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
   ]);
 });

@@ -115,8 +115,9 @@ export const LOGOUT_PATH = /^\/([a-z0-9][a-z0-9-]*)\/__logout$/;
  *  SchoolSoft has no logout or revoke endpoint (the official app only clears
  *  local state), but the cookies `rewriteCookiePath` planted on our origin are
  *  HttpOnly, so the SPA can't drop them itself. The request doesn't say which
- *  path each cookie was scoped to, so each name is expired on both shapes
- *  upstream uses: `Path=/<school>` and `Path=/`, re-scoped under the mount. */
+ *  path each cookie was scoped to, so each name is expired on every shape
+ *  upstream uses — `Path=/<school>`, `/<school>/` and `/` — re-scoped under
+ *  the mount. */
 export function logoutCookies(cookieHeader: string | null, school: string): string[] {
   const names = new Set(
     (cookieHeader ?? "")
@@ -126,7 +127,7 @@ export function logoutCookies(cookieHeader: string | null, school: string): stri
   );
   const out: string[] = [];
   for (const name of names) {
-    for (const path of [`${MOUNT}/${school}`, `${MOUNT}/`]) {
+    for (const path of [`${MOUNT}/${school}`, `${MOUNT}/${school}/`, `${MOUNT}/`]) {
       out.push(`${name}=; Path=${path}; Max-Age=0; Secure; HttpOnly; SameSite=Lax`);
     }
   }
