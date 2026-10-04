@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { CalendarClock, ChevronLeft, ChevronRight, ClipboardCheck, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useShowLongRunning } from "../hooks/useShowLongRunning.ts";
+import CalendarItemChip from "../components/CalendarItemChip.tsx";
 import {
   bootstrapSchoolsoftSession,
   fetchCalendarEvents,
@@ -19,7 +20,6 @@ import { cn } from "../lib/utils.ts";
 import {
   addDays,
   formatDate,
-  formatTime,
   formatWeekRange,
   isoWeek,
   isoWeekYear,
@@ -29,38 +29,12 @@ import {
 import {
   inWeek,
   isLongRunning,
-  lastIncludedMs,
   lessonStartMs,
   scheduleLessonToLesson,
   weekItems,
-  type WeekItem,
 } from "../lib/schedule.ts";
 
 const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
-const SHOW_LONG_KEY = "bss_schedule_show_long";
-
-/** Whether to show long-running items (term projects and the like), which
- *  otherwise sit in the week strip every week. Remembered per browser. */
-function useShowLongRunning(): [boolean, (show: boolean) => void] {
-  const [show, setShow] = useState(() => {
-    try {
-      return localStorage.getItem(SHOW_LONG_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-  const update = (next: boolean) => {
-    setShow(next);
-    try {
-      if (next) localStorage.setItem(SHOW_LONG_KEY, "1");
-      else localStorage.removeItem(SHOW_LONG_KEY);
-    } catch {
-      /* storage unavailable: the choice lasts for this visit */
-    }
-  };
-  return [show, update];
-}
 
 const navButtonClass =
   "inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700";
@@ -235,7 +209,7 @@ export default function SchedulePage() {
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {stripItems.map((it) => (
                     <li key={it.key}>
-                      <ItemChip item={it} spanLabel />
+                      <CalendarItemChip item={it} spanLabel />
                     </li>
                   ))}
                 </ul>
@@ -288,7 +262,7 @@ export default function SchedulePage() {
                     {[
                       ...dayItems.map((it) => ({
                         at: it.start,
-                        node: <ItemChip key={it.key} item={it} />,
+                        node: <CalendarItemChip key={it.key} item={it} />,
                       })),
                       ...dayLessons.map((l) => ({
                         at: lessonStartMs(l),
@@ -363,53 +337,4 @@ function Badge({ className, children }: { className: string; children: string })
       {children}
     </span>
   );
-}
-
-const ITEM_STYLE: Record<WeekItem["kind"], { icon: typeof Star; className: string }> = {
-  test: { icon: ClipboardCheck, className: "border-rose-200 bg-rose-50 text-rose-900" },
-  booking: { icon: CalendarClock, className: "border-sky-200 bg-sky-50 text-sky-900" },
-  event: { icon: Star, className: "border-green-200 bg-green-50 text-green-900" },
-};
-
-/** A test, booking or school event. Timed ones show their time; the week
- *  strip shows the date span instead. Tests link to their subject. */
-function ItemChip({ item, spanLabel }: { item: WeekItem; spanLabel?: boolean }) {
-  const { icon: Icon, className } = ITEM_STYLE[item.kind];
-  const lastDay = lastIncludedMs(item);
-  const when = spanLabel
-    ? sameLocalDate(new Date(item.start), new Date(lastDay))
-      ? formatDate(item.start)
-      : `${formatDate(item.start)} – ${formatDate(lastDay)}`
-    : `${formatTime(item.start)}–${formatTime(item.end)}`;
-  const body = (
-    <>
-      <Icon className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-      <span className="min-w-0">
-        <span className="block text-[0.82rem] leading-tight font-semibold">{item.title}</span>
-        <span className="block text-[0.72rem] opacity-80">
-          {when}
-          {item.detail && ` · ${item.detail}`}
-        </span>
-      </span>
-    </>
-  );
-  const chipClass = cn(
-    "flex items-start gap-1.5 rounded-md border px-2.5 py-1.5 text-inherit no-underline",
-    className,
-  );
-  if (item.kind === "test" && item.activityId) {
-    return (
-      <Link to={`/subjects/${item.activityId}`} className={cn(chipClass, "hover:brightness-95")}>
-        {body}
-      </Link>
-    );
-  }
-  if (item.kind === "booking") {
-    return (
-      <Link to="/bookings" className={cn(chipClass, "hover:brightness-95")}>
-        {body}
-      </Link>
-    );
-  }
-  return <div className={chipClass}>{body}</div>;
 }

@@ -1797,6 +1797,8 @@ export interface CalendarItem {
   typeName?: string;
   /** Subject-room id, for linking tests to `/subjects/:activityId`. */
   activityId?: number;
+  /** Subject code of a test ("KE", "EN"). */
+  activity?: string;
   eventId?: number;
   entityId?: number;
 }
@@ -1812,6 +1814,17 @@ export function fetchCalendarEvents(
 ): Promise<CalendarItem[]> {
   return cookieGetList(
     `${BASE}/${school}/rest-api/parent/calendar/event/year/${year}/week/${week}`,
+  );
+}
+
+/** School and calendar events between two dates (inclusive, YYYY-MM-DD). */
+export function fetchCalendarAgenda(
+  school: string,
+  startDate: string,
+  endDate: string,
+): Promise<CalendarItem[]> {
+  return cookieGetList(
+    `${BASE}/${school}/rest-api/parent/calendar/event/agenda?start_date=${startDate}&end_date=${endDate}`,
   );
 }
 

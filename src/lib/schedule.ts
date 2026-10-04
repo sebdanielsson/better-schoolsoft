@@ -67,6 +67,8 @@ export interface WeekItem {
   allDay: boolean;
   /** Subject room to link a test to. */
   activityId?: number;
+  /** Long subject name for tests ("Chemistry"), when the code is known. */
+  subject?: string;
 }
 
 /** True for entries spanning more than a week (term projects, standing
@@ -99,6 +101,41 @@ function kindOf(category: string): CalendarItemKind | null {
  *  timed entries in their weekday's column (1–5), all-day and multi-day ones
  *  in a strip across the week. Plannings and weekend-only entries are left
  *  out. */
+/** Map the calendar feeds to display entries: plannings dropped (multi-week;
+ *  the Plannings card covers them), and the same entry listed once per
+ *  teaching group collapsed. Unsorted. */
+export function toWeekItems(items: CalendarItem[]): WeekItem[] {
+  const out: WeekItem[] = [];
+  const seen = new Set<string>();
+  for (const it of items) {
+    const kind = kindOf(it.category);
+    if (!kind) continue;
+    /* Deduplicate on what the user sees: the same test is often listed
+     * once per teaching group, with different entity and subject ids. */
+    const key = `${kind}:${it.name.trim()}:${it.startDate}:${it.endDate}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const start = localMs(it.startDate);
+    const subject = it.activity ? expandSubjectCode(it.activity) : undefined;
+    out.push({
+      key,
+      kind,
+      title: it.name.trim(),
+      detail: it.typeName || it.teacher || undefined,
+      start,
+      end: Math.max(start, localMs(it.endDate)),
+      allDay: it.allDay,
+      activityId: it.activityId || undefined,
+      subject: subject && subject !== it.activity ? subject : undefined,
+    });
+  }
+  return out;
+}
+
+/** The week's non-lesson entries, split the way the schedule shows them:
+ *  timed entries in their weekday's column (1–5), all-day and multi-day ones
+ *  in a strip across the week. Plannings and weekend-only entries are left
+ *  out. */
 export function weekItems(
   items: CalendarItem[],
   monday: Date,
@@ -107,34 +144,12 @@ export function weekItems(
   const weekEnd = addDays(startOfDay(monday), 5).getTime(); /* Saturday 00:00 */
   const allWeek: WeekItem[] = [];
   const byDay: Record<number, WeekItem[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-  const seen = new Set<string>();
-  for (const it of items) {
-    const kind = kindOf(it.category);
-    if (!kind) continue;
-    const start = localMs(it.startDate);
-    const end = Math.max(start, localMs(it.endDate));
-    /* Ending at Monday 00:00 means it finished last week. */
-    const endsBefore = end < weekStart || (end === weekStart && end > start);
-    if (endsBefore || start >= weekEnd) continue;
-    /* Deduplicate on what the user sees: the same test is often listed
-     * once per teaching group, with different entity ids. */
-    const key = `${kind}:${it.name.trim()}:${it.startDate}:${it.endDate}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const item: WeekItem = {
-      key,
-      kind,
-      title: it.name.trim(),
-      detail: it.typeName || it.teacher || undefined,
-      start,
-      end,
-      allDay: it.allDay,
-      activityId: it.activityId || undefined,
-    };
-    const startDate = new Date(start);
+  for (const item of toWeekItems(items)) {
+    if (!overlaps(item, weekStart, weekEnd)) continue;
+    const startDate = new Date(item.start);
     /* Exclusive end: 09:00 → next day 00:00 covers only the first day. */
     const singleDay = sameLocalDate(startDate, new Date(lastIncludedMs(item)));
-    if (!it.allDay && singleDay) {
+    if (!item.allDay && singleDay) {
       const day = isoDay(startDate);
       if (day <= 5) byDay[day]!.push(item);
     } else {
@@ -143,6 +158,39 @@ export function weekItems(
   }
   for (const list of [allWeek, ...Object.values(byDay)]) list.sort((a, b) => a.start - b.start);
   return { allWeek, byDay };
+}
+
+/** True when the entry covers any instant in [from, to). An entry ending
+ *  exactly at `from` (e.g. at midnight) finished before it. */
+function overlaps(item: WeekItem, from: number, to: number): boolean {
+  const endsBefore = item.end < from || (item.end === from && item.end > item.start);
+  return !endsBefore && item.start < to;
+}
+
+/** Upcoming entries for the Calendar page: those already under way at
+ *  `from` (ongoing), then the ones starting in [from, to) grouped by the
+ *  local day they start, in order. */
+export function agenda(
+  items: WeekItem[],
+  from: Date,
+  to: Date,
+): { ongoing: WeekItem[]; days: Array<{ day: number; items: WeekItem[] }> } {
+  const fromMs = startOfDay(from).getTime();
+  const toMs = to.getTime();
+  const ongoing: WeekItem[] = [];
+  const byDay = new Map<number, WeekItem[]>();
+  for (const item of [...items].sort((a, b) => a.start - b.start)) {
+    if (!overlaps(item, fromMs, toMs)) continue;
+    if (item.start < fromMs) {
+      ongoing.push(item);
+      continue;
+    }
+    const day = startOfDay(new Date(item.start)).getTime();
+    const list = byDay.get(day) ?? [];
+    list.push(item);
+    byDay.set(day, list);
+  }
+  return { ongoing, days: [...byDay].map(([day, list]) => ({ day, items: list })) };
 }
 
 /** True when a zone-less SchoolSoft date falls in ISO week `week` of ISO

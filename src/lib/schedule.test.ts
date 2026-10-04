@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  agenda,
   inWeek,
   isLongRunning,
   lastIncludedMs,
@@ -10,6 +11,7 @@ import {
   lessonAbsence,
   scheduleLessonToLesson,
   scheduleLessonsForDate,
+  toWeekItems,
   weekItems,
 } from "./schedule.ts";
 import {
@@ -268,4 +270,64 @@ void test("weekItems keeps a timed entry ending at midnight in its day column", 
     ["Evening event"],
   );
   assert.equal(allWeek.length, 0);
+});
+
+void test("agenda lists ongoing entries, then upcoming ones by start day", () => {
+  const from = new Date(2026, 9, 4, 15, 0); /* Sunday afternoon */
+  const to = new Date(2026, 10, 29);
+  const entry = (over: Partial<CalendarItem>): CalendarItem => ({
+    name: "x",
+    startDate: "2026-10-09T09:50",
+    endDate: "2026-10-09T10:45",
+    allDay: false,
+    category: "test",
+    ...over,
+  });
+  const { ongoing, days } = agenda(
+    toWeekItems([
+      entry({
+        name: "Term task",
+        allDay: true,
+        startDate: "2026-08-18T00:00",
+        endDate: "2026-12-19T00:00",
+      }),
+      entry({ name: "Kemi - provet", activity: "KE" }),
+      entry({ name: "Kemi - provet", activity: "KE", activityId: 2 }),
+      entry({
+        name: "Booking",
+        category: "timeBooking",
+        startDate: "2026-10-09T08:00",
+        endDate: "2026-10-09T08:20",
+      }),
+      entry({ name: "Earlier today", startDate: "2026-10-04T08:00", endDate: "2026-10-04T09:00" }),
+      entry({
+        name: "Finished",
+        allDay: true,
+        startDate: "2026-09-25T00:00",
+        endDate: "2026-10-04T00:00",
+      }),
+      entry({ name: "Too late", startDate: "2026-12-01T09:00", endDate: "2026-12-01T10:00" }),
+      entry({
+        name: "Unit",
+        category: "planning",
+        startDate: "2026-08-21",
+        endDate: "2026-10-23T12:00",
+      }),
+    ]),
+    from,
+    to,
+  );
+  assert.deepEqual(
+    ongoing.map((i) => i.title),
+    ["Term task"],
+  );
+  assert.deepEqual(
+    days.map((d) => [new Date(d.day).getDate(), d.items.map((i) => i.title)]),
+    [
+      [4, ["Earlier today"]],
+      [9, ["Booking", "Kemi - provet"]],
+    ],
+    "today's earlier entries still count; duplicates, plannings and out-of-range entries are dropped",
+  );
+  assert.equal(days[1]!.items[1]!.subject, "Chemistry");
 });
