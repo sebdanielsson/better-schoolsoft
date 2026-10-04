@@ -1397,7 +1397,8 @@ async function renewFocus(entry: FocusEntry, sentUnder: number): Promise<boolean
   if (!entry.renewal && entry.renewals !== sentUnder) return true;
   /* Also becomes the entry's promise, so a child switch queued meanwhile
    * chains behind the renewal instead of racing it. */
-  entry.renewal ??= entry.promise = mintCookies(...entry.args)
+  entry.renewal ??= entry.promise = freshToken(entry)
+    .then(() => mintCookies(...entry.args))
     .then(() => {
       entry.renewals++;
     })
@@ -1413,6 +1414,23 @@ async function renewFocus(entry: FocusEntry, sentUnder: number): Promise<boolean
   }
 }
 
+/** Supplies a valid Eva access token (refreshing if needed), registered by
+ *  the auth provider. A renewal can run long after the last bootstrap — e.g.
+ *  a button pressed on a page left idle — when the token the cookies were
+ *  minted with has expired too. */
+let evaTokenSupplier: (() => Promise<string | null>) | null = null;
+
+export function setEvaTokenSupplier(fn: (() => Promise<string | null>) | null): void {
+  evaTokenSupplier = fn;
+}
+
+/** Refresh the entry's token from the supplier when one is registered;
+ *  otherwise keep the newest token a bootstrap caller handed in. */
+async function freshToken(entry: FocusEntry): Promise<void> {
+  const token = await evaTokenSupplier?.().catch(() => null);
+  if (token) entry.args[1] = token;
+}
+
 /** A credentialed request that survives one upstream session expiry: on 401
  *  it re-mints the cookies for the same focus and retries once. */
 async function cookieFetch(url: string, init: RequestInit = {}): Promise<Response> {
@@ -1424,7 +1442,15 @@ async function cookieFetch(url: string, init: RequestInit = {}): Promise<Respons
   return req();
 }
 
+/** Set once the user logs out. Work that was already past its auth checks
+ *  (an effect resuming from `getEvaToken`, a pending renewal) could otherwise
+ *  mint after `__logout` and plant the session cookie again. Signing back in
+ *  goes through SchoolSoft's login page and returns with a full page load,
+ *  which resets this module, so nothing needs to lift the block. */
+let cookieSessionEnded = false;
+
 async function mintCookies(...[school, evaToken, userId, orgId, studentId]: BootstrapArgs) {
+  if (cookieSessionEnded) throw new Error("Signed out");
   const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
     method: "GET",
     credentials: "include",
@@ -1457,6 +1483,7 @@ async function mintCookies(...[school, evaToken, userId, orgId, studentId]: Boot
  *  covers them all. Call before `clearSessionCaches()` drops the entry.
  *  Fire-and-forget: `keepalive` lets it finish while the app navigates away. */
 export function endCookieSession(school: string): Promise<void> {
+  cookieSessionEnded = true;
   const pending = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
   return pending
     .then(() =>

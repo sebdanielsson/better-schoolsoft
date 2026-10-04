@@ -6,9 +6,9 @@ import {
   acquireCookieFocus,
   bootstrapSchoolsoftSession,
   cookieSessionFocus,
-  endCookieSession,
   fetchHolisticAssessments,
   fetchScheduleLessons,
+  setEvaTokenSupplier,
 } from "./schoolsoft.ts";
 import { clearSessionCaches } from "../lib/session-caches.ts";
 import { isoWeek } from "../lib/dates.ts";
@@ -194,38 +194,29 @@ void test("a late 401 after a finished renewal retries without re-minting", asyn
   }
 });
 
-/* A mint still in flight at logout would re-plant the session cookie if its
- * response landed after the expiry, so the expiry must wait for it. */
-void test("endCookieSession expires cookies only after in-flight mints settle", async () => {
+/* The cookies were minted with a token that has since expired; renewal must
+ * ask the auth provider for a fresh one rather than reuse it. */
+void test("renewal mints with a fresh token from the supplier", async () => {
   const realFetch = globalThis.fetch;
-  const order: string[] = [];
-  let releaseMint: (() => void) | null = null;
-  globalThis.fetch = ((url: string) => {
+  const minted: string[] = [];
+  let expired = false;
+  globalThis.fetch = ((url: string, init?: RequestInit) => {
     if (url.includes("/eva-apps/auth/login/parent")) {
-      order.push("mint start");
-      return new Promise<Response>((resolve) => {
-        releaseMint = () => {
-          order.push("mint end");
-          resolve(new Response(null, { status: 200 }));
-        };
-      });
+      minted.push((init!.headers as Record<string, string>).token!);
+      expired = false;
+      return Promise.resolve(new Response(null, { status: 200 }));
     }
-    order.push(url.endsWith("/__logout") ? "logout" : url);
-    return Promise.resolve(new Response(null, { status: 204 }));
+    return Promise.resolve(expired ? new Response(null, { status: 401 }) : new Response("[1]"));
   }) as typeof fetch;
+  setEvaTokenSupplier(() => Promise.resolve("fresh"));
   try {
     clearSessionCaches();
-    const mint = bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
-    await Promise.resolve();
-    const logout = endCookieSession("s");
-    clearSessionCaches();
-    await new Promise((r) => setTimeout(r, 10));
-    assert.deepEqual(order, ["mint start"], "logout waits for the mint");
-    releaseMint!();
-    await mint;
-    await logout;
-    assert.deepEqual(order, ["mint start", "mint end", "logout"]);
+    await bootstrapSchoolsoftSession("s", "stale", 1, 2, 100);
+    expired = true;
+    assert.deepEqual(await fetchHolisticAssessments("s"), [1]);
+    assert.deepEqual(minted, ["stale", "fresh"]);
   } finally {
+    setEvaTokenSupplier(null);
     globalThis.fetch = realFetch;
     clearSessionCaches();
   }

@@ -8,7 +8,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { endCookieSession, refreshEvaToken, type UserType } from "../api/schoolsoft.ts";
+import {
+  endCookieSession,
+  refreshEvaToken,
+  setEvaTokenSupplier,
+  type UserType,
+} from "../api/schoolsoft.ts";
 import { clearPkce } from "../api/pkce.ts";
 import { clearSessionCaches } from "../lib/session-caches.ts";
 
@@ -114,6 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     return evaRefreshInFlight.current;
   }, [session]);
+
+  /* Cookie-session renewals run outside React; hand them the live token
+   * getter so they never re-mint with an expired access token. */
+  useEffect(() => {
+    setEvaTokenSupplier(getEvaToken);
+    return () => setEvaTokenSupplier(null);
+  }, [getEvaToken]);
 
   const setEvaTokens = useCallback(
     (refreshToken: string, accessToken?: string, expiresIn?: number) => {
