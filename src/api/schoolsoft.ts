@@ -1449,14 +1449,27 @@ async function mintCookies(...[school, evaToken, userId, orgId, studentId]: Boot
 /** Drop the SchoolSoft cookies the proxy planted on our origin. They're
  *  HttpOnly, so only the proxy's `__logout` route can expire them. Upstream
  *  has no logout or revoke endpoint — the official app's logout is local-only
- *  too — so the server-side session simply idles out. Fire-and-forget:
- *  `keepalive` lets it finish while the app navigates to the login page. */
-export function endCookieSession(school: string): void {
-  void fetch(`${BASE}/${school}/__logout`, {
-    method: "POST",
-    credentials: "include",
-    keepalive: true,
-  }).catch(() => {});
+ *  too — so the server-side session simply idles out.
+ *
+ *  Expiry must land after any cookie mint already in flight, or that mint's
+ *  late `Set-Cookie` would restore the session. Every mint (re-focus or
+ *  renewal) is chained onto the current entry's promise, so waiting for it
+ *  covers them all. Call before `clearSessionCaches()` drops the entry.
+ *  Fire-and-forget: `keepalive` lets it finish while the app navigates away. */
+export function endCookieSession(school: string): Promise<void> {
+  const pending = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
+  return pending
+    .then(() =>
+      fetch(`${BASE}/${school}/__logout`, {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+      }),
+    )
+    .then(
+      () => {},
+      () => {},
+    );
 }
 
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {

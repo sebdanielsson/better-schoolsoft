@@ -6,6 +6,7 @@ import {
   acquireCookieFocus,
   bootstrapSchoolsoftSession,
   cookieSessionFocus,
+  endCookieSession,
   fetchHolisticAssessments,
   fetchScheduleLessons,
 } from "./schoolsoft.ts";
@@ -187,6 +188,43 @@ void test("a late 401 after a finished renewal retries without re-minting", asyn
     releaseSlow!();
     assert.deepEqual(await slow, [1]);
     assert.equal(bootstraps, 2, "the late 401 reused that renewal");
+  } finally {
+    globalThis.fetch = realFetch;
+    clearSessionCaches();
+  }
+});
+
+/* A mint still in flight at logout would re-plant the session cookie if its
+ * response landed after the expiry, so the expiry must wait for it. */
+void test("endCookieSession expires cookies only after in-flight mints settle", async () => {
+  const realFetch = globalThis.fetch;
+  const order: string[] = [];
+  let releaseMint: (() => void) | null = null;
+  globalThis.fetch = ((url: string) => {
+    if (url.includes("/eva-apps/auth/login/parent")) {
+      order.push("mint start");
+      return new Promise<Response>((resolve) => {
+        releaseMint = () => {
+          order.push("mint end");
+          resolve(new Response(null, { status: 200 }));
+        };
+      });
+    }
+    order.push(url.endsWith("/__logout") ? "logout" : url);
+    return Promise.resolve(new Response(null, { status: 204 }));
+  }) as typeof fetch;
+  try {
+    clearSessionCaches();
+    const mint = bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    await Promise.resolve();
+    const logout = endCookieSession("s");
+    clearSessionCaches();
+    await new Promise((r) => setTimeout(r, 10));
+    assert.deepEqual(order, ["mint start"], "logout waits for the mint");
+    releaseMint!();
+    await mint;
+    await logout;
+    assert.deepEqual(order, ["mint start", "mint end", "logout"]);
   } finally {
     globalThis.fetch = realFetch;
     clearSessionCaches();

@@ -81,7 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const school = session?.school;
   const logout = useCallback(() => {
-    if (school) endCookieSession(school);
+    /* Before clearSessionCaches(): it waits on the cookie mints in flight. */
+    if (school) void endCookieSession(school);
     setSession(null);
     /* Leaving these behind would expose the previous account's cached staff
      * details and avatars to the next person who signs in on this device. */
