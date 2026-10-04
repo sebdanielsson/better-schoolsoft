@@ -355,15 +355,15 @@ function SubjectPicker({
     ?.filter((r) => r.isSubjectRoom && !r.hiddenForStudents)
     .sort((a, b) => a.subject.localeCompare(b.subject));
   if (!visible || visible.length < 2) {
-    return <h2 className="text-2xl font-bold tracking-tight">{title}</h2>;
+    return <h2 className="text-[1.375rem] font-bold tracking-tight">{title}</h2>;
   }
   return (
     <DropdownMenu>
       {/* The heading wraps the button (not the reverse): a button can't
        * contain a heading, and this keeps it in heading navigation. */}
-      <h2 className="text-2xl font-bold tracking-tight">
+      <h2 className="text-[1.375rem] font-bold tracking-tight">
         <DropdownMenuTrigger className="-mx-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 text-left transition-colors hover:bg-slate-100 data-popup-open:bg-slate-100">
-          <span className="truncate">{title}</span>
+          <span className="min-w-0 wrap-break-word">{title}</span>
           <span className="sr-only"> (switch subject)</span>
           <ChevronDown aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-400" />
         </DropdownMenuTrigger>
