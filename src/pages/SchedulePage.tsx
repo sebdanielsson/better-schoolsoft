@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
-import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
+import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
-  fetchLessons,
+  bootstrapSchoolsoftSession,
   fetchEvaLessonsWeek,
-  bitmaskToWeeks,
+  fetchScheduleLessons,
   formatLessonTime,
-  isoDay,
-  isoWeek,
   lessonDayIndex,
   type EvaLessonTile,
   type Lesson,
 } from "../api/schoolsoft.ts";
 import { cn } from "../lib/utils.ts";
 import { schoolSoftUrl } from "../lib/safe-url.ts";
+import { isoDay, isoWeek } from "../lib/dates.ts";
+import { scheduleLessonToLesson } from "../lib/schedule.ts";
 
 const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
   { idx: 1, label: "Monday" },
@@ -34,9 +34,9 @@ type ScheduleRow = {
   teacher?: string;
 };
 
-function legacyToRow(l: Lesson): ScheduleRow {
+function lessonToRow(l: Lesson): ScheduleRow {
   return {
-    id: `legacy-${l.id}`,
+    id: `rest-${l.id}`,
     startTime: l.startTime,
     endTime: l.endTime,
     subject: l.groupName ?? l.subjectName ?? `Subject ${l.subjectId}`,
@@ -57,15 +57,13 @@ function evaToRow(l: EvaLessonTile, idx: number): ScheduleRow {
 }
 
 export default function SchedulePage() {
-  const { session, getToken, getEvaToken } = useAuth();
-  const { child } = useHeroData();
+  const { session, getEvaToken } = useAuth();
+  const { parentUserId, child } = useHeroData();
   const childStudentId = child?.studentId ?? null;
   const childOrgId = child?.schools[0]?.orgId ?? null;
-  const isDefaultChild = useIsDefaultChild();
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<"eva" | "legacy" | "empty">("empty");
+  const [source, setSource] = useState<"rest" | "eva" | "empty">("empty");
 
   const now = useNow();
   const currentWeek = isoWeek(now);
@@ -76,11 +74,38 @@ export default function SchedulePage() {
     if (!session) return;
     let cancelled = false;
     setLoading(true);
-    setError(null);
 
     async function load() {
-      /* Try Eva first when an OAuth token is available. */
       const evaToken = await getEvaToken().catch(() => null);
+      /* The confirmed week schedule (HomePage's source too). It reads the
+       * cookie session's child in focus, so bootstrap for the selected child —
+       * that keeps siblings apart. */
+      if (evaToken && parentUserId && childStudentId) {
+        try {
+          await bootstrapSchoolsoftSession(
+            session!.school,
+            evaToken,
+            parentUserId,
+            childOrgId ?? session!.orgId,
+            childStudentId,
+          );
+          const lessons = await fetchScheduleLessons(session!.school, selectedWeek);
+          const rest = lessons
+            .filter((l) => l.category === "lesson")
+            .map((l) => lessonToRow(scheduleLessonToLesson(l)));
+          if (rest.length) {
+            if (!cancelled) {
+              setRows(rest);
+              setSource("rest");
+            }
+            return;
+          }
+        } catch {
+          /* fall through to the Eva probe */
+        }
+      }
+      /* Unconfirmed Eva week endpoints (see fetchEvaLessonsWeek), kept as a
+       * fallback for tenants whose rest-api schedule comes back empty. */
       if (evaToken) {
         try {
           /* The Eva endpoint needs the child in focus, which the hero data
@@ -101,37 +126,12 @@ export default function SchedulePage() {
             }
           }
         } catch {
-          /* fall through to legacy */
+          /* fall through to empty */
         }
       }
-      /* Legacy bitmask-keyed schedule. It always describes the login's
-       * default child, so for a sibling (Eva empty, failed or unavailable)
-       * show nothing rather than someone else's lessons. */
-      if (!isDefaultChild) {
-        if (!cancelled) {
-          setRows([]);
-          setSource("empty");
-        }
-        return;
-      }
-      try {
-        const token = await getToken();
-        if (!token) throw new Error("legacy session unavailable");
-        const lessons = await fetchLessons(session!.school, token, session!.orgId);
-        const filtered = lessons.filter(
-          (l) => l.weeks && bitmaskToWeeks(l.weeks).includes(selectedWeek),
-        );
-        if (!cancelled) {
-          setRows(filtered.map(legacyToRow));
-          setSource(filtered.length ? "legacy" : "empty");
-        }
-      } catch {
-        /* Don't surface 401/410 from the deprecated legacy endpoint as a user-facing error —
-         * the user is signed in, the data source is just gone. */
-        if (!cancelled) {
-          setRows([]);
-          setSource("empty");
-        }
+      if (!cancelled) {
+        setRows([]);
+        setSource("empty");
       }
     }
 
@@ -142,7 +142,7 @@ export default function SchedulePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, selectedWeek, childStudentId, childOrgId, isDefaultChild]);
+  }, [session, getEvaToken, selectedWeek, parentUserId, childStudentId, childOrgId]);
 
   const byDay = useMemo(() => {
     const map: Record<number, ScheduleRow[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
@@ -194,12 +194,6 @@ export default function SchedulePage() {
           </button>
         </div>
       </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
-        </div>
-      )}
 
       {source === "empty" ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">

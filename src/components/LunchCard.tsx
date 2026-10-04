@@ -1,30 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Leaf, Utensils } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
-import { useChildOrgId, useIsDefaultChild } from "../hooks/useHeroData.tsx";
+import { useChildOrgId } from "../hooks/useHeroData.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import {
   DAY_NAMES_FULL,
   evaLunchToWeek,
   fetchEvaLunchWeek,
-  fetchLunch,
-  isoDay,
-  isoWeek,
   type LunchWeek,
 } from "../api/schoolsoft.ts";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
-
-function startOfIsoWeek(d: Date): Date {
-  const day = d.getDay() || 7;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - (day - 1));
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setDate(d.getDate() + n);
-  return r;
-}
+import { addDays, isoDay, isoWeek, mondayOf } from "../lib/dates.ts";
 
 function firstLine(s: string): string {
   const i = s.indexOf("\n");
@@ -58,7 +45,7 @@ function parseLunchLines(text: string): LunchEntry[] {
 /* On Sat/Sun the "active" week shifts to next week (current week is done).
  * The Today button restores this anchor. */
 function activeLunchMonday(now: Date): Date {
-  const start = startOfIsoWeek(now);
+  const start = mondayOf(now);
   return isoDay(now) >= 6 ? addDays(start, 7) : start;
 }
 
@@ -81,9 +68,8 @@ const lunchWeekMealClass = "min-w-0 break-words text-[0.85rem] leading-[1.35]";
 const LUNCH_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 
 export default function LunchCard() {
-  const { session, getEvaToken, getToken } = useAuth();
+  const { session, getEvaToken } = useAuth();
   const orgId = useChildOrgId();
-  const isDefaultChild = useIsDefaultChild();
 
   const [weekMonday, setWeekMonday] = useState<Date>(() => activeLunchMonday(new Date()));
   const [lunch, setLunch] = useState<LunchWeek | null>(null);
@@ -112,20 +98,7 @@ export default function LunchCard() {
           );
           data = evaLunchToWeek(days);
         } catch {
-          /* fall through to legacy */
-        }
-      }
-      /* The legacy menu belongs to the login's default child's school. */
-      if (!data && isDefaultChild) {
-        try {
-          const legacyToken = await getToken().catch(() => "");
-          if (legacyToken) {
-            /* The legacy app-key API is tied to the login's own school. */
-            const weeks = await fetchLunch(session.school, legacyToken, session.orgId);
-            data = weeks.find((w) => w.week === week) ?? null;
-          }
-        } catch {
-          /* swallow */
+          /* no menu for this week */
         }
       }
       if (!cancelled) {
@@ -136,7 +109,7 @@ export default function LunchCard() {
     return () => {
       cancelled = true;
     };
-  }, [session, getEvaToken, getToken, week, orgId, isDefaultChild]);
+  }, [session, getEvaToken, week, orgId]);
 
   if (!session) return null;
 

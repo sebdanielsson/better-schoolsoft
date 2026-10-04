@@ -8,7 +8,11 @@
  * the cookies back on subsequent proxied requests. School-agnostic.
  */
 import {
+  LOGOUT_PATH,
   PROXY_SECURITY_HEADERS,
+  isAllowedUpstreamRequest,
+  logoutCookies,
+  isSameOriginRequest,
   upstreamUrlFor,
   rewriteCookiePath,
   rewriteLocation,
@@ -29,8 +33,23 @@ const HOP_BY_HOP = [
 export default { fetch: handler };
 
 async function handler(request: Request): Promise<Response> {
+  if (!isSameOriginRequest(request.headers, request.url)) {
+    return new Response("Forbidden", { status: 403 });
+  }
   const upstreamUrl = upstreamUrlFor(request.url);
   if (!upstreamUrl) return new Response("Bad request", { status: 400 });
+  const logout = LOGOUT_PATH.exec(new URL(upstreamUrl).pathname);
+  if (logout) {
+    if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+    const headers = new Headers({ "cache-control": "no-store" });
+    for (const c of logoutCookies(request.headers.get("cookie"), logout[1]!)) {
+      headers.append("set-cookie", c);
+    }
+    return new Response(null, { status: 204, headers });
+  }
+  if (!isAllowedUpstreamRequest(request.method, upstreamUrl)) {
+    return new Response("Not found", { status: 404 });
+  }
 
   const headers = new Headers(request.headers);
   /* fetch() derives Host from the upstream URL. Vercel's own request headers

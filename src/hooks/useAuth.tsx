@@ -9,10 +9,9 @@ import {
   type ReactNode,
 } from "react";
 import {
-  fetchToken,
-  isTokenExpired,
+  endCookieSession,
   refreshEvaToken,
-  type TokenResponse,
+  setEvaTokenSupplier,
   type UserType,
 } from "../api/schoolsoft.ts";
 import { clearPkce } from "../api/pkce.ts";
@@ -27,9 +26,6 @@ interface EvaSession {
 
 interface Session {
   school: string;
-  appKey: string;
-  token: string;
-  expiryDate: string;
   orgId: number;
   orgName?: string;
   name: string;
@@ -47,7 +43,6 @@ interface AuthContextValue {
   session: Session | null;
   isAuthenticated: boolean;
   logout: () => void;
-  getToken: () => Promise<string>;
   /** Get a fresh Eva access token (auto-refresh), or null if no Eva session. */
   getEvaToken: () => Promise<string | null>;
   /** Save an Eva refresh token (and optional initial access token) into the session. */
@@ -63,7 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as Session) : null;
+      const stored = raw ? (JSON.parse(raw) as Session) : null;
+      /* Sessions from the removed password login carry only the legacy app
+       * token, which nothing reads any more. Treat them as signed out so the
+       * user re-authenticates (and the OAuth callback starts from a clean
+       * slate instead of patching tokens onto the stale record). */
+      if (stored && !stored.eva) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+      return stored;
     } catch {
       return null;
     }
@@ -89,23 +93,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSessionCaches();
   }, [cacheIdentity]);
 
+  const school = session?.school;
   const logout = useCallback(() => {
+    /* Before clearSessionCaches(): it waits on the cookie mints in flight. */
+    if (school) void endCookieSession(school);
     setSession(null);
     /* Leaving these behind would expose the previous account's cached staff
      * details and avatars to the next person who signs in on this device. */
     clearSessionCaches();
     clearPkce();
-  }, []);
-
-  const getToken = useCallback(async (): Promise<string> => {
-    if (!session) throw new Error("Not authenticated");
-    if (!isTokenExpired(session.expiryDate)) return session.token;
-    const tokenResp: TokenResponse = await fetchToken(session.school, session.appKey);
-    setSession((prev) =>
-      prev ? { ...prev, token: tokenResp.token, expiryDate: tokenResp.expiryDate } : prev,
-    );
-    return tokenResp.token;
-  }, [session]);
+  }, [school]);
 
   /* Coalesce concurrent Eva-token refreshes into one network call. */
   const evaRefreshInFlight = useRef<Promise<string> | null>(null);
@@ -131,6 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     return evaRefreshInFlight.current;
   }, [session]);
+
+  /* Cookie-session renewals run outside React; hand them the live token
+   * getter so they never re-mint with an expired access token. */
+  useEffect(() => {
+    setEvaTokenSupplier(getEvaToken);
+    return () => setEvaTokenSupplier(null);
+  }, [getEvaToken]);
 
   const setEvaTokens = useCallback(
     (refreshToken: string, accessToken?: string, expiresIn?: number) => {
@@ -159,12 +163,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isAuthenticated: session !== null,
       logout,
-      getToken,
       getEvaToken,
       setEvaTokens,
       clearEvaTokens,
     }),
-    [session, logout, getToken, getEvaToken, setEvaTokens, clearEvaTokens],
+    [session, logout, getEvaToken, setEvaTokens, clearEvaTokens],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,43 +2,7 @@
  *  `localStorage.bss_dev_mock === '1'`. Used to preview the UI without a SchoolSoft account.
  */
 
-function isoWeekOf(d: Date): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
-const DAY1970: Record<number, string> = {
-  1: "1970-01-05",
-  2: "1970-01-06",
-  3: "1970-01-07",
-  4: "1970-01-01",
-  5: "1970-01-02",
-};
-
-function lesson(
-  id: number,
-  day: number,
-  start: string,
-  end: string,
-  subject: string,
-  room: string,
-  teacher: string,
-  weeksMask: number,
-) {
-  return {
-    id,
-    subjectId: id,
-    startTime: `${DAY1970[day]} ${start}:00.0`,
-    endTime: `${DAY1970[day]} ${end}:00.0`,
-    groupName: subject,
-    location: room,
-    teacherName: teacher,
-    weeks: weeksMask,
-  };
-}
+import { isoWeek } from "./lib/dates.ts";
 
 /* Staff directory mock — grouped exactly like the real Eva endpoint. Pictures point
  * at `teacher{id}.jpg` filenames that won't resolve in mock mode, so avatars fall
@@ -161,111 +125,7 @@ function defaultStaffDetail(teacherId: number) {
 
 function buildMocks() {
   const today = new Date();
-  const w = isoWeekOf(today);
-  const mask = (1 << (w - 1)) | (1 << w) | (1 << (w - 2)) | (1 << (w + 1));
-
-  const lessons = [
-    lesson(1, 1, "08:30", "09:20", "English 4B", "Room 142", "Ms. Anderson", mask),
-    lesson(2, 1, "09:30", "10:20", "Mathematics", "Room 210", "Mr. Johansson", mask),
-    lesson(3, 1, "10:40", "11:30", "Swedish", "Room 142", "Ms. Lindberg", mask),
-    lesson(4, 1, "12:30", "13:20", "Physical Education", "Gym", "Mr. Berg", mask),
-    lesson(5, 2, "08:30", "09:20", "Science", "Room 305", "Dr. Karlsson", mask),
-    lesson(6, 2, "09:30", "10:20", "Art", "Room 120", "Ms. Pettersson", mask),
-    lesson(7, 2, "10:40", "12:00", "Mathematics", "Room 210", "Mr. Johansson", mask),
-    lesson(8, 3, "08:30", "09:20", "English 4B", "Room 142", "Ms. Anderson", mask),
-    lesson(9, 3, "09:30", "10:20", "History", "Room 208", "Mr. Nilsson", mask),
-    lesson(10, 3, "10:40", "11:30", "Music", "Room 160", "Ms. Olsson", mask),
-    lesson(11, 3, "13:00", "13:50", "Mathematics", "Room 210", "Mr. Johansson", mask),
-    lesson(12, 4, "08:30", "09:20", "Geography", "Room 305", "Dr. Karlsson", mask),
-    lesson(13, 4, "09:30", "10:20", "Swedish", "Room 142", "Ms. Lindberg", mask),
-    lesson(14, 4, "12:30", "13:20", "Religion", "Room 208", "Mr. Nilsson", mask),
-    lesson(15, 5, "08:30", "09:20", "English 4B", "Room 142", "Ms. Anderson", mask),
-    lesson(16, 5, "09:30", "10:20", "Mathematics", "Room 210", "Mr. Johansson", mask),
-    lesson(17, 5, "10:40", "11:30", "Physical Education", "Gym", "Mr. Berg", mask),
-  ];
-
-  const buildLunchWeek = (week: number, dates: string[]) => ({
-    week,
-    monday: "Veckans lunch · Spaghetti Bolognese\nVeckans vegetariska · Halloumi och linsgryta",
-    tuesday:
-      "Veckans lunch · Stekt fisk med potatismos\nVeckans vegetariska · Bönbiff med tzatziki",
-    wednesday: "Veckans lunch · Kycklinggryta med ris\nVeckans vegetariska · Indisk dahl med naan",
-    thursday: "Veckans lunch · Ärtsoppa och pannkakor\nVeckans vegetariska · Linssoppa",
-    friday:
-      "Veckans lunch · Fiskpinnar med remouladsås\nVeckans vegetariska · Quornbiffar med sallad",
-    saturday: "",
-    sunday: "",
-    dates,
-  });
-  const lunch = [
-    buildLunchWeek(w, ["2026-05-11", "2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15"]),
-    buildLunchWeek(w + 1, ["2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22"]),
-  ];
-
-  const now = Date.now();
-  const oneDay = 86_400_000;
-  const calendar = [
-    {
-      id: 100,
-      eventStart: now + 2 * oneDay + 9 * 3.6e6,
-      eventEnd: now + 2 * oneDay + 11 * 3.6e6,
-      title: "Friluftsdag",
-      eventTypeInfo: "Whole school",
-    },
-    {
-      id: 101,
-      eventStart: now + 5 * oneDay + 14 * 3.6e6,
-      eventEnd: now + 5 * oneDay + 16 * 3.6e6,
-      title: "Föräldramöte 4B",
-      eventTypeInfo: "Class 4B",
-    },
-    {
-      id: 102,
-      eventStart: now + 9 * oneDay + 8 * 3.6e6,
-      title: "Nationella prov – Svenska",
-      eventTypeInfo: "Test",
-    },
-    {
-      id: 103,
-      eventStart: now + 14 * oneDay + 10 * 3.6e6,
-      title: "Skolavslutning",
-      eventTypeInfo: "Whole school",
-    },
-    {
-      id: 104,
-      eventStart: now + 21 * oneDay + 9 * 3.6e6,
-      title: "Sommarlovets början",
-      eventTypeInfo: "Holiday",
-    },
-  ];
-
-  const news = [
-    {
-      id: 200,
-      eventStart: now - 1 * oneDay,
-      title: "Pollensäsongen närmar sig",
-      description:
-        "Våren är på väg och med den kommer ljusare dagar och spirande natur. Informera klassföreståndaren om eventuell pollenallergi.",
-      eventTypeInfo: "School news",
-    },
-    {
-      id: 201,
-      eventStart: now - 4 * oneDay,
-      title: "Nya hämtningsregler för fritids",
-      description:
-        "Från och med måndag den 18:e gäller nya rutiner för avhämtning från fritids — vänligen läs det utskickade dokumentet.",
-      eventTypeInfo: "Practical",
-    },
-    {
-      id: 202,
-      eventStart: now - 7 * oneDay,
-      title: "Klassfoton denna vecka",
-      description:
-        "Fotografering av klass 4B sker på onsdag förmiddag i aulan. Ta gärna med ett extra plagg om barnet vill byta inför fotot.",
-      eventTypeInfo: "Reminder",
-    },
-  ];
-
+  const w = isoWeek(today);
   /* Eva-style lunch keyed by week (mirrors /eva/api/v1/schools/{orgId}/lunchmenu/{week}). */
   const evaLunchByWeek: Record<
     number,
@@ -321,7 +181,7 @@ function buildMocks() {
     ],
   };
 
-  return { lessons, lunch, calendar, news, evaLunchByWeek };
+  return { evaLunchByWeek };
 }
 
 export function shouldInstallMocks(): boolean {
@@ -344,7 +204,7 @@ export function shouldInstallMocks(): boolean {
 const confirmedWarnings = new Set<number>();
 
 export function installMocks() {
-  const { lessons, lunch, calendar, news, evaLunchByWeek } = buildMocks();
+  const { evaLunchByWeek } = buildMocks();
 
   /* Pre-seed an authenticated session so the dashboard renders.
    * `eva` is included so the modern Eva endpoints are exercised in mock mode too. */
@@ -353,9 +213,6 @@ export function installMocks() {
       "bss_session",
       JSON.stringify({
         school: "exampleacademy",
-        appKey: "mock-appkey",
-        token: "mock-token",
-        expiryDate: "2099-01-01 00:00:00.0",
         orgId: 21,
         orgName: "Example Academy",
         name: "Alex",
@@ -727,7 +584,7 @@ export function installMocks() {
     if (calendarLessonsMatch) {
       const askedWeek = Number(calendarLessonsMatch[1]);
       const today = new Date();
-      const currentWeek = isoWeekOf(today);
+      const currentWeek = isoWeek(today);
       /* Find Monday of the asked week by stepping from today's Monday. */
       const todayMonday = (() => {
         const dn = today.getDay() || 7;
@@ -1141,7 +998,7 @@ export function installMocks() {
     );
     if (planningsStartMatch) {
       const askedWeek = Number(planningsStartMatch[1]);
-      const currentWeek = isoWeekOf(new Date());
+      const currentWeek = isoWeek(new Date());
       const delta = askedWeek - currentWeek;
       const data: Record<
         number,
@@ -1202,7 +1059,7 @@ export function installMocks() {
     );
     if (assignmentsMatch) {
       const askedWeek = Number(assignmentsMatch[1]);
-      const currentWeek = isoWeekOf(new Date());
+      const currentWeek = isoWeek(new Date());
       const delta = askedWeek - currentWeek;
       const dataByDelta: Record<
         number,
@@ -1496,22 +1353,6 @@ export function installMocks() {
       return Promise.resolve(json(staffDetails[id] ?? defaultStaffDetail(id)));
     }
 
-    if (url.includes("/api/lessons/student/")) return Promise.resolve(json(lessons));
-    if (url.includes("/api/lunchmenus/student/")) return Promise.resolve(json(lunch));
-    if (url.includes("/api/notices/student/")) {
-      if (url.includes("news")) return Promise.resolve(json(news));
-      return Promise.resolve(json(calendar));
-    }
-    if (url.includes("/rest/app/token"))
-      return Promise.resolve(json({ token: "mock-token", expiryDate: "2099-01-01 00:00:00.0" }));
-    if (url.includes("/rest/app/login"))
-      return Promise.resolve(
-        json({
-          appKey: "mock-appkey",
-          orgs: [{ orgId: 21, orgName: "Example Academy" }],
-          name: "Alex",
-        }),
-      );
     return origFetch(input, init);
   };
 

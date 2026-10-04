@@ -7,8 +7,6 @@ import {
   fetchEvaAbsenceDay,
   fetchEvaAbsencePermissions,
   fetchEvaAbsenceWeek,
-  isoWeek,
-  isoWeekYear,
   saveEvaAbsenceLessonComment,
   saveEvaAbsenceWeekComment,
   setEvaFullDayAbsence,
@@ -19,13 +17,11 @@ import {
 } from "../api/schoolsoft.ts";
 import {
   absenceKeys,
-  addDays,
   canReportFullDay,
   canReportLesson,
   canWithdrawLesson,
   lessonAttendance,
   lessonEnded,
-  mondayOf,
   schoolMidnightMs,
   schoolYearWeeks,
   type AttendanceTone,
@@ -36,6 +32,8 @@ import { ErrorBanner } from "../components/DashCard.tsx";
 import ConfirmDialog, { btnPrimaryClass, btnSecondaryClass } from "../components/ConfirmDialog.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
+import { isoWeek, isoWeekYear } from "../lib/dates.ts";
+import { addDays, mondayOf } from "../lib/dates.ts";
 
 const DAYS = [0, 1, 2, 3, 4] as const;
 

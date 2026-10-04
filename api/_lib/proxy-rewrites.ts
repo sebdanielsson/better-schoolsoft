@@ -78,3 +78,68 @@ export function upstreamUrlFor(requestUrl: string): string | null {
   }
   return target.origin === UPSTREAM_ORIGIN ? target.href : null;
 }
+
+/** The upstream API namespaces the SPA calls (see `src/api/schoolsoft.ts`)
+ *  and the methods it uses in each. This is a namespace allowlist, not a
+ *  per-route one: it shuts out the React webview, admin JSPs and everything
+ *  else on the host, and keeps the read-only areas read-only. It doesn't
+ *  enumerate routes — the relay only ever acts with the caller's own cookies
+ *  or token, so a route list would add upkeep, not privilege separation.
+ *  The school list lives under the pseudo-school `internal/`; `files/` covers
+ *  the download redirects `rewriteLocation` keeps on our origin. */
+const READ_WRITE_PATH = /^\/[a-z0-9][a-z0-9-]*\/(?:eva\/api|rest-api)\//;
+const READ_ONLY_PATH =
+  /^\/(?:files\/|[a-z0-9][a-z0-9-]*\/(?:eva-apps\/auth\/|jsp\/student\/|files\/))/;
+const READ_METHODS = new Set(["GET", "HEAD"]);
+const WRITE_METHODS = new Set(["POST", "PUT", "DELETE"]);
+
+/** True when the SPA makes requests of this method to this upstream path. */
+export function isAllowedUpstreamRequest(method: string, upstreamUrl: string): boolean {
+  const path = new URL(upstreamUrl).pathname;
+  if (READ_METHODS.has(method)) return READ_WRITE_PATH.test(path) || READ_ONLY_PATH.test(path);
+  if (WRITE_METHODS.has(method)) return READ_WRITE_PATH.test(path);
+  return false;
+}
+
+/** Reject requests a browser tells us came from another site.
+ *
+ *  Every proxied call is a same-origin `fetch()` from the SPA, so modern
+ *  browsers send `Sec-Fetch-Site: same-origin`. Older browsers without Fetch
+ *  Metadata fall back to the `Origin` header. A request carrying neither is
+ *  let through: that's a non-browser client, which can forge both anyway and
+ *  is the WAF rate limit's job. */
+export function isSameOriginRequest(headers: Headers, requestUrl: string): boolean {
+  const site = headers.get("sec-fetch-site");
+  if (site !== null) return site === "same-origin";
+  const origin = headers.get("origin");
+  if (origin !== null) return origin === new URL(requestUrl).origin;
+  return true;
+}
+
+/** Proxy-local route (never forwarded) that ends our copy of the cookie
+ *  session: `POST /schoolsoft/<school>/__logout`. */
+export const LOGOUT_PATH = /^\/([a-z0-9][a-z0-9-]*)\/__logout$/;
+
+/** `Set-Cookie` values expiring every cookie the browser sent.
+ *
+ *  SchoolSoft has no logout or revoke endpoint (the official app only clears
+ *  local state), but the cookies `rewriteCookiePath` planted on our origin are
+ *  HttpOnly, so the SPA can't drop them itself. The request doesn't say which
+ *  path each cookie was scoped to, so each name is expired on every shape
+ *  upstream uses — `Path=/<school>`, `/<school>/` and `/` — re-scoped under
+ *  the mount. */
+export function logoutCookies(cookieHeader: string | null, school: string): string[] {
+  const names = new Set(
+    (cookieHeader ?? "")
+      .split(";")
+      .map((c) => c.split("=")[0]!.trim())
+      .filter((n) => /^[!#$%&'*+\-.^`|~\w]+$/.test(n)),
+  );
+  const out: string[] = [];
+  for (const name of names) {
+    for (const path of [`${MOUNT}/${school}`, `${MOUNT}/${school}/`, `${MOUNT}/`]) {
+      out.push(`${name}=; Path=${path}; Max-Age=0; Secure; HttpOnly; SameSite=Lax`);
+    }
+  }
+  return out;
+}
