@@ -190,7 +190,7 @@ export default function NewsPage() {
       ) : (
         <>
           {categories.length > 1 && (
-            <div className="sticky top-16 z-[5] mb-5 flex flex-wrap gap-[0.4rem] bg-slate-50 py-2">
+            <div className="mb-5 flex flex-wrap gap-[0.4rem]">
               <button
                 type="button"
                 aria-pressed={selectedCategory === null}
