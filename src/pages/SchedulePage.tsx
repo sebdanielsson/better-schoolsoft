@@ -27,7 +27,10 @@ import {
   sameLocalDate,
 } from "../lib/dates.ts";
 import {
+  inWeek,
   isLongRunning,
+  lastIncludedMs,
+  lessonStartMs,
   scheduleLessonToLesson,
   weekItems,
   type WeekItem,
@@ -73,7 +76,7 @@ interface WeekData {
  *  ("Kalender (Ny)"): lessons, plus tests, school events and time bookings. */
 export default function SchedulePage() {
   const { session, getEvaToken } = useAuth();
-  const { parentUserId, child } = useHeroData();
+  const { parentUserId, child, loading: heroLoading } = useHeroData();
   const studentId = child?.studentId ?? null;
   const orgId = child?.schools[0]?.orgId ?? session?.orgId ?? null;
 
@@ -110,11 +113,17 @@ export default function SchedulePage() {
         if (lessons.status === "rejected") throw lessons.reason;
         setData({
           key,
-          lessons: lessons.value.filter((l) => l.category === "lesson").map(scheduleLessonToLesson),
+          /* The feed takes a bare week number; drop anything it returns for
+           * another ISO year rather than show it under this week's dates. */
+          lessons: lessons.value
+            .filter((l) => l.category === "lesson" && inWeek(l.startDate, week, year))
+            .map(scheduleLessonToLesson),
           items: extras.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
         });
       } catch (e: unknown) {
         if (!cancelled) {
+          /* Don't keep showing an earlier load of this week as if it were fresh. */
+          setData((prev) => (prev?.key === key ? null : prev));
           setError({ key, message: e instanceof Error ? e.message : "Failed to load schedule" });
         }
       }
@@ -126,7 +135,14 @@ export default function SchedulePage() {
   }, [session, getEvaToken, parentUserId, studentId, orgId, week, year, key]);
 
   const current = data?.key === key ? data : null;
-  const failed = error?.key === key && !current ? error.message : null;
+  /* The hero data finished without a child: its parent request failed, and
+   * the load effect above can never start. */
+  const noAccount = !heroLoading && (!parentUserId || !studentId);
+  const failed = noAccount
+    ? "Couldn't load your account details. Reload the page to try again."
+    : error?.key === key && !current
+      ? error.message
+      : null;
 
   const lessonsByDay = useMemo(() => {
     const map: Record<number, Lesson[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
@@ -268,13 +284,21 @@ export default function SchedulePage() {
                         </span>
                       )}
                     </div>
-                    {dayItems.map((it) => (
-                      <ItemChip key={it.key} item={it} />
-                    ))}
-                    {dayLessons.length === 0 ? (
+                    {/* Overlays and lessons in one chronological list. */}
+                    {[
+                      ...dayItems.map((it) => ({
+                        at: it.start,
+                        node: <ItemChip key={it.key} item={it} />,
+                      })),
+                      ...dayLessons.map((l) => ({
+                        at: lessonStartMs(l),
+                        node: <LessonCard key={l.id} lesson={l} />,
+                      })),
+                    ]
+                      .sort((a, b) => a.at - b.at)
+                      .map((e) => e.node)}
+                    {dayLessons.length === 0 && (
                       <div className="py-2 text-[0.8rem] text-slate-500 italic">No lessons</div>
-                    ) : (
-                      dayLessons.map((l) => <LessonCard key={l.id} lesson={l} />)
                     )}
                   </div>
                 );
@@ -351,10 +375,11 @@ const ITEM_STYLE: Record<WeekItem["kind"], { icon: typeof Star; className: strin
  *  strip shows the date span instead. Tests link to their subject. */
 function ItemChip({ item, spanLabel }: { item: WeekItem; spanLabel?: boolean }) {
   const { icon: Icon, className } = ITEM_STYLE[item.kind];
+  const lastDay = lastIncludedMs(item);
   const when = spanLabel
-    ? sameLocalDate(new Date(item.start), new Date(item.end))
+    ? sameLocalDate(new Date(item.start), new Date(lastDay))
       ? formatDate(item.start)
-      : `${formatDate(item.start)} – ${formatDate(item.end)}`
+      : `${formatDate(item.start)} – ${formatDate(lastDay)}`
     : `${formatTime(item.start)}–${formatTime(item.end)}`;
   const body = (
     <>

@@ -4,7 +4,7 @@ import type {
   ScheduleLesson,
   StudentLessonStatus,
 } from "../api/schoolsoft.ts";
-import { addDays, isoDay, sameLocalDate, startOfDay } from "./dates.ts";
+import { addDays, isoDay, isoWeek, isoWeekYear, sameLocalDate, startOfDay } from "./dates.ts";
 import { expandSubjectCode } from "./subject-codes.ts";
 
 /** Map a `ScheduleLesson` from the rest-api schedule onto the `Lesson` shape
@@ -142,4 +142,25 @@ export function weekItems(
   }
   for (const list of [allWeek, ...Object.values(byDay)]) list.sort((a, b) => a.start - b.start);
   return { allWeek, byDay };
+}
+
+/** True when a zone-less SchoolSoft date falls in ISO week `week` of ISO
+ *  week-year `year`. */
+export function inWeek(date: string, week: number, year: number): boolean {
+  const d = new Date(localMs(date));
+  return isoWeek(d) === week && isoWeekYear(d) === year;
+}
+
+/** A lesson's start as epoch ms, for ordering it among calendar items. */
+export function lessonStartMs(l: Lesson): number {
+  return localMs(l.startTime.slice(0, 16).replace(" ", "T"));
+}
+
+/** The last instant an entry covers, for labelling its date span. A span
+ *  that ends exactly at midnight ends the day before (as `weekItems`
+ *  already assumes); timed entries and zero-length ones keep their end. */
+export function lastIncludedMs(item: WeekItem): number {
+  const end = new Date(item.end);
+  const atMidnight = end.getHours() === 0 && end.getMinutes() === 0;
+  return atMidnight && item.end > item.start ? item.end - 1 : item.end;
 }

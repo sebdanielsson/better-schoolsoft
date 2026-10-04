@@ -3,7 +3,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  inWeek,
   isLongRunning,
+  lastIncludedMs,
+  lessonStartMs,
   lessonAbsence,
   scheduleLessonToLesson,
   scheduleLessonsForDate,
@@ -216,4 +219,33 @@ void test("isLongRunning counts calendar days, so a week across DST is not long"
   });
   assert.equal(isLongRunning(item(new Date(2026, 9, 19), new Date(2026, 9, 26))), false);
   assert.equal(isLongRunning(item(new Date(2026, 9, 19), new Date(2026, 9, 27))), true);
+});
+
+void test("inWeek checks both the ISO week and the ISO year", () => {
+  assert.equal(inWeek("2026-10-05T08:30", 41, 2026), true);
+  assert.equal(inWeek("2027-10-04T08:30", 40, 2026), false, "same week number, next year");
+  assert.equal(inWeek("2026-12-31T08:30", 53, 2026), true);
+  assert.equal(inWeek("2027-01-01", 53, 2026), true, "1 Jan 2027 belongs to ISO 2026-W53");
+});
+
+void test("lessonStartMs orders lessons among calendar items", () => {
+  const l = scheduleLessonToLesson(lesson({ startDate: "2026-10-05T08:30" }));
+  assert.equal(lessonStartMs(l), new Date(2026, 9, 5, 8, 30).getTime());
+});
+
+void test("lastIncludedMs treats a midnight end as the previous day", () => {
+  const item = (start: Date, end: Date) => ({
+    key: "k",
+    kind: "test" as const,
+    title: "t",
+    start: start.getTime(),
+    end: end.getTime(),
+    allDay: true,
+  });
+  const span = item(new Date(2026, 8, 25), new Date(2026, 9, 1));
+  assert.equal(new Date(lastIncludedMs(span)).getDate(), 30, "ends Wed 30 Sep, not Thu 1 Oct");
+  const point = item(new Date(2026, 9, 1), new Date(2026, 9, 1));
+  assert.equal(lastIncludedMs(point), point.end, "zero-length keeps its date");
+  const timed = item(new Date(2026, 9, 1, 9), new Date(2026, 9, 1, 10));
+  assert.equal(lastIncludedMs(timed), timed.end);
 });
