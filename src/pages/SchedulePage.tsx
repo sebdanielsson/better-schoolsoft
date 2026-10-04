@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
-import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
 import {
   fetchLessons,
   fetchEvaLessonsWeek,
@@ -58,10 +58,10 @@ function evaToRow(l: EvaLessonTile, idx: number): ScheduleRow {
 
 export default function SchedulePage() {
   const { session, getToken, getEvaToken } = useAuth();
-  const { child, children } = useHeroData();
+  const { child } = useHeroData();
   const childStudentId = child?.studentId ?? null;
   const childOrgId = child?.schools[0]?.orgId ?? null;
-  const isDefaultChild = !child || children[0]?.studentId === child.studentId;
+  const isDefaultChild = useIsDefaultChild();
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,23 +99,21 @@ export default function SchedulePage() {
               setSource("eva");
               return;
             }
-            /* An empty week from Eva is authoritative for any child but the
-             * login's default one: the legacy schedule below always belongs
-             * to the default child, so falling back would show a sibling's
-             * lessons. */
-            if (!isDefaultChild) {
-              if (!cancelled) {
-                setRows([]);
-                setSource("empty");
-              }
-              return;
-            }
           }
         } catch {
           /* fall through to legacy */
         }
       }
-      /* Legacy bitmask-keyed schedule. */
+      /* Legacy bitmask-keyed schedule. It always describes the login's
+       * default child, so for a sibling (Eva empty, failed or unavailable)
+       * show nothing rather than someone else's lessons. */
+      if (!isDefaultChild) {
+        if (!cancelled) {
+          setRows([]);
+          setSource("empty");
+        }
+        return;
+      }
       try {
         const token = await getToken();
         if (!token) throw new Error("legacy session unavailable");

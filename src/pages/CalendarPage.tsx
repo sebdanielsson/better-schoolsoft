@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
-import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
 import {
   fetchCalendar,
   fetchEvaNextCalendarEvent,
@@ -50,10 +50,10 @@ function legacyToUnified(e: CalendarEvent): UnifiedEvent {
 }
 
 export default function CalendarPage() {
-  const { child, children } = useHeroData();
+  const { child } = useHeroData();
   const childStudentId = child?.studentId;
   /* The legacy notices fallback can only describe the login's default child. */
-  const isDefaultChild = !child || children[0]?.studentId === child.studentId;
+  const isDefaultChild = useIsDefaultChild();
   const { session, getToken, getEvaToken } = useAuth();
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(true);

@@ -76,7 +76,11 @@ export function ErrorBanner({ children }: { children: ReactNode }) {
 
 /** Small blue dot used across the app to flag unread items. */
 export function UnreadDot() {
+  /* A plain span can't carry an accessible name, so the label is real
+   * (visually hidden) text. */
   return (
-    <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
+    <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-600">
+      <span className="sr-only">Unread</span>
+    </span>
   );
 }

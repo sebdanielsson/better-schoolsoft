@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
-import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
 import {
   bootstrapSchoolsoftSession,
   fetchLessons,
@@ -230,6 +230,7 @@ export default function HomePage() {
    * DashboardPage). This page reuses them for its own Eva fetches instead of
    * re-fetching the parent record. */
   const { parentUserId, child } = useHeroData();
+  const isDefaultChild = useIsDefaultChild();
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [scheduleLessons, setScheduleLessons] = useState<ScheduleLesson[]>([]);
@@ -325,7 +326,9 @@ export default function HomePage() {
       const evaDataP = evaToken
         ? loadEva(evaToken).catch(() => emptyEva)
         : Promise.resolve(emptyEva);
-      const lists = legacyToken ? loadLegacyLists(legacyToken) : Promise.resolve();
+      /* Legacy lists describe the login's default child only. */
+      const lists =
+        legacyToken && isDefaultChild ? loadLegacyLists(legacyToken) : Promise.resolve();
 
       const evaData = await evaDataP;
       if (cancelled) return;
@@ -346,7 +349,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, todayDayIdx, parentUserId, child]);
+  }, [session, getToken, getEvaToken, todayDayIdx, parentUserId, child, isDefaultChild]);
 
   /* Fetch this + next week from the rest-api schedule endpoint. This is what
    * IES Uppsala (and likely other schools) actually populate; the legacy

@@ -99,6 +99,8 @@ function SubjectCard({ ctx, room }: { ctx: SchoolsoftContext; room: SubjectRoom 
           <div className="mt-1.5 truncate text-[0.8rem] text-slate-700">
             {assignments.loading ? (
               <Skeleton className="h-3 w-40 rounded-sm" />
+            ) : assignments.error && !assignments.data ? (
+              <span className="text-red-700">Couldn't load assignments</span>
             ) : next ? (
               <>
                 <span className="font-medium">Next:</span> {next.title}

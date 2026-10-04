@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useAuth } from "./useAuth.tsx";
@@ -146,8 +147,12 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
   /* Counts only — no loading flag, so the hero pills update in place. A
    * refresh that lands after a child switch is dropped (studentId check). */
   const { parentUserId, child } = state;
+  const refreshSeq = useRef(0);
   const refreshCounts = useCallback(() => {
     if (!session || !parentUserId) return;
+    /* Overlapping refreshes (mark read, then quickly unread) may resolve out
+     * of order; only the latest one may commit. */
+    const seq = ++refreshSeq.current;
     const studentId = child?.studentId;
     const orgId = child?.schools[0]?.orgId ?? session.orgId;
     void (async () => {
@@ -159,6 +164,7 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
           ? fetchEvaBadgeCounts(session.school, token, parentUserId, orgId, studentId)
           : Promise.resolve<EvaBadgeCounts>({}),
       ]);
+      if (seq !== refreshSeq.current) return;
       setState((prev) => {
         if (prev.child?.studentId !== studentId) return prev;
         return {
@@ -189,4 +195,12 @@ export function useChildOrgId(): number | null {
   const { session } = useAuth();
   const { child } = useHeroData();
   return child?.schools[0]?.orgId ?? session?.orgId ?? null;
+}
+
+/** True unless a sibling other than the login's first child is in focus. The
+ *  legacy app-key API (schedule, calendar, notices, lunch fallbacks) can only
+ *  describe that default child, so its data must not be shown for others. */
+export function useIsDefaultChild(): boolean {
+  const { child, children } = useHeroData();
+  return !child || children[0]?.studentId === child.studentId;
 }
