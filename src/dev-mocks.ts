@@ -2,13 +2,7 @@
  *  `localStorage.bss_dev_mock === '1'`. Used to preview the UI without a SchoolSoft account.
  */
 
-function isoWeekOf(d: Date): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
+import { isoWeek } from "./lib/dates.ts";
 
 const DAY1970: Record<number, string> = {
   1: "1970-01-05",
@@ -161,7 +155,7 @@ function defaultStaffDetail(teacherId: number) {
 
 function buildMocks() {
   const today = new Date();
-  const w = isoWeekOf(today);
+  const w = isoWeek(today);
   const mask = (1 << (w - 1)) | (1 << w) | (1 << (w - 2)) | (1 << (w + 1));
 
   const lessons = [
@@ -727,7 +721,7 @@ export function installMocks() {
     if (calendarLessonsMatch) {
       const askedWeek = Number(calendarLessonsMatch[1]);
       const today = new Date();
-      const currentWeek = isoWeekOf(today);
+      const currentWeek = isoWeek(today);
       /* Find Monday of the asked week by stepping from today's Monday. */
       const todayMonday = (() => {
         const dn = today.getDay() || 7;
@@ -1141,7 +1135,7 @@ export function installMocks() {
     );
     if (planningsStartMatch) {
       const askedWeek = Number(planningsStartMatch[1]);
-      const currentWeek = isoWeekOf(new Date());
+      const currentWeek = isoWeek(new Date());
       const delta = askedWeek - currentWeek;
       const data: Record<
         number,
@@ -1202,7 +1196,7 @@ export function installMocks() {
     );
     if (assignmentsMatch) {
       const askedWeek = Number(assignmentsMatch[1]);
-      const currentWeek = isoWeekOf(new Date());
+      const currentWeek = isoWeek(new Date());
       const delta = askedWeek - currentWeek;
       const dataByDelta: Record<
         number,
