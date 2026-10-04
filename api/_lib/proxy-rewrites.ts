@@ -78,3 +78,30 @@ export function upstreamUrlFor(requestUrl: string): string | null {
   }
   return target.origin === UPSTREAM_ORIGIN ? target.href : null;
 }
+
+/** Upstream path shapes the SPA actually calls (see `src/api/schoolsoft.ts`),
+ *  (the school list lives under the pseudo-school `internal/`), plus `files/` for the download redirects `rewriteLocation` keeps on our
+ *  origin. Everything else — the React webview, JSP admin pages, arbitrary
+ *  probing — is refused, so the proxy isn't a general relay to SchoolSoft. */
+const ALLOWED_PATH =
+  /^\/(?:files\/|[a-z0-9][a-z0-9-]*\/(?:eva\/api\/|eva-apps\/auth\/|rest-api\/|rest\/app\/token$|api\/|jsp\/student\/|files\/))/;
+
+/** True when the upstream URL's path is one the SPA uses. */
+export function isAllowedUpstreamPath(upstreamUrl: string): boolean {
+  return ALLOWED_PATH.test(new URL(upstreamUrl).pathname);
+}
+
+/** Reject requests a browser tells us came from another site.
+ *
+ *  Every proxied call is a same-origin `fetch()` from the SPA, so modern
+ *  browsers send `Sec-Fetch-Site: same-origin`. Older browsers without Fetch
+ *  Metadata fall back to the `Origin` header. A request carrying neither is
+ *  let through: that's a non-browser client, which can forge both anyway and
+ *  is the WAF rate limit's job. */
+export function isSameOriginRequest(headers: Headers, requestUrl: string): boolean {
+  const site = headers.get("sec-fetch-site");
+  if (site !== null) return site === "same-origin";
+  const origin = headers.get("origin");
+  if (origin !== null) return origin === new URL(requestUrl).origin;
+  return true;
+}

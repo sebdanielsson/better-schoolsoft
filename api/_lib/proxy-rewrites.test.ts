@@ -2,7 +2,13 @@
 // promise the runner owns; awaiting it at the call site would serialize the suite.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rewriteCookiePath, rewriteLocation, upstreamUrlFor } from "./proxy-rewrites.ts";
+import {
+  isAllowedUpstreamPath,
+  isSameOriginRequest,
+  rewriteCookiePath,
+  rewriteLocation,
+  upstreamUrlFor,
+} from "./proxy-rewrites.ts";
 
 test("re-scopes the upstream cookie path under /schoolsoft", () => {
   assert.equal(
@@ -112,4 +118,67 @@ test("upstreamUrlFor returns null instead of throwing on unparseable paths", () 
     );
   }
   assert.equal(upstreamUrlFor("https://app.example/api/schoolsoft?__proxy_path=%5C%5B"), null);
+});
+
+const UP = "https://sms.schoolsoft.se";
+
+test("isAllowedUpstreamPath accepts every path shape the SPA calls", () => {
+  for (const p of [
+    "/internal/rest-api/login/schoollist",
+    "/engelska/eva/api/v1/parent",
+    "/engelska/eva/api/v2/parent/1/schools/2/news?studentId=3",
+    "/engelska/eva-apps/auth/login/parent",
+    "/engelska/rest-api/login/token?grant_type=refresh_token",
+    "/engelska/rest-api/parent/calendar/lessons/week/40",
+    "/engelska/rest/app/token",
+    "/engelska/api/lessons/student/1",
+    "/engelska/jsp/student/right_student_library_download.jsp?requestid=1",
+    "/files/abc/report.pdf",
+  ]) {
+    assert.ok(isAllowedUpstreamPath(UP + p), p);
+  }
+});
+
+test("isAllowedUpstreamPath refuses everything else", () => {
+  for (const p of [
+    "/",
+    "/engelska",
+    "/engelska/react/",
+    "/engelska/jsp/admin/start.jsp",
+    "/engelska/rest/app/token/x",
+    "/Engelska/eva/api/v1/parent",
+  ]) {
+    assert.ok(!isAllowedUpstreamPath(UP + p), p);
+  }
+});
+
+test("isAllowedUpstreamPath sees the normalised path, so dot segments can't escape", () => {
+  for (const p of ["engelska/eva/api/../../react/", "engelska/eva/api/%2e%2e/%2e%2e/react/"]) {
+    const out = upstreamUrlFor(
+      `https://app.example/api/schoolsoft?__proxy_path=${encodeURIComponent(p)}`,
+    );
+    assert.ok(out !== null && !isAllowedUpstreamPath(out), `${p} -> ${out}`);
+  }
+});
+
+test("isSameOriginRequest trusts Fetch Metadata first", () => {
+  const url = "https://app.example/api/schoolsoft";
+  assert.ok(isSameOriginRequest(new Headers({ "sec-fetch-site": "same-origin" }), url));
+  for (const site of ["cross-site", "same-site", "none"]) {
+    assert.ok(!isSameOriginRequest(new Headers({ "sec-fetch-site": site }), url), site);
+  }
+  /* A matching Origin can't override a cross-site Fetch Metadata verdict. */
+  assert.ok(
+    !isSameOriginRequest(
+      new Headers({ "sec-fetch-site": "cross-site", origin: "https://app.example" }),
+      url,
+    ),
+  );
+});
+
+test("isSameOriginRequest falls back to Origin, then lets header-less clients through", () => {
+  const url = "https://app.example/api/schoolsoft";
+  assert.ok(isSameOriginRequest(new Headers({ origin: "https://app.example" }), url));
+  assert.ok(!isSameOriginRequest(new Headers({ origin: "https://evil.example" }), url));
+  assert.ok(isSameOriginRequest(new Headers(), url));
 });

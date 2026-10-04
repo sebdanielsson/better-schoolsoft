@@ -9,10 +9,15 @@
  */
 import {
   PROXY_SECURITY_HEADERS,
+  isAllowedUpstreamPath,
+  isSameOriginRequest,
   upstreamUrlFor,
   rewriteCookiePath,
   rewriteLocation,
 } from "./_lib/proxy-rewrites.ts";
+
+/** Methods the SPA issues; anything else (TRACE, PATCH, ...) is refused. */
+const ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "DELETE"]);
 
 /** RFC 9110 hop-by-hop headers — scoped to a single connection, never forwarded. */
 const HOP_BY_HOP = [
@@ -29,8 +34,15 @@ const HOP_BY_HOP = [
 export default { fetch: handler };
 
 async function handler(request: Request): Promise<Response> {
+  if (!ALLOWED_METHODS.has(request.method)) {
+    return new Response("Method not allowed", { status: 405 });
+  }
+  if (!isSameOriginRequest(request.headers, request.url)) {
+    return new Response("Forbidden", { status: 403 });
+  }
   const upstreamUrl = upstreamUrlFor(request.url);
   if (!upstreamUrl) return new Response("Bad request", { status: 400 });
+  if (!isAllowedUpstreamPath(upstreamUrl)) return new Response("Not found", { status: 404 });
 
   const headers = new Headers(request.headers);
   /* fetch() derives Host from the upstream URL. Vercel's own request headers
