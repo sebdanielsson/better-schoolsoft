@@ -4,7 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   fetchHolisticAssessments,
   type HolisticAssessmentRow,
 } from "../api/schoolsoft.ts";
@@ -30,7 +31,7 @@ export default function AssessmentsPage() {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token available");
         const orgId = child.schools[0]?.orgId ?? session.orgId;
-        await bootstrapSchoolsoftSession(
+        const focus = await acquireCookieFocus(
           session.school,
           token,
           parentUserId,
@@ -38,6 +39,7 @@ export default function AssessmentsPage() {
           child.studentId,
         );
         const data = await fetchHolisticAssessments(session.school);
+        assertCookieFocus(focus);
         if (cancelled) return;
         setRows(data);
       } catch (e: unknown) {

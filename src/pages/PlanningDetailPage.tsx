@@ -4,7 +4,8 @@ import { FileText, Link2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   fetchPlanningConnectedAssignments,
   fetchPlanningPartView,
   fetchPlanningTabs,
@@ -64,7 +65,7 @@ export default function PlanningDetailPage() {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
         const orgId = child.schools[0]?.orgId ?? session.orgId;
-        await bootstrapSchoolsoftSession(
+        const focus = await acquireCookieFocus(
           session.school,
           token,
           parentUserId,
@@ -77,6 +78,7 @@ export default function PlanningDetailPage() {
           fetchPlanningPartView(session.school, activePartId),
           fetchPlanningConnectedAssignments(session.school, activePartId),
         ]);
+        assertCookieFocus(focus);
         if (cancelled) return;
         setState({
           view: viewRes.status === "fulfilled" ? viewRes.value : null,

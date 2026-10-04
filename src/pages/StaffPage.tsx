@@ -249,7 +249,10 @@ export default function StaffPage() {
             )}
             <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-slate-400" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[420px] w-[260px] overflow-y-auto">
+          <DropdownMenuContent
+            align="end"
+            className="max-h-[min(420px,var(--available-height))] w-[260px] overflow-y-auto"
+          >
             {activeRoles.size > 0 && (
               <>
                 <DropdownMenuLabel className="flex items-center justify-between gap-3 py-1.5 tracking-normal normal-case">

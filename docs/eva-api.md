@@ -404,6 +404,8 @@ Not Eva: these are what SchoolSoft's new web calendar ("Kalender (Ny)", `/{schoo
 | GET    | `subject_room/ps_entities`                                                                               | all subject-room tests, homework and plannings (`category: "test" \| "planning"`, `typeName`, `activityId`) | implemented | confirmed  |
 | GET    | `lessons/{lessonId}` and `lessons/{lessonId}/date/{YYYY-MM-DD}/assignments`                              | lesson detail and that day's assignments                                                                    | new         | inferred   |
 
+The Calendar page lists upcoming entries from `event/agenda?start_date=&end_date=`, `timebookings` and `subject_room/ps_entities` (plannings excluded), plus Eva's `news/calendarevent/next` tile, which comes from school news. Schools that don't post web-calendar events return `[]` from `event/…` for every range; the reference school is one of them.
+
 How the web calendar renders lessons: `status === 3` is struck through (cancelled). `studentLessonStatus` shows nothing when null, `status` 0 or `statusType` 1, an "approved absence" icon for `statusType` 3 or 4, and an absence icon otherwise. `status` −1 marks breaks and lessons without attendance yet, 2 lessons where attendance was taken. `src/lib/schedule.ts` mirrors these rules.
 
 `ps_entities` lists the same test once per teaching group (different `entityId`), so dedupe on name and times. Its date strings have no zone and are sometimes date-only.

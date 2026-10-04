@@ -4,7 +4,8 @@ import { AlertCircle, CheckCircle2, FileText, HandCoins, Link2 } from "lucide-re
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   fetchAssignmentAssessment,
   fetchAssignmentConnectedPlannings,
   fetchAssignmentSections,
@@ -67,7 +68,7 @@ export default function AssignmentDetailPage() {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
         const orgId = child.schools[0]?.orgId ?? session.orgId;
-        await bootstrapSchoolsoftSession(
+        const focus = await acquireCookieFocus(
           session.school,
           token,
           parentUserId,
@@ -82,6 +83,7 @@ export default function AssignmentDetailPage() {
           fetchAssignmentConnectedPlannings(session.school, id),
           fetchAssignmentAssessment(session.school, id),
         ]);
+        assertCookieFocus(focus);
         if (cancelled) return;
         const sections = sectionsRes.status === "fulfilled" ? sectionsRes.value : [];
         const submissionSection = sections.find((s) => s.type === "SUBMISSION");
@@ -92,6 +94,7 @@ export default function AssignmentDetailPage() {
             : Promise.resolve(null),
           ...materialSections.map((m) => fetchMaterialFiles(session.school, m.id)),
         ]);
+        assertCookieFocus(focus);
         if (cancelled) return;
         const submission = submissionRes2.status === "fulfilled" ? submissionRes2.value : null;
         const materialFiles = materialResults.flatMap((r) =>

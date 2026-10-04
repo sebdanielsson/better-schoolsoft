@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { Award, CalendarRange } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Award, CalendarRange, ChevronDown } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
 import {
@@ -10,6 +10,8 @@ import {
   fetchSubjectRoomPlannings,
   fetchSubjectRoomResults,
   fetchSubjectRoomTeachers,
+  fetchSubjectRooms,
+  type SubjectRoom,
   type SubjectRoomAssignmentRow,
 } from "../api/schoolsoft.ts";
 import {
@@ -25,6 +27,13 @@ import StaffHtml from "../components/StaffHtml.tsx";
 import { SubmissionIcon } from "../components/AssignmentsCard.tsx";
 import DashCard, { DashCardEmpty, ErrorBanner, UnreadDot } from "../components/DashCard.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu.tsx";
 import { cn } from "../lib/utils.ts";
 
 const PAST_PREVIEW = 5;
@@ -66,6 +75,11 @@ export default function SubjectRoomPage() {
     c && subjectRoomKeys.plannings(c, id),
     withSession(c, (x) => fetchSubjectRoomPlannings(x.school, id)),
   );
+  /* Same key as the Subjects page, so the picker is usually a cache hit. */
+  const rooms = useQuery(
+    c && subjectRoomKeys.all(c),
+    withSession(c, (x) => fetchSubjectRooms(x.school)),
+  );
   const information = useQuery(
     c && subjectRoomKeys.information(c, id),
     withSession(c, (x) => fetchSubjectRoomInformation(x.school, id)),
@@ -86,7 +100,7 @@ export default function SubjectRoomPage() {
         <span aria-hidden="true" className="w-1.5 rounded-full" style={{ background: color }} />
         <div className="min-w-0">
           {room.data ? (
-            <h2 className="text-2xl font-bold tracking-tight">{room.data.subject}</h2>
+            <SubjectPicker current={id} title={room.data.subject} rooms={rooms.data} />
           ) : (
             <Skeleton className="h-7 w-48 rounded-md" />
           )}
@@ -212,7 +226,7 @@ export default function SubjectRoomPage() {
           items={information.data ?? []}
         />
 
-        <PastCard rows={past} loading={assignments.loading} />
+        <PastCard key={id} rows={past} loading={assignments.loading} />
       </div>
     </div>
   );
@@ -321,5 +335,66 @@ function RowSkeletons({ count = 3 }: { count?: number }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** The subject title doubles as a switcher, so moving between subjects
+ *  doesn't need a trip back to the list. Falls back to a plain heading
+ *  until the list is in. */
+function SubjectPicker({
+  current,
+  title,
+  rooms,
+}: {
+  current: number;
+  title: string;
+  rooms: SubjectRoom[] | undefined;
+}) {
+  const navigate = useNavigate();
+  const visible = rooms
+    ?.filter((r) => r.isSubjectRoom && !r.hiddenForStudents)
+    .sort((a, b) => a.subject.localeCompare(b.subject));
+  if (!visible || visible.length < 2) {
+    return <h2 className="text-2xl font-bold tracking-tight">{title}</h2>;
+  }
+  return (
+    <DropdownMenu>
+      {/* The heading wraps the button (not the reverse): a button can't
+       * contain a heading, and this keeps it in heading navigation. */}
+      <h2 className="text-2xl font-bold tracking-tight">
+        <DropdownMenuTrigger className="-mx-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 text-left transition-colors hover:bg-slate-100 data-popup-open:bg-slate-100">
+          <span className="truncate">{title}</span>
+          <span className="sr-only"> (switch subject)</span>
+          <ChevronDown aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-400" />
+        </DropdownMenuTrigger>
+      </h2>
+      <DropdownMenuContent
+        align="start"
+        className="max-h-[min(420px,var(--available-height))] w-[280px] overflow-y-auto"
+      >
+        <DropdownMenuRadioGroup
+          value={String(current)}
+          onValueChange={(value) => {
+            if (value !== String(current)) void navigate(`/subjects/${String(value)}`);
+          }}
+        >
+          {visible.map((r) => (
+            <DropdownMenuRadioItem
+              key={r.activityId}
+              value={String(r.activityId)}
+              /* Subject names carry case; override the menu's uppercase default. */
+              className="text-[0.88rem] font-normal tracking-normal normal-case"
+            >
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: safeHexColor(r.color) }}
+              />
+              <span className="truncate">{r.subject}</span>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
