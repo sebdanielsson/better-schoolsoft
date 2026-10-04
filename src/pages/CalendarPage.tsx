@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
 import {
   fetchCalendar,
   fetchEvaNextCalendarEvent,
@@ -49,6 +50,10 @@ function legacyToUnified(e: CalendarEvent): UnifiedEvent {
 }
 
 export default function CalendarPage() {
+  const { child } = useHeroData();
+  const childStudentId = child?.studentId;
+  /* The legacy notices fallback can only describe the login's default child. */
+  const isDefaultChild = useIsDefaultChild();
   const { session, getToken, getEvaToken } = useAuth();
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +72,10 @@ export default function CalendarPage() {
       if (evaToken) {
         try {
           const parent = await fetchEvaParent(session!.school, evaToken);
-          const studentId = parent.children[0]?.studentId;
-          const orgId = parent.children[0]?.schools[0]?.orgId ?? session!.orgId;
+          const focus =
+            parent.children.find((c) => c.studentId === childStudentId) ?? parent.children[0];
+          const studentId = focus?.studentId;
+          const orgId = focus?.schools[0]?.orgId ?? session!.orgId;
           if (studentId) {
             const next = await fetchEvaNextCalendarEvent(
               session!.school,
@@ -103,7 +110,15 @@ export default function CalendarPage() {
           /* fall through to legacy */
         }
       }
-      /* Legacy /api/notices. */
+      /* Legacy /api/notices — scoped to the login's default child, so never
+       * shown while a sibling is selected. */
+      if (!isDefaultChild) {
+        if (!cancelled) {
+          setEvents([]);
+          setSource("empty");
+        }
+        return;
+      }
       try {
         const token = await getToken();
         if (!token) throw new Error("No session token");
@@ -132,7 +147,7 @@ export default function CalendarPage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken]);
+  }, [session, getToken, getEvaToken, childStudentId, isDefaultChild]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, UnifiedEvent[]>();

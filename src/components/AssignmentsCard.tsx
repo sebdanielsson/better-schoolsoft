@@ -36,7 +36,7 @@ function formatRange(monday: Date): string {
 
 const submissionIconClass = "h-4 w-4 shrink-0";
 
-function SubmissionIcon({ status }: { status: string }) {
+export function SubmissionIcon({ status }: { status: string }) {
   if (status === "SUBMITTED" || status === "EXPIRED_SUBMITTED") {
     return (
       <CheckCircle2 className={cn(submissionIconClass, "text-green-600")} aria-label="Submitted" />

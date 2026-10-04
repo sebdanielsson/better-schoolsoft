@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
+import { useChildOrgId } from "../hooks/useHeroData.tsx";
 import {
   fetchEvaParent,
   fetchEvaParentProfile,
@@ -49,6 +50,7 @@ const ddClass = "text-slate-900 flex items-center gap-2 flex-wrap";
 
 export default function ProfilePage() {
   const { session, getEvaToken } = useAuth();
+  const orgId = useChildOrgId();
   const [profile, setProfile] = useState<EvaParentProfile | null>(null);
   const [permissions, setPermissions] = useState<EvaProfilePermissions | null>(null);
   const [userId, setUserId] = useState<number | null>(session?.userId ?? null);
@@ -99,7 +101,7 @@ export default function ProfilePage() {
 
         const [p, perms] = await Promise.all([
           fetchEvaParentProfile(session.school, token, uid),
-          fetchEvaProfilePermissions(session.school, token, session.orgId),
+          fetchEvaProfilePermissions(session.school, token, orgId ?? session.orgId),
         ]);
         if (cancelled) return;
         setProfile(p);
@@ -130,7 +132,7 @@ export default function ProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getEvaToken]);
+  }, [session, getEvaToken, orgId]);
 
   async function saveName(e: FormEvent) {
     e.preventDefault();
@@ -205,7 +207,7 @@ export default function ProfilePage() {
         homePhone: homePhone.trim(),
         workPhone: workPhone.trim(),
         contactInfo: contactInfo.trim(),
-        orgId: session.orgId,
+        orgId: orgId ?? session.orgId,
       };
       await updateEvaProfileContact(session.school, token, userId, body);
       setProfile((p) =>

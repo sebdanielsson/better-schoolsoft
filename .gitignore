@@ -31,3 +31,6 @@ dist-ssr
 
 # Local git worktrees created by Claude Code
 .claude/worktrees/
+
+# Vercel CLI project link and build output
+.vercel

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FileText, Link2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
@@ -15,7 +15,7 @@ import {
   type PlanningView,
 } from "../api/schoolsoft.ts";
 import { Skeleton } from "../components/ui/skeleton.tsx";
-import { sanitizeStaffHtml } from "../lib/sanitize-html.ts";
+import StaffHtml from "../components/StaffHtml.tsx";
 import { cn } from "../lib/utils.ts";
 
 interface State {
@@ -98,11 +98,7 @@ export default function PlanningDetailPage() {
     };
   }, [session, getEvaToken, parentUserId, child, planningId, activePartId]);
 
-  const sanitizedDescription = useMemo(
-    () => (state.partView?.description ? sanitizeStaffHtml(state.partView.description) : ""),
-    /* See AssignmentDetailPage: the narrower dep makes React Compiler skip the component. */
-    [state.partView],
-  );
+  const description = state.partView?.description ?? "";
 
   if (!session) return null;
 
@@ -166,12 +162,9 @@ export default function PlanningDetailPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
           <div className="flex flex-col gap-4 md:col-span-2">
-            {sanitizedDescription && (
+            {description.trim() && (
               <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
-                <div
-                  className="text-[0.95rem] leading-[1.55] text-slate-800 [&_a]:text-blue-600 [&_a]:underline [&_li]:my-0.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-5"
-                  dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-                />
+                <StaffHtml html={description} />
                 {state.partView?.publishDate && (
                   <p className="mt-3 text-[0.78rem] text-slate-500">
                     Published {state.partView.publishDate}

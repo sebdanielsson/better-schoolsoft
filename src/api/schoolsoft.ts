@@ -1,3 +1,6 @@
+import { decodeLegacyBody } from "../lib/legacy-pages.ts";
+import { registerSessionCache } from "../lib/session-caches.ts";
+
 const BASE = "/schoolsoft";
 
 const APP_HEADERS = {
@@ -136,10 +139,30 @@ export interface EvaNewsItem {
   category?: string;
   author?: EvaNewsAuthor;
   read?: boolean;
+  /** The item asks guardians a question (see `responseLabel` on the detail). */
   response?: boolean;
   hasAttachment?: boolean;
-  newsConfirm?: unknown;
+  /** The guardian's answer, when one has been given. */
+  newsConfirm?: EvaNewsConfirm | null;
 }
+
+export interface EvaNewsConfirm {
+  responseText: string;
+  confirmDate: string | null;
+}
+
+export interface EvaNewsDetail extends EvaNewsItem {
+  fromDate?: string;
+  /** The question, when `response` is true. */
+  responseLabel?: string;
+  attachments?: EvaMessageAttachment[];
+  toParent?: boolean;
+  toStudent?: boolean;
+  toTeacher?: boolean;
+  groupRecipients?: string[];
+}
+
+export type EvaNewsFeed = "current" | "old" | "archived";
 
 /** A message sender. id = -1 indicates a system message from SchoolSoft itself. */
 export interface EvaMessageSender {
@@ -172,9 +195,27 @@ export interface EvaMessageDetail {
   replyTo: boolean;
   isRead: boolean;
   date: string;
-  recipients: Array<{ id: number; firstName: string; lastName: string; picture?: string }>;
-  attachments: Array<{ id?: number; name?: string; size?: number }>;
+  recipients: Array<{ id: number; firstName?: string; lastName?: string; name?: string }>;
+  attachments: EvaMessageAttachment[];
   sentByUser: boolean;
+}
+
+/** Download via `fetchEvaAttachment(fileId)`. */
+export interface EvaMessageAttachment {
+  fileId: number;
+  name: string;
+  type?: string;
+}
+
+export type EvaMessageFolder = "inbox" | "sent" | "bin";
+
+/** A staff member a guardian can write to, from `/teachers`. */
+export interface EvaTeacher {
+  teacherId: number;
+  fname: string;
+  lname: string;
+  picture?: string;
+  type?: string;
 }
 
 /** OAuth-style token response from `/{school}/rest-api/login/token`. */
@@ -386,6 +427,36 @@ export function fetchEvaNews(
   );
 }
 
+/** Current, older (expired) or archived news. */
+export function fetchEvaNewsFeed(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+  feed: EvaNewsFeed,
+  langId = 1,
+): Promise<EvaNewsItem[]> {
+  const path = feed === "current" ? "news" : `news/${feed}`;
+  return evaGetList(
+    `${BASE}/${school}/eva/api/v2/parent/${userId}/schools/${orgId}/${path}?studentId=${studentId}&langId=${langId}`,
+    accessToken,
+  );
+}
+
+export function fetchEvaNewsDetail(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  newsId: number,
+): Promise<EvaNewsDetail | null> {
+  return evaGet(
+    `${BASE}/${school}/eva/api/v2/parent/${userId}/schools/${orgId}/news/${newsId}`,
+    accessToken,
+  );
+}
+
 /** Fetch a binary image resource as a Blob using the Bearer JWT.
  *  `<img>` tags can't carry custom headers, so this is required for the avatars. */
 export async function fetchEvaResource(
@@ -546,6 +617,20 @@ export function fetchEvaInbox(
   );
 }
 
+/** Inbox, sent or bin listing. */
+export function fetchEvaMessages(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  folder: EvaMessageFolder,
+): Promise<EvaMessageInbox[]> {
+  return evaGetList(
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/messages/${folder}`,
+    accessToken,
+  );
+}
+
 /** Full message detail by id. */
 export function fetchEvaMessage(
   school: string,
@@ -620,6 +705,545 @@ async function evaPut(url: string, accessToken: string, body: unknown): Promise<
   if (!res.ok) throw new Error(`PUT ${url} failed (${res.status})`);
 }
 
+/** Write call for Eva endpoints that answer with an empty body (or one we
+ *  don't need). Omits the body and its Content-Type when `body` is undefined:
+ *  several report/read-marker endpoints take no payload at all. */
+async function evaSend(
+  method: "POST" | "PUT" | "DELETE",
+  url: string,
+  accessToken: string,
+  body?: unknown,
+): Promise<void> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new EvaWriteError(method, res.status);
+}
+
+/** A rejected Eva write. Keeps the status so callers can tell "slot already
+ *  taken" (409) from other failures without parsing message strings. */
+export class EvaWriteError extends Error {
+  readonly status: number;
+  constructor(method: string, status: number) {
+    super(`${method} request failed (${status})`);
+    this.name = "EvaWriteError";
+    this.status = status;
+  }
+}
+
+/* ---------- Messages: writes (Eva) ---------- */
+
+const messagesBase = (school: string, userId: number, orgId: number) =>
+  `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}`;
+
+/** Mark a received message read (`read`) or unread again. */
+export function setEvaMessageRead(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  messageId: number,
+  read: boolean,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${messagesBase(school, userId, orgId)}/message-recipient/${read ? "read-date" : "un-read"}`,
+    accessToken,
+    { messageId },
+  );
+}
+
+/** Folder moves. `remove-inbox`/`remove-sent` move to the bin; `restore`
+ *  brings back from the bin; `delete` removes from the bin for good. */
+export type EvaMessageMove = "remove-inbox" | "remove-sent" | "restore" | "delete";
+
+export function moveEvaMessages(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  move: EvaMessageMove,
+  messageIds: number[],
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${messagesBase(school, userId, orgId)}/messages/${move}`,
+    accessToken,
+    messageIds,
+  );
+}
+
+/** Send a new message or a reply (the official app uses the same call for
+ *  both). Only `teacherId` of each recipient is meaningful to the server. */
+export function sendEvaMessage(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  message: { subject: string; messageBody: string; recipients: EvaTeacher[] },
+): Promise<void> {
+  return evaSend("POST", `${messagesBase(school, userId, orgId)}/messages`, accessToken, {
+    subject: message.subject,
+    messageBody: message.messageBody,
+    recipients: message.recipients,
+    showRecipients: false,
+  });
+}
+
+export function fetchEvaTeachers(
+  school: string,
+  accessToken: string,
+  orgId: number,
+): Promise<EvaTeacher[]> {
+  return evaGetList(`${BASE}/${school}/eva/api/v1/schools/${orgId}/teachers`, accessToken);
+}
+
+/** One staff member, e.g. the sender of a message being replied to. The
+ *  official app resolves reply recipients this way rather than from the
+ *  full `/teachers` list. */
+export function fetchEvaTeacher(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  teacherId: number,
+): Promise<EvaTeacher | null> {
+  return evaGet(`${BASE}/${school}/eva/api/v1/schools/${orgId}/teachers/${teacherId}`, accessToken);
+}
+
+/** Whether guardians may start new conversations. When false, they can only
+ *  reply to messages that allow it (`replyTo`). */
+export function fetchEvaMessagingAllowAll(
+  school: string,
+  accessToken: string,
+  orgId: number,
+): Promise<boolean> {
+  return evaGet<boolean>(
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/parameters/message-usage-level-allow-all`,
+    accessToken,
+  ).then((v) => v === true);
+}
+
+/** Download a message attachment as a Blob. */
+export async function fetchEvaAttachment(
+  school: string,
+  accessToken: string,
+  fileId: number,
+): Promise<Blob> {
+  const res = await fetch(
+    `${BASE}/${school}/eva/api/v1/resource/attachment/${encodeURIComponent(String(fileId))}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`Attachment download failed (${res.status})`);
+  return res.blob();
+}
+
+/* ---------- News: writes (Eva) ---------- */
+
+/** Mark a news item read, as the official app does when the detail opens. */
+export function markEvaNewsRead(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  newsId: number,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/news/read/${newsId}`,
+    accessToken,
+  );
+}
+
+/** Archive (hide) a news item, or bring it back. */
+export function setEvaNewsArchived(
+  school: string,
+  accessToken: string,
+  userId: number,
+  newsId: number,
+  archived: boolean,
+): Promise<void> {
+  return evaSend(
+    archived ? "POST" : "DELETE",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/news-hidden/${newsId}`,
+    accessToken,
+  );
+}
+
+/** Answer (or update the answer to) a news item's question. */
+export function saveEvaNewsResponse(
+  school: string,
+  accessToken: string,
+  userId: number,
+  newsId: number,
+  responseText: string,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/newsconfirm/${newsId}`,
+    accessToken,
+    { responseText },
+  );
+}
+
+/* ---------- Time bookings (Eva) ---------- */
+
+export type TimebookingStatus =
+  | "AVAILABLE"
+  | "NEEDS_CONFIRMATION"
+  | "NOT_AVAILABLE"
+  | "BOOKED"
+  | "FOR_INFORMATION"
+  | (string & {});
+
+export interface TimebookingTeacher {
+  fName: string;
+  lName: string;
+  picture?: string;
+}
+
+export interface TimebookingSummary {
+  timebookingId: number;
+  name: string;
+  status: TimebookingStatus;
+  isRead: boolean;
+  creDate?: string;
+  /** Last day a time can be booked. */
+  bookableTo?: string | null;
+  firstTimebookingTime?: string | null;
+  lastTimebookingTime?: string | null;
+  studentBookedDate?: string | null;
+  timebookingTimeAmount?: number;
+  teacher?: TimebookingTeacher | null;
+}
+
+/** Identifies one slot. Field casing is lowercase on purpose — it is sent
+ *  back verbatim as the reserve/confirm/cancel body. */
+export interface TimebookingTimeKey {
+  timebookingid: number;
+  sequence: number;
+}
+
+export interface TimebookingTime {
+  timebookingTimeKey: TimebookingTimeKey;
+  /** Timestamp or "HH:mm"; the app formats both. */
+  startTime: string | number;
+  endTime: string | number;
+  date?: string | number;
+  /** Slot length in minutes. */
+  length?: number;
+  comment?: string | null;
+  location?: string | null;
+  /** Taken by someone (possibly this student). */
+  booked?: boolean;
+  bookedByStudent?: boolean;
+  confirmed?: boolean;
+}
+
+export interface TimebookingDate {
+  date: string | number;
+  timebookingTimes: TimebookingTime[];
+}
+
+export interface TimebookingDetail extends TimebookingSummary {
+  description?: string | null;
+  meetingLink?: string | null;
+  bookable?: boolean;
+  /** Only the student (not a guardian) may book. */
+  onlyStudent?: boolean;
+  bookedByStudent?: boolean;
+  timebookingDates?: TimebookingDate[];
+}
+
+export interface TimebookingStartpageItem {
+  timebookingId: number;
+  name: string;
+  teacherName?: string;
+  startTime: string | number;
+  endTime: string | number;
+}
+
+const timebookingsBase = (school: string, userId: number, studentId: number, orgId: number) =>
+  `${BASE}/${school}/eva/api/v1/parents/${userId}/students/${studentId}/schools/${orgId}/timebookings`;
+
+export function fetchEvaTimebookingsEnabled(
+  school: string,
+  accessToken: string,
+  orgId: number,
+): Promise<boolean> {
+  return evaGet<boolean>(
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/parameters/time-bookings`,
+    accessToken,
+  ).then((v) => v === true);
+}
+
+export function fetchEvaTimebookings(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+): Promise<TimebookingSummary[]> {
+  return evaGetList(timebookingsBase(school, userId, studentId, orgId), accessToken);
+}
+
+export function fetchEvaTimebooking(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+  timebookingId: number,
+): Promise<TimebookingDetail | null> {
+  return evaGet(
+    `${timebookingsBase(school, userId, studentId, orgId)}/${timebookingId}`,
+    accessToken,
+  );
+}
+
+/** Next upcoming booked time for the home page; null when there is none. */
+export async function fetchEvaTimebookingStartpage(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+): Promise<TimebookingStartpageItem | null> {
+  const data = await evaGet<TimebookingStartpageItem | TimebookingStartpageItem[] | null>(
+    `${timebookingsBase(school, userId, studentId, orgId)}/startpage`,
+    accessToken,
+  );
+  if (Array.isArray(data)) return data[0] ?? null;
+  return data && typeof data === "object" ? data : null;
+}
+
+export type TimebookingAction = "reserve" | "confirm" | "cancel";
+
+/** Reserve a free slot, confirm a teacher-proposed slot, or cancel the
+ *  student's slot. Reserve answers 409 when someone else took it first. */
+export function updateEvaTimebookingTime(
+  school: string,
+  accessToken: string,
+  userId: number,
+  studentId: number,
+  orgId: number,
+  action: TimebookingAction,
+  key: TimebookingTimeKey,
+): Promise<void> {
+  return evaSend(
+    "PUT",
+    `${BASE}/${school}/eva/api/v1/schools/${orgId}/parents/${userId}/students/${studentId}/timebookingtimes/${action}`,
+    accessToken,
+    { timebookingid: key.timebookingid, sequence: key.sequence },
+  );
+}
+
+export function markEvaTimebookingRead(
+  school: string,
+  accessToken: string,
+  userId: number,
+  timebookingId: number,
+): Promise<void> {
+  return evaSend(
+    "POST",
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/timebooking-read/${timebookingId}`,
+    accessToken,
+  );
+}
+
+/* ---------- Report absence (Eva) ---------- */
+
+/** Student-level status of a day or lesson. */
+export const ABSENCE_STATUS = {
+  NO_STATUS: 0,
+  ATTENDANCE: 1,
+  ABSENT: 2,
+  EXPLAINED_ABSENCE: 3,
+  /** Reported in advance by a guardian. */
+  PRE_REPORTED_ABSENCE: 4,
+  APPLICATION_OF_LEAVE_APPROVED: 750,
+} as const;
+
+/** Whether the teacher has taken attendance for a lesson. */
+export const LESSON_STATUS = {
+  UNREPORTED: 1,
+  REPORTED: 2,
+  CANCELLED: 3,
+} as const;
+
+export interface AbsenceWeekDay {
+  /** 0 = Monday … 4 = Friday. */
+  dayId: number;
+  status: number;
+  hasAbsenceReportFullDay: boolean;
+  nrOfLessonsAbsent: number;
+}
+
+export interface AbsenceWeek {
+  studentAbsenceDays: AbsenceWeekDay[];
+  parentComment: string;
+}
+
+export interface AbsenceLesson {
+  lessonId: number;
+  subject: string;
+  /** "HH:mm" */
+  startTime: string;
+  endTime: string;
+  lessonStatus: number;
+  lessonStatusStudent: number;
+  hasAbsenceReportForLesson: boolean;
+  comment: string;
+  nrOfMinutesAbsent: number;
+}
+
+export interface AbsenceDay {
+  dayId: number;
+  hasAbsenceReportFullDay: boolean;
+  absenceStatusFullDay: number;
+  lessons: AbsenceLesson[];
+}
+
+export interface AbsencePermissions {
+  enabled: boolean;
+  allowComment: boolean;
+  allowChange: boolean;
+  isPreSchool: boolean;
+}
+
+const absenceBase = (
+  school: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+) =>
+  `${BASE}/${school}/eva/api/v1/schools/${orgId}/student/${studentId}/parent/${userId}/student-absence/week/${week}`;
+
+export async function fetchEvaAbsencePermissions(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+): Promise<AbsencePermissions> {
+  const params = `${BASE}/${school}/eva/api/v1/schools/${orgId}/parameters`;
+  const [enabled, allowComment, allowChange, isPreSchool] = await Promise.all([
+    evaGet<boolean>(`${params}/report-absence-parent`, accessToken),
+    evaGet<boolean>(`${params}/student-absence-allow-parent-comment-absence`, accessToken),
+    evaGet<boolean>(`${params}/student-absence-allow-parent-change-absence`, accessToken),
+    evaGet<boolean>(
+      `${BASE}/${school}/eva/api/v1/student/${studentId}/school/${orgId}/is-pre-school`,
+      accessToken,
+    ),
+  ]);
+  return {
+    enabled: enabled === true,
+    allowComment: allowComment === true,
+    allowChange: allowChange === true,
+    isPreSchool: isPreSchool === true,
+  };
+}
+
+export function fetchEvaAbsenceWeek(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+): Promise<AbsenceWeek | null> {
+  return evaGet(absenceBase(school, orgId, studentId, userId, week), accessToken);
+}
+
+export function fetchEvaAbsenceDay(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  dayId: number,
+): Promise<AbsenceDay | null> {
+  return evaGet(`${absenceBase(school, orgId, studentId, userId, week)}/day/${dayId}`, accessToken);
+}
+
+/** Report (or with `remove`, withdraw) absence for a whole day. `dayStartMs`
+ *  is the day's midnight in Swedish time as epoch millis, which is what the
+ *  official app puts in the path. */
+export function setEvaFullDayAbsence(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  dayId: number,
+  dayStartMs: number,
+  remove: boolean,
+): Promise<void> {
+  return evaSend(
+    remove ? "DELETE" : "PUT",
+    `${absenceBase(school, orgId, studentId, userId, week)}/day/${dayId}/date/${dayStartMs}`,
+    accessToken,
+  );
+}
+
+/** Report (or with `remove`, withdraw) absence for one lesson. */
+export function setEvaLessonAbsence(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  lessonId: number,
+  remove: boolean,
+): Promise<void> {
+  return evaSend(
+    remove ? "DELETE" : "POST",
+    `${absenceBase(school, orgId, studentId, userId, week)}/lesson/${lessonId}`,
+    accessToken,
+  );
+}
+
+export function saveEvaAbsenceWeekComment(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  comment: string,
+): Promise<void> {
+  return evaSend(
+    "POST",
+    `${absenceBase(school, orgId, studentId, userId, week)}/comment`,
+    accessToken,
+    { comment },
+  );
+}
+
+export function saveEvaAbsenceLessonComment(
+  school: string,
+  accessToken: string,
+  orgId: number,
+  studentId: number,
+  userId: number,
+  week: number,
+  lessonId: number,
+  comment: string,
+): Promise<void> {
+  return evaSend(
+    "POST",
+    `${absenceBase(school, orgId, studentId, userId, week)}/lesson/${lessonId}/comment`,
+    accessToken,
+    { comment },
+  );
+}
+
 export function updateEvaProfileAddress(
   school: string,
   accessToken: string,
@@ -635,7 +1259,12 @@ export function updateEvaProfileName(
   userId: number,
   body: { fName: string; lName: string },
 ): Promise<void> {
-  return evaPut(`${BASE}/${school}/eva/api/v1/parent/${userId}/profile/name`, accessToken, body);
+  /* `/profile/name` 404s; the official app uses `/profile/personal`. */
+  return evaPut(
+    `${BASE}/${school}/eva/api/v1/parent/${userId}/profile/personal`,
+    accessToken,
+    body,
+  );
 }
 
 export function updateEvaProfileContact(
@@ -743,41 +1372,102 @@ export interface HolisticAssessmentRow {
   read: boolean;
 }
 
-/** Cache of schools we've already exchanged an Eva JWT for cookies on. The
- *  cookies live on the browser; this just avoids re-running the bootstrap. */
-const bootstrappedSchools = new Set<string>();
+/** The cookie session carries a single "child in focus", so it is valid for
+ *  exactly one (school, guardian, org, child) at a time. Remember which one
+ *  the cookies were last minted for, and share the in-flight exchange so a
+ *  burst of parallel requests triggers one bootstrap rather than dozens. */
+let sessionFocus: { key: string; promise: Promise<void> } | null = null;
+
+/** Opaque token for the focus the cookie session was last minted for. A new
+ *  token is created for every re-focus, so comparing tokens (not keys) also
+ *  catches a quick A → B → A switch during a single request. */
+export function cookieSessionFocus(): object | null {
+  return sessionFocus;
+}
+
+export function cookieFocusKey(
+  school: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): string {
+  return `${school}:${userId}:${orgId}:${studentId}`;
+}
+registerSessionCache(() => {
+  sessionFocus = null;
+});
 
 /** Trade the Eva JWT for JSESSIONID + hash cookies on the SchoolSoft React
- *  webview's session. Cheap, idempotent on the client (we deduplicate per
- *  school), and required before any /rest-api/* call. */
-export async function bootstrapSchoolsoftSession(
+ *  webview's session. Required before any /rest-api/* or JSP call. Cheap
+ *  after the first call for the same focus; switching child re-runs it. */
+export function bootstrapSchoolsoftSession(
   school: string,
   evaToken: string,
   userId: number,
   orgId: number,
   studentId: number,
 ): Promise<void> {
-  if (bootstrappedSchools.has(school)) return;
-  const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
-    method: "GET",
-    credentials: "include",
-    redirect: "manual",
-    headers: {
-      token: evaToken,
-      userId: String(userId),
-      orgId: String(orgId),
-      childInFocus: String(studentId),
-      userOS: "android",
-      language: "sw",
-    },
+  return focusEntry(school, evaToken, userId, orgId, studentId).promise;
+}
+
+/** Bootstrap the cookie session for this focus and resolve to the focus
+ *  token of the exchange that was actually awaited. Callers compare it with
+ *  `cookieSessionFocus()` after their request: re-reading the global after
+ *  the await could already return a sibling's queued token. */
+export async function acquireCookieFocus(
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): Promise<object> {
+  const entry = focusEntry(school, evaToken, userId, orgId, studentId);
+  await entry.promise;
+  return entry;
+}
+
+function focusEntry(
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): { key: string; promise: Promise<void> } {
+  const key = cookieFocusKey(school, userId, orgId, studentId);
+  if (sessionFocus?.key === key) return sessionFocus;
+  /* Run exchanges one after another: if two overlapped and the older one
+   * landed last, the cookies would point at the old child while
+   * sessionFocus named the new one. Chaining keeps "last started" equal to
+   * "last applied". */
+  const previous = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
+  const promise = previous.then(async () => {
+    const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
+      method: "GET",
+      credentials: "include",
+      redirect: "manual",
+      headers: {
+        token: evaToken,
+        userId: String(userId),
+        orgId: String(orgId),
+        childInFocus: String(studentId),
+        userOS: "android",
+        language: "sw",
+      },
+    });
+    /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
+     * Cookies are applied regardless. Any non-redirect status that isn't 2xx
+     * means the bootstrap failed. */
+    if (res.type !== "opaqueredirect" && !res.ok) {
+      throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
+    }
   });
-  /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
-   * Cookies are applied regardless. Any non-redirect status that isn't 2xx
-   * means the bootstrap failed and we shouldn't mark the school as ready. */
-  if (res.type !== "opaqueredirect" && !res.ok) {
-    throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
-  }
-  bootstrappedSchools.add(school);
+  const entry = { key, promise };
+  sessionFocus = entry;
+  /* Don't cache a failure: the next caller should try again. */
+  promise.catch(() => {
+    if (sessionFocus === entry) sessionFocus = null;
+  });
+  return entry;
 }
 
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
@@ -1125,6 +1815,161 @@ export function fetchMaterialFiles(school: string, materialId: number): Promise<
   return cookieGetList(`${BASE}/${school}/rest-api/parent/ps/material/${materialId}/file`);
 }
 
+/* ---------- Legacy JSP pages (cookie session) ---------- */
+
+/** Fetch a server-rendered guardian page as text. Needs the cookie session.
+ *  Returns null when SchoolSoft bounces app sessions to its "blocked" page. */
+export async function fetchLegacyPage(school: string, page: string): Promise<string | null> {
+  const res = await fetch(`${BASE}/${school}/jsp/student/${page}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status})`);
+  if (res.url.includes("app_blocked")) return null;
+  return decodeLegacyBody(await res.arrayBuffer(), res.headers.get("content-type"));
+}
+
+/** Download a "Files & links" document. */
+export async function fetchLibraryFile(school: string, requestId: number): Promise<Blob> {
+  const res = await fetch(
+    `${BASE}/${school}/jsp/student/right_student_library_download.jsp?requestid=${encodeURIComponent(String(requestId))}`,
+    { credentials: "include" },
+  );
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  return res.blob();
+}
+
+/* ---------- Subject rooms (cookie session, /rest-api/parent/ps/subjectroom) ---------- */
+
+export interface SubjectRoom {
+  activityId: number;
+  subject: string;
+  groupNames: string[];
+  /** Hex colour picked by the teacher; empty string when unset. */
+  color: string;
+  isSubjectRoom: boolean;
+  hiddenForStudents: boolean;
+}
+
+export interface SubjectRoomUnread {
+  assignments: number;
+  plannings: number;
+  results: number;
+  sum: number;
+}
+
+export interface SubjectRoomTeacher {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+export type SubjectRoomRowStatus = "ONGOING" | "EXPIRED" | (string & {});
+
+export interface SubjectRoomAssignmentRow {
+  assignmentId: number;
+  activityId: number;
+  title: string;
+  assignmentType: string;
+  submissionStatus: AssignmentSubmissionStatus | (string & {});
+  /** "" when nothing has been submitted. */
+  submissionDate: string;
+  resultReportStatus: AssignmentResultStatus | (string & {});
+  /** "YYYY-MM-DD HH:mm" */
+  startDate: string;
+  endDate: string;
+  publishDate: string;
+  teacher: string;
+  status: SubjectRoomRowStatus;
+  read: boolean;
+}
+
+export interface SubjectRoomResultRow {
+  assignmentId: number;
+  activityId: number;
+  title: string;
+  assignmentType: string;
+  teacher: string;
+  /** When the result was published, "YYYY-MM-DD HH:mm". */
+  publishDate: string;
+  read: boolean;
+}
+
+export interface SubjectRoomPlanningRow {
+  planningPartId: number;
+  planningId: number;
+  activityId: number;
+  planningTitle: string;
+  planningPartTitle: string;
+  teacher: string;
+  /** "YYYY-MM-DD" */
+  startDate: string;
+  endDate: string;
+  publishDate: string;
+  status: SubjectRoomRowStatus;
+  read: boolean;
+}
+
+export interface SubjectRoomInformation {
+  id: number;
+  /** Teacher-authored HTML — always pass through `sanitizeHtml` before rendering. */
+  information: string;
+  createdBy: string;
+  createdById: number;
+  /** Pre-formatted by the server, e.g. "18 Aug 18:07". */
+  updatedAt: string;
+}
+
+const subjectRoomBase = (school: string) => `${BASE}/${school}/rest-api/parent/ps/subjectroom`;
+
+export function fetchSubjectRooms(school: string): Promise<SubjectRoom[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/all`);
+}
+
+export function fetchSubjectRoom(school: string, activityId: number): Promise<SubjectRoom> {
+  return cookieGet(`${subjectRoomBase(school)}/${activityId}`);
+}
+
+export function fetchSubjectRoomUnread(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomUnread> {
+  return cookieGet(`${subjectRoomBase(school)}/${activityId}/unread_entities`);
+}
+
+export function fetchSubjectRoomTeachers(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomTeacher[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/teachers`);
+}
+
+export function fetchSubjectRoomAssignments(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomAssignmentRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/assignments/grid/rows`);
+}
+
+export function fetchSubjectRoomResults(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomResultRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/results/grid/rows`);
+}
+
+export function fetchSubjectRoomPlannings(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomPlanningRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/plannings/grid/rows`);
+}
+
+export function fetchSubjectRoomInformation(
+  school: string,
+  activityId: number,
+): Promise<SubjectRoomInformation[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/${activityId}/information`);
+}
+
 /* ---------- Feature parameters (gates PS-module features) ---------- */
 
 export interface SchoolsoftParameters {
@@ -1134,6 +1979,7 @@ export interface SchoolsoftParameters {
 }
 
 const parametersCache = new Map<string, SchoolsoftParameters>();
+registerSessionCache(() => parametersCache.clear());
 
 /** Fetch /rest-api/parameters once per school + per session-load and cache the
  *  result. Bootstraps the cookie session if needed so callers don't have to
@@ -1145,11 +1991,13 @@ export async function getSchoolsoftParameters(
   orgId: number,
   studentId: number,
 ): Promise<SchoolsoftParameters> {
-  const cached = parametersCache.get(school);
+  /* Parameters are per school org; siblings can attend different ones. */
+  const cacheKey = `${school}:${orgId}`;
+  const cached = parametersCache.get(cacheKey);
   if (cached) return cached;
   await bootstrapSchoolsoftSession(school, evaToken, userId, orgId, studentId);
   const params = await cookieGet<SchoolsoftParameters>(`${BASE}/${school}/rest-api/parameters`);
-  parametersCache.set(school, params);
+  parametersCache.set(cacheKey, params);
   return params;
 }
 

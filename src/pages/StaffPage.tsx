@@ -5,7 +5,8 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import { fetchEvaStaff, type EvaStaffGroup, type EvaStaffMember } from "../api/schoolsoft.ts";
 import Avatar from "../components/Avatar.tsx";
 import StaffPopover from "../components/StaffPopover.tsx";
-import { preloadStaffDetail, staffDetailCache } from "../lib/staff-cache.ts";
+import { getCachedStaffDetail, preloadStaffDetail } from "../lib/staff-cache.ts";
+import { useChildOrgId } from "../hooks/useHeroData.tsx";
 import { Input } from "../components/ui/input.tsx";
 import {
   DropdownMenu,
@@ -44,6 +45,7 @@ function fullName(m: EvaStaffMember): string {
 
 export default function StaffPage() {
   const { session, getEvaToken } = useAuth();
+  const orgId = useChildOrgId();
   const [groups, setGroups] = useState<EvaStaffGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function StaffPage() {
   const refreshTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || orgId === null) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -77,7 +79,7 @@ export default function StaffPage() {
       try {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token available");
-        const data = await fetchEvaStaff(session.school, token, session.orgId);
+        const data = await fetchEvaStaff(session.school, token, orgId);
         if (cancelled) return;
         /* Queue all detail preloads BEFORE setGroups commits. Once committed,
          * the Avatar components mount and start queueing their resource fetches
@@ -85,7 +87,7 @@ export default function StaffPage() {
          * already filled, so details drain ahead of avatars. */
         for (const group of data ?? []) {
           for (const m of group.data) {
-            preloadStaffDetail(session.school, token, session.orgId, m.teacherId)
+            preloadStaffDetail(session.school, token, orgId, m.teacherId)
               .then(scheduleRefresh)
               .catch(() => {
                 /* swallow per-teacher failures — the popover will retry on demand */
@@ -106,23 +108,25 @@ export default function StaffPage() {
         refreshTimer.current = null;
       }
     };
-  }, [session, getEvaToken]);
+  }, [session, getEvaToken, orgId]);
 
   /* Union of every role ever seen in the cache, sorted. Recomputes on detailsTick
    * so the dropdown fills in as preloads land. */
   const allRoles = useMemo(() => {
     const set = new Set<string>();
-    for (const d of staffDetailCache.values()) {
-      for (const r of d.roles ?? []) set.add(r);
+    for (const g of groups) {
+      for (const m of g.data) {
+        for (const r of getCachedStaffDetail(orgId ?? 0, m.teacherId)?.roles ?? []) set.add(r);
+      }
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "sv"));
-    /* detailsTick is a change signal, not a value the memo reads: staffDetailCache is a
+    /* detailsTick is a change signal, not a value the memo reads: the staff cache is a
      * module-level Map filled by background preloads, so the tick is what tells React the
      * derived value is stale. Dropping it (as the rule suggests) freezes the roles dropdown
      * at whatever had loaded on first render. Fixing it properly means moving the cache into
      * state, which is a refactor of this page rather than a lint fix. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailsTick]);
+  }, [detailsTick, groups, orgId]);
 
   const visibleGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -133,7 +137,7 @@ export default function StaffPage() {
         data: g.data.filter((m) => {
           if (q && !fullName(m).toLowerCase().includes(q)) return false;
           if (filteringByRole) {
-            const roles = staffDetailCache.get(m.teacherId)?.roles ?? [];
+            const roles = getCachedStaffDetail(orgId ?? 0, m.teacherId)?.roles ?? [];
             if (!roles.some((r) => activeRoles.has(r))) return false;
           }
           return true;
@@ -346,10 +350,11 @@ function GroupBlock({ type, color, members, onOpen }: GroupBlockProps) {
 }
 
 function StaffRow({ member, onOpen }: { member: EvaStaffMember; onOpen: (id: number) => void }) {
+  const orgId = useChildOrgId();
   /* Read straight from the cache. The parent re-renders (via detailsTick) as
    * preloads land, which drags this row's read along with it — no per-row
    * subscription needed. */
-  const roles = staffDetailCache.get(member.teacherId)?.roles ?? [];
+  const roles = getCachedStaffDetail(orgId ?? 0, member.teacherId)?.roles ?? [];
   return (
     <TableRow
       onClick={() => {
