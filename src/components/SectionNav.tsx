@@ -21,7 +21,7 @@ export default function SectionNav() {
   return (
     <nav
       aria-label="Sections"
-      className="-mx-4 mb-5 [scrollbar-width:none] overflow-x-auto px-4 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden"
+      className="-mx-4 mb-5 overflow-x-auto px-4 md:mx-0 md:px-0 pointer-coarse:[scrollbar-width:none] pointer-coarse:[&::-webkit-scrollbar]:hidden"
     >
       <ul className="flex w-max gap-1.5">
         {SECTIONS.map((s) => (
