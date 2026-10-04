@@ -1376,7 +1376,23 @@ export interface HolisticAssessmentRow {
  *  exactly one (school, guardian, org, child) at a time. Remember which one
  *  the cookies were last minted for, and share the in-flight exchange so a
  *  burst of parallel requests triggers one bootstrap rather than dozens. */
-let sessionFocus: { key: string; promise: Promise<void> } | null = null;
+interface FocusEntry {
+  key: string;
+  promise: Promise<void>;
+  /** What the cookies were minted with, so an expired session can be
+   *  re-minted for the same focus without the caller's help. */
+  args: BootstrapArgs;
+  /** In-flight re-bootstrap after a 401, shared by every request that hit it. */
+  renewal?: Promise<void>;
+}
+type BootstrapArgs = [
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+];
+let sessionFocus: FocusEntry | null = null;
 
 /** Opaque token for the focus the cookie session was last minted for. A new
  *  token is created for every re-focus, so comparing tokens (not keys) also
@@ -1432,42 +1448,80 @@ function focusEntry(
   userId: number,
   orgId: number,
   studentId: number,
-): { key: string; promise: Promise<void> } {
+): FocusEntry {
   const key = cookieFocusKey(school, userId, orgId, studentId);
-  if (sessionFocus?.key === key) return sessionFocus;
+  if (sessionFocus?.key === key) {
+    /* Keep the newest token for renewFocus; the one we minted with may have
+     * expired by the time upstream drops the cookie session. */
+    sessionFocus.args[1] = evaToken;
+    return sessionFocus;
+  }
   /* Run exchanges one after another: if two overlapped and the older one
    * landed last, the cookies would point at the old child while
    * sessionFocus named the new one. Chaining keeps "last started" equal to
    * "last applied". */
   const previous = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
-  const promise = previous.then(async () => {
-    const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
-      method: "GET",
-      credentials: "include",
-      redirect: "manual",
-      headers: {
-        token: evaToken,
-        userId: String(userId),
-        orgId: String(orgId),
-        childInFocus: String(studentId),
-        userOS: "android",
-        language: "sw",
-      },
-    });
-    /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
-     * Cookies are applied regardless. Any non-redirect status that isn't 2xx
-     * means the bootstrap failed. */
-    if (res.type !== "opaqueredirect" && !res.ok) {
-      throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
-    }
-  });
-  const entry = { key, promise };
+  const args: BootstrapArgs = [school, evaToken, userId, orgId, studentId];
+  const promise = previous.then(() => mintCookies(...args));
+  const entry: FocusEntry = { key, promise, args };
   sessionFocus = entry;
   /* Don't cache a failure: the next caller should try again. */
   promise.catch(() => {
     if (sessionFocus === entry) sessionFocus = null;
   });
   return entry;
+}
+
+/** Re-mint the cookies for the current focus after upstream expired the
+ *  session (idle timeout answers 401). The entry is kept, not replaced: its
+ *  identity is the focus token `withCookies` compares, and the focus hasn't
+ *  changed. Returns false when there is nothing to renew or it failed. */
+async function renewFocus(entry: FocusEntry): Promise<boolean> {
+  if (sessionFocus !== entry) return false;
+  /* Also becomes the entry's promise, so a child switch queued meanwhile
+   * chains behind the renewal instead of racing it. */
+  entry.renewal ??= entry.promise = mintCookies(...entry.args).finally(() => {
+    entry.renewal = undefined;
+  });
+  try {
+    await entry.renewal;
+    return true;
+  } catch {
+    if (sessionFocus === entry) sessionFocus = null;
+    return false;
+  }
+}
+
+/** A credentialed request that survives one upstream session expiry: on 401
+ *  it re-mints the cookies for the same focus and retries once. */
+async function cookieFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const req = (): Promise<Response> => fetch(url, { ...init, credentials: "include" });
+  const focus = sessionFocus;
+  const res = await req();
+  if (res.status !== 401 || !focus || !(await renewFocus(focus))) return res;
+  return req();
+}
+
+async function mintCookies(...[school, evaToken, userId, orgId, studentId]: BootstrapArgs) {
+  const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
+    method: "GET",
+    credentials: "include",
+    redirect: "manual",
+    headers: {
+      token: evaToken,
+      userId: String(userId),
+      orgId: String(orgId),
+      childInFocus: String(studentId),
+      userOS: "android",
+      language: "sw",
+    },
+  });
+  /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
+   * Cookies are applied regardless. Any non-redirect status that isn't 2xx
+   * means the bootstrap failed. */
+  if (res.type !== "opaqueredirect" && !res.ok) {
+    throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
+  }
 }
 
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
@@ -1568,9 +1622,9 @@ export async function confirmHolisticAssessmentSubjectWarning(
   school: string,
   id: number,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await cookieFetch(
     `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning/confirm`,
-    { method: "POST", credentials: "include" },
+    { method: "POST" },
   );
   if (!res.ok) throw new Error(`Subject warning confirm failed (${res.status})`);
 }
@@ -1820,7 +1874,7 @@ export function fetchMaterialFiles(school: string, materialId: number): Promise<
 /** Fetch a server-rendered guardian page as text. Needs the cookie session.
  *  Returns null when SchoolSoft bounces app sessions to its "blocked" page. */
 export async function fetchLegacyPage(school: string, page: string): Promise<string | null> {
-  const res = await fetch(`${BASE}/${school}/jsp/student/${page}`, { credentials: "include" });
+  const res = await cookieFetch(`${BASE}/${school}/jsp/student/${page}`);
   if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status})`);
   if (res.url.includes("app_blocked")) return null;
   return decodeLegacyBody(await res.arrayBuffer(), res.headers.get("content-type"));
@@ -1828,9 +1882,8 @@ export async function fetchLegacyPage(school: string, page: string): Promise<str
 
 /** Download a "Files & links" document. */
 export async function fetchLibraryFile(school: string, requestId: number): Promise<Blob> {
-  const res = await fetch(
+  const res = await cookieFetch(
     `${BASE}/${school}/jsp/student/right_student_library_download.jsp?requestid=${encodeURIComponent(String(requestId))}`,
-    { credentials: "include" },
   );
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
   return res.blob();
@@ -2002,7 +2055,7 @@ export async function getSchoolsoftParameters(
 }
 
 async function cookieGet<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await cookieFetch(url);
   if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status}) ${url}`);
   const text = await res.text();
   if (!text) return null as T;
@@ -2041,7 +2094,7 @@ async function evaGetList<T>(url: string, accessToken: string): Promise<T[]> {
  *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
  *  reached the UI. An absent or non-array body means "no rows" here. */
 async function cookieGetList<T>(url: string): Promise<T[]> {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await cookieFetch(url);
   if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status}) ${url}`);
   const text = await res.text();
   if (!text) return [];

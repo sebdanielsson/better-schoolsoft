@@ -7,6 +7,7 @@ import {
   bitmaskToWeeks,
   bootstrapSchoolsoftSession,
   cookieSessionFocus,
+  fetchHolisticAssessments,
   isTokenExpired,
   isoWeek,
 } from "./schoolsoft.ts";
@@ -142,5 +143,68 @@ void test("acquireCookieFocus returns the awaited exchange's token, not a queued
     await switchToB;
   } finally {
     globalThis.fetch = realFetch;
+  }
+});
+
+/* Upstream drops the cookie session after an idle timeout and answers 401;
+ * the request should re-mint cookies for the same focus and retry once. */
+void test("cookie requests re-bootstrap the same focus after a 401 and retry", async () => {
+  const realFetch = globalThis.fetch;
+  const calls: string[] = [];
+  let expired = false;
+  globalThis.fetch = ((url: string, init?: RequestInit) => {
+    if (url.includes("/eva-apps/auth/login/parent")) {
+      calls.push(`bootstrap ${(init!.headers as Record<string, string>).token}`);
+      expired = false;
+      return Promise.resolve(new Response(null, { status: 200 }));
+    }
+    calls.push("rows");
+    return Promise.resolve(
+      expired ? new Response(null, { status: 401 }) : new Response("[1]", { status: 200 }),
+    );
+  }) as typeof fetch;
+  try {
+    clearSessionCaches();
+    await bootstrapSchoolsoftSession("s", "old", 1, 2, 100);
+    const focus = cookieSessionFocus();
+    /* A later caller hands in a fresh token; renewal must use it. */
+    await bootstrapSchoolsoftSession("s", "new", 1, 2, 100);
+    expired = true;
+    const [a, b] = await Promise.all([
+      fetchHolisticAssessments("s"),
+      fetchHolisticAssessments("s"),
+    ]);
+    assert.deepEqual(a, [1]);
+    assert.deepEqual(b, [1]);
+    assert.deepEqual(
+      calls.filter((c) => c.startsWith("bootstrap")),
+      ["bootstrap old", "bootstrap new"],
+    );
+    assert.equal(cookieSessionFocus(), focus, "renewal keeps the focus token");
+  } finally {
+    globalThis.fetch = realFetch;
+    clearSessionCaches();
+  }
+});
+
+void test("cookie requests give up after one failed renewal", async () => {
+  const realFetch = globalThis.fetch;
+  let bootstraps = 0;
+  globalThis.fetch = ((url: string) => {
+    if (url.includes("/eva-apps/auth/login/parent")) {
+      bootstraps++;
+      return Promise.resolve(new Response(null, { status: bootstraps === 1 ? 200 : 500 }));
+    }
+    return Promise.resolve(new Response(null, { status: 401 }));
+  }) as typeof fetch;
+  try {
+    clearSessionCaches();
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    await assert.rejects(fetchHolisticAssessments("s"), /\(401\)/);
+    assert.equal(bootstraps, 2);
+    assert.equal(cookieSessionFocus(), null, "a failed renewal isn't cached");
+  } finally {
+    globalThis.fetch = realFetch;
+    clearSessionCaches();
   }
 });
