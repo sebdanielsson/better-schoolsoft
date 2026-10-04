@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  endCookieSession,
   fetchToken,
   isTokenExpired,
   refreshEvaToken,
@@ -89,13 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSessionCaches();
   }, [cacheIdentity]);
 
+  const school = session?.school;
   const logout = useCallback(() => {
+    if (school) endCookieSession(school);
     setSession(null);
     /* Leaving these behind would expose the previous account's cached staff
      * details and avatars to the next person who signs in on this device. */
     clearSessionCaches();
     clearPkce();
-  }, []);
+  }, [school]);
 
   const getToken = useCallback(async (): Promise<string> => {
     if (!session) throw new Error("Not authenticated");

@@ -3,7 +3,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  LOGOUT_PATH,
   isAllowedUpstreamPath,
+  logoutCookies,
   isSameOriginRequest,
   rewriteCookiePath,
   rewriteLocation,
@@ -181,4 +183,24 @@ test("isSameOriginRequest falls back to Origin, then lets header-less clients th
   assert.ok(isSameOriginRequest(new Headers({ origin: "https://app.example" }), url));
   assert.ok(!isSameOriginRequest(new Headers({ origin: "https://evil.example" }), url));
   assert.ok(isSameOriginRequest(new Headers(), url));
+});
+
+test("LOGOUT_PATH matches only the school-scoped logout route", () => {
+  assert.equal(LOGOUT_PATH.exec("/engelska/__logout")?.[1], "engelska");
+  assert.equal(LOGOUT_PATH.exec("/engelska/eva/__logout"), null);
+  assert.equal(LOGOUT_PATH.exec("/__logout"), null);
+});
+
+test("logoutCookies expires each sent cookie on both upstream path shapes", () => {
+  assert.deepEqual(logoutCookies("JSESSIONID=abc; hash=x=y", "engelska"), [
+    "JSESSIONID=; Path=/schoolsoft/engelska; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "JSESSIONID=; Path=/schoolsoft/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "hash=; Path=/schoolsoft/engelska; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "hash=; Path=/schoolsoft/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+  ]);
+});
+
+test("logoutCookies ignores a missing header and malformed names", () => {
+  assert.deepEqual(logoutCookies(null, "s"), []);
+  assert.deepEqual(logoutCookies("a b=1; =2; c\r\nd=3", "s"), []);
 });

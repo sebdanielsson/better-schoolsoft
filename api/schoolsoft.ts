@@ -8,8 +8,10 @@
  * the cookies back on subsequent proxied requests. School-agnostic.
  */
 import {
+  LOGOUT_PATH,
   PROXY_SECURITY_HEADERS,
   isAllowedUpstreamPath,
+  logoutCookies,
   isSameOriginRequest,
   upstreamUrlFor,
   rewriteCookiePath,
@@ -42,6 +44,15 @@ async function handler(request: Request): Promise<Response> {
   }
   const upstreamUrl = upstreamUrlFor(request.url);
   if (!upstreamUrl) return new Response("Bad request", { status: 400 });
+  const logout = LOGOUT_PATH.exec(new URL(upstreamUrl).pathname);
+  if (logout) {
+    if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+    const headers = new Headers({ "cache-control": "no-store" });
+    for (const c of logoutCookies(request.headers.get("cookie"), logout[1]!)) {
+      headers.append("set-cookie", c);
+    }
+    return new Response(null, { status: 204, headers });
+  }
   if (!isAllowedUpstreamPath(upstreamUrl)) return new Response("Not found", { status: 404 });
 
   const headers = new Headers(request.headers);

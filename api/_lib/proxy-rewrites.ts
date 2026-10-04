@@ -105,3 +105,30 @@ export function isSameOriginRequest(headers: Headers, requestUrl: string): boole
   if (origin !== null) return origin === new URL(requestUrl).origin;
   return true;
 }
+
+/** Proxy-local route (never forwarded) that ends our copy of the cookie
+ *  session: `POST /schoolsoft/<school>/__logout`. */
+export const LOGOUT_PATH = /^\/([a-z0-9][a-z0-9-]*)\/__logout$/;
+
+/** `Set-Cookie` values expiring every cookie the browser sent.
+ *
+ *  SchoolSoft has no logout or revoke endpoint (the official app only clears
+ *  local state), but the cookies `rewriteCookiePath` planted on our origin are
+ *  HttpOnly, so the SPA can't drop them itself. The request doesn't say which
+ *  path each cookie was scoped to, so each name is expired on both shapes
+ *  upstream uses: `Path=/<school>` and `Path=/`, re-scoped under the mount. */
+export function logoutCookies(cookieHeader: string | null, school: string): string[] {
+  const names = new Set(
+    (cookieHeader ?? "")
+      .split(";")
+      .map((c) => c.split("=")[0]!.trim())
+      .filter((n) => /^[!#$%&'*+\-.^`|~\w]+$/.test(n)),
+  );
+  const out: string[] = [];
+  for (const name of names) {
+    for (const path of [`${MOUNT}/${school}`, `${MOUNT}/`]) {
+      out.push(`${name}=; Path=${path}; Max-Age=0; Secure; HttpOnly; SameSite=Lax`);
+    }
+  }
+  return out;
+}

@@ -1524,6 +1524,19 @@ async function mintCookies(...[school, evaToken, userId, orgId, studentId]: Boot
   }
 }
 
+/** Drop the SchoolSoft cookies the proxy planted on our origin. They're
+ *  HttpOnly, so only the proxy's `__logout` route can expire them. Upstream
+ *  has no logout or revoke endpoint — the official app's logout is local-only
+ *  too — so the server-side session simply idles out. Fire-and-forget:
+ *  `keepalive` lets it finish while the app navigates to the login page. */
+export function endCookieSession(school: string): void {
+  void fetch(`${BASE}/${school}/__logout`, {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
   return cookieGetList<HolisticAssessmentRow>(
     `${BASE}/${school}/rest-api/parent/holistic_assessment/rows`,
