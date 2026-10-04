@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   acquireCookieFocus,
+  assertCookieFocus,
   bootstrapSchoolsoftSession,
   cookieSessionFocus,
   fetchHolisticAssessments,
@@ -217,6 +218,23 @@ void test("renewal mints with a fresh token from the supplier", async () => {
     assert.deepEqual(minted, ["stale", "fresh"]);
   } finally {
     setEvaTokenSupplier(null);
+    globalThis.fetch = realFetch;
+    clearSessionCaches();
+  }
+});
+
+/* Effect-local reads verify the focus after awaiting, as withCookies does:
+ * a re-focus on a sibling in between must invalidate the result. */
+void test("assertCookieFocus rejects results after a re-focus on another child", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (() => Promise.resolve(new Response(null, { status: 200 }))) as typeof fetch;
+  try {
+    clearSessionCaches();
+    const forA = await acquireCookieFocus("s", "t", 1, 2, 100);
+    assert.doesNotThrow(() => assertCookieFocus(forA));
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 200);
+    assert.throws(() => assertCookieFocus(forA), /child in focus changed/);
+  } finally {
     globalThis.fetch = realFetch;
     clearSessionCaches();
   }

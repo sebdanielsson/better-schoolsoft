@@ -3,13 +3,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  agenda,
   inWeek,
   isLongRunning,
   lastIncludedMs,
   lessonStartMs,
+  nextEntries,
+  toLocalStamp,
   lessonAbsence,
   scheduleLessonToLesson,
   scheduleLessonsForDate,
+  toWeekItems,
   weekItems,
 } from "./schedule.ts";
 import {
@@ -245,7 +249,12 @@ void test("lastIncludedMs treats a midnight end as the previous day", () => {
   const span = item(new Date(2026, 8, 25), new Date(2026, 9, 1));
   assert.equal(new Date(lastIncludedMs(span)).getDate(), 30, "ends Wed 30 Sep, not Thu 1 Oct");
   const point = item(new Date(2026, 9, 1), new Date(2026, 9, 1));
-  assert.equal(lastIncludedMs(point), point.end, "zero-length keeps its date");
+  assert.equal(
+    new Date(lastIncludedMs(point)).toDateString(),
+    new Date(point.end).toDateString(),
+    "zero-length all-day keeps its date",
+  );
+  assert.ok(lastIncludedMs(point) > point.end, "…and covers the whole day");
   const timed = item(new Date(2026, 9, 1, 9), new Date(2026, 9, 1, 10));
   assert.equal(lastIncludedMs(timed), timed.end);
 });
@@ -268,4 +277,220 @@ void test("weekItems keeps a timed entry ending at midnight in its day column", 
     ["Evening event"],
   );
   assert.equal(allWeek.length, 0);
+});
+
+void test("agenda lists ongoing entries, then upcoming ones by start day", () => {
+  const from = new Date(2026, 9, 4, 15, 0); /* Sunday afternoon */
+  const to = new Date(2026, 10, 29);
+  const entry = (over: Partial<CalendarItem>): CalendarItem => ({
+    name: "x",
+    startDate: "2026-10-09T09:50",
+    endDate: "2026-10-09T10:45",
+    allDay: false,
+    category: "test",
+    ...over,
+  });
+  const { ongoing, days } = agenda(
+    toWeekItems([
+      entry({
+        name: "Term task",
+        allDay: true,
+        startDate: "2026-08-18T00:00",
+        endDate: "2026-12-19T00:00",
+      }),
+      entry({ name: "Kemi - provet", activity: "KE" }),
+      entry({ name: "Kemi - provet", activity: "KE", activityId: 2 }),
+      entry({
+        name: "Booking",
+        category: "timeBooking",
+        startDate: "2026-10-09T08:00",
+        endDate: "2026-10-09T08:20",
+      }),
+      entry({ name: "Earlier today", startDate: "2026-10-04T08:00", endDate: "2026-10-04T09:00" }),
+      entry({
+        name: "Finished",
+        allDay: true,
+        startDate: "2026-09-25T00:00",
+        endDate: "2026-10-04T00:00",
+      }),
+      entry({ name: "Too late", startDate: "2026-12-01T09:00", endDate: "2026-12-01T10:00" }),
+      entry({
+        name: "Unit",
+        category: "planning",
+        startDate: "2026-08-21",
+        endDate: "2026-10-23T12:00",
+      }),
+    ]),
+    from,
+    to,
+  );
+  assert.deepEqual(
+    ongoing.map((i) => i.title),
+    ["Term task"],
+  );
+  assert.deepEqual(
+    days.map((d) => [new Date(d.day).getDate(), d.items.map((i) => i.title)]),
+    [
+      [4, ["Earlier today"]],
+      [9, ["Booking", "Kemi - provet"]],
+    ],
+    "today's earlier entries still count; duplicates, plannings and out-of-range entries are dropped",
+  );
+  assert.equal(days[1]!.items[1]!.subject, "Chemistry");
+});
+
+void test("nextEntries picks the next upcoming, unfinished, short entries", () => {
+  const now = new Date(2026, 9, 5, 12, 0);
+  const entry = (
+    name: string,
+    startDate: string,
+    endDate: string,
+    allDay = false,
+  ): CalendarItem => ({
+    name,
+    startDate,
+    endDate,
+    allDay,
+    category: "test",
+  });
+  const picked = nextEntries(
+    toWeekItems([
+      entry("Later", "2026-10-20T09:00", "2026-10-20T10:00"),
+      entry("Done this morning", "2026-10-05T08:00", "2026-10-05T09:00"),
+      entry("This afternoon", "2026-10-05T13:00", "2026-10-05T14:00"),
+      entry("All day today", "2026-10-05", "2026-10-06T00:00", true),
+      entry("Term task", "2026-10-05", "2026-12-19T00:00", true),
+      entry("Started last week", "2026-09-30T00:00", "2026-10-07T00:00", true),
+      entry("Tomorrow", "2026-10-06T08:30", "2026-10-06T09:30"),
+      entry("Beyond range", "2026-10-05T12:30", "2026-10-05T12:45"),
+    ]).map((i) =>
+      i.title === "Beyond range" ? { ...i, start: new Date(2026, 11, 1).getTime() } : i,
+    ),
+    now,
+    new Date(2026, 10, 30),
+    3,
+  );
+  assert.deepEqual(
+    picked.map((i) => i.title),
+    ["All day today", "This afternoon", "Tomorrow"],
+  );
+});
+
+void test("toLocalStamp converts zoned timestamps to local time", () => {
+  const d = new Date("2026-10-04T22:00:00Z");
+  const p = (n: number) => String(n).padStart(2, "0");
+  const local = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  assert.equal(toLocalStamp("2026-10-04T22:00:00Z"), local);
+  assert.equal(toLocalStamp("2026-10-04T22:00:00.000Z"), local);
+  assert.equal(toLocalStamp("2026-10-05T00:00:00+02:00"), local, "same instant, other offset");
+  assert.equal(toLocalStamp("2026-10-05T09:30:00"), "2026-10-05T09:30", "zone-less passes through");
+  assert.equal(toLocalStamp("2026-10-05"), "2026-10-05", "date-only passes through");
+});
+
+void test("agenda drops prior-day entries that have already ended from Ongoing", () => {
+  const now = new Date(2026, 9, 5, 15, 0);
+  const { ongoing } = agenda(
+    toWeekItems([
+      {
+        name: "Ended at nine",
+        startDate: "2026-10-04T18:00",
+        endDate: "2026-10-05T09:00",
+        allDay: false,
+        category: "event",
+      },
+      {
+        name: "Still running",
+        startDate: "2026-10-04T18:00",
+        endDate: "2026-10-05T18:00",
+        allDay: false,
+        category: "event",
+      },
+    ]),
+    startOfDayLocal(now),
+    new Date(2026, 10, 30),
+    now,
+  );
+  assert.deepEqual(
+    ongoing.map((i) => i.title),
+    ["Still running"],
+  );
+});
+
+function startOfDayLocal(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+void test("nextEntries ignores entries starting at or after the range end", () => {
+  const now = new Date(2026, 9, 5, 12, 0);
+  const picked = nextEntries(
+    toWeekItems([
+      {
+        name: "In range",
+        startDate: "2026-10-06T08:30",
+        endDate: "2026-10-06T09:30",
+        allDay: false,
+        category: "test",
+      },
+      {
+        name: "Past the range",
+        startDate: "2026-12-07T08:30",
+        endDate: "2026-12-07T09:30",
+        allDay: false,
+        category: "test",
+      },
+    ]),
+    now,
+    new Date(2026, 10, 30),
+    10,
+  );
+  assert.deepEqual(
+    picked.map((i) => i.title),
+    ["In range"],
+  );
+});
+
+void test("nextEntries keeps a zero-length all-day entry for its whole day", () => {
+  const now = new Date(2026, 9, 5, 15, 0);
+  const picked = nextEntries(
+    toWeekItems([
+      {
+        name: "Sports day",
+        startDate: "2026-10-05",
+        endDate: "2026-10-05",
+        allDay: true,
+        category: "event",
+      },
+      {
+        name: "Timed, over",
+        startDate: "2026-10-05T09:00",
+        endDate: "2026-10-05T09:00",
+        allDay: false,
+        category: "event",
+      },
+    ]),
+    now,
+    new Date(2026, 10, 30),
+    3,
+  );
+  assert.deepEqual(
+    picked.map((i) => i.title),
+    ["Sports day"],
+  );
+});
+
+void test("toWeekItems keeps descriptions as plain text", () => {
+  const [item] = toWeekItems([
+    {
+      name: "Trip",
+      description: "Bring <b>lunch</b>  &amp; water",
+      startDate: "2026-10-05",
+      endDate: "2026-10-05",
+      allDay: true,
+      category: "event",
+    },
+  ]);
+  /* No DOM in node tests, so only tags are stripped (entities decode in the
+   * browser; text.test.ts covers that with jsdom). */
+  assert.equal(item!.description?.startsWith("Bring lunch"), true);
+  assert.equal(item!.description?.includes("<"), false);
 });

@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useSchoolsoftParameters } from "../hooks/useSchoolsoftParameters.tsx";
-import { bootstrapSchoolsoftSession } from "../api/schoolsoft.ts";
+import { acquireCookieFocus, assertCookieFocus } from "../api/schoolsoft.ts";
 import { addDays, formatWeekRange, isoWeek, isoWeekYear, mondayOf } from "../lib/dates.ts";
 import AnimateHeight from "./AnimateHeight.tsx";
 import { Skeleton } from "./ui/skeleton.tsx";
@@ -67,7 +67,7 @@ export default function WeekCard<T extends WeekRow>(props: WeekCardProps<T>) {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token");
         const orgId = child.schools[0]?.orgId ?? session.orgId;
-        await bootstrapSchoolsoftSession(
+        const focus = await acquireCookieFocus(
           session.school,
           token,
           parentUserId,
@@ -75,6 +75,7 @@ export default function WeekCard<T extends WeekRow>(props: WeekCardProps<T>) {
           child.studentId,
         );
         const rows = await fetchWeek(session.school, week, year);
+        assertCookieFocus(focus);
         if (!cancelled) setData({ child: childKey, key, rows });
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : `Failed to load ${noun}`);

@@ -6,6 +6,7 @@ import type {
 } from "../api/schoolsoft.ts";
 import { addDays, isoDay, isoWeek, isoWeekYear, sameLocalDate, startOfDay } from "./dates.ts";
 import { expandSubjectCode } from "./subject-codes.ts";
+import { htmlToText } from "./text.ts";
 
 /** Map a `ScheduleLesson` from the rest-api schedule onto the `Lesson` shape
  *  the lesson rows render.
@@ -67,6 +68,10 @@ export interface WeekItem {
   allDay: boolean;
   /** Subject room to link a test to. */
   activityId?: number;
+  /** Long subject name for tests ("Chemistry"), when the code is known. */
+  subject?: string;
+  /** Plain-text description, when the feed has one. */
+  description?: string;
 }
 
 /** True for entries spanning more than a week (term projects, standing
@@ -99,6 +104,42 @@ function kindOf(category: string): CalendarItemKind | null {
  *  timed entries in their weekday's column (1–5), all-day and multi-day ones
  *  in a strip across the week. Plannings and weekend-only entries are left
  *  out. */
+/** Map the calendar feeds to display entries: plannings dropped (multi-week;
+ *  the Plannings card covers them), and the same entry listed once per
+ *  teaching group collapsed. Unsorted. */
+export function toWeekItems(items: CalendarItem[]): WeekItem[] {
+  const out: WeekItem[] = [];
+  const seen = new Set<string>();
+  for (const it of items) {
+    const kind = kindOf(it.category);
+    if (!kind) continue;
+    /* Deduplicate on what the user sees: the same test is often listed
+     * once per teaching group, with different entity and subject ids. */
+    const key = `${kind}:${it.name.trim()}:${it.startDate}:${it.endDate}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const start = localMs(it.startDate);
+    const subject = it.activity ? expandSubjectCode(it.activity) : undefined;
+    out.push({
+      key,
+      kind,
+      title: it.name.trim(),
+      detail: it.typeName || it.teacher || undefined,
+      start,
+      end: Math.max(start, localMs(it.endDate)),
+      allDay: it.allDay,
+      activityId: it.activityId || undefined,
+      subject: subject && subject !== it.activity ? subject : undefined,
+      description: it.description ? htmlToText(it.description) || undefined : undefined,
+    });
+  }
+  return out;
+}
+
+/** The week's non-lesson entries, split the way the schedule shows them:
+ *  timed entries in their weekday's column (1–5), all-day and multi-day ones
+ *  in a strip across the week. Plannings and weekend-only entries are left
+ *  out. */
 export function weekItems(
   items: CalendarItem[],
   monday: Date,
@@ -107,34 +148,12 @@ export function weekItems(
   const weekEnd = addDays(startOfDay(monday), 5).getTime(); /* Saturday 00:00 */
   const allWeek: WeekItem[] = [];
   const byDay: Record<number, WeekItem[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-  const seen = new Set<string>();
-  for (const it of items) {
-    const kind = kindOf(it.category);
-    if (!kind) continue;
-    const start = localMs(it.startDate);
-    const end = Math.max(start, localMs(it.endDate));
-    /* Ending at Monday 00:00 means it finished last week. */
-    const endsBefore = end < weekStart || (end === weekStart && end > start);
-    if (endsBefore || start >= weekEnd) continue;
-    /* Deduplicate on what the user sees: the same test is often listed
-     * once per teaching group, with different entity ids. */
-    const key = `${kind}:${it.name.trim()}:${it.startDate}:${it.endDate}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const item: WeekItem = {
-      key,
-      kind,
-      title: it.name.trim(),
-      detail: it.typeName || it.teacher || undefined,
-      start,
-      end,
-      allDay: it.allDay,
-      activityId: it.activityId || undefined,
-    };
-    const startDate = new Date(start);
+  for (const item of toWeekItems(items)) {
+    if (!overlaps(item, weekStart, weekEnd)) continue;
+    const startDate = new Date(item.start);
     /* Exclusive end: 09:00 → next day 00:00 covers only the first day. */
     const singleDay = sameLocalDate(startDate, new Date(lastIncludedMs(item)));
-    if (!it.allDay && singleDay) {
+    if (!item.allDay && singleDay) {
       const day = isoDay(startDate);
       if (day <= 5) byDay[day]!.push(item);
     } else {
@@ -143,6 +162,41 @@ export function weekItems(
   }
   for (const list of [allWeek, ...Object.values(byDay)]) list.sort((a, b) => a.start - b.start);
   return { allWeek, byDay };
+}
+
+/** True when the entry covers any instant in [from, to). An entry ending
+ *  exactly at `from` (e.g. at midnight) finished before it. */
+function overlaps(item: WeekItem, from: number, to: number): boolean {
+  const endsBefore = item.end < from || (item.end === from && item.end > item.start);
+  return !endsBefore && item.start < to;
+}
+
+/** Upcoming entries for the Calendar page: those started before `from`'s
+ *  day and still under way at `now` (ongoing), then the ones starting in
+ *  [from's day, to) grouped by the local day they start, in order. Entries
+ *  from earlier today stay in today's group even once over. */
+export function agenda(
+  items: WeekItem[],
+  from: Date,
+  to: Date,
+  now: Date = from,
+): { ongoing: WeekItem[]; days: Array<{ day: number; items: WeekItem[] }> } {
+  const fromMs = startOfDay(from).getTime();
+  const toMs = to.getTime();
+  const ongoing: WeekItem[] = [];
+  const byDay = new Map<number, WeekItem[]>();
+  for (const item of [...items].sort((a, b) => a.start - b.start)) {
+    if (!overlaps(item, fromMs, toMs)) continue;
+    if (item.start < fromMs) {
+      if (lastIncludedMs(item) >= now.getTime()) ongoing.push(item);
+      continue;
+    }
+    const day = startOfDay(new Date(item.start)).getTime();
+    const list = byDay.get(day) ?? [];
+    list.push(item);
+    byDay.set(day, list);
+  }
+  return { ongoing, days: [...byDay].map(([day, list]) => ({ day, items: list })) };
 }
 
 /** True when a zone-less SchoolSoft date falls in ISO week `week` of ISO
@@ -159,9 +213,48 @@ export function lessonStartMs(l: Lesson): number {
 
 /** The last instant an entry covers, for labelling its date span. A span
  *  that ends exactly at midnight ends the day before (as `weekItems`
- *  already assumes); timed entries and zero-length ones keep their end. */
+ *  already assumes), a zero-length all-day entry covers its whole day, and
+ *  other timed or zero-length entries keep their end. */
 export function lastIncludedMs(item: WeekItem): number {
+  /* A zero-length all-day entry (same start and end date) is that whole day. */
+  if (item.allDay && item.end <= item.start) {
+    return addDays(startOfDay(new Date(item.start)), 1).getTime() - 1;
+  }
   const end = new Date(item.end);
   const atMidnight = end.getHours() === 0 && end.getMinutes() === 0;
   return atMidnight && item.end > item.start ? item.end - 1 : item.end;
+}
+
+/** The next `n` entries for the Home card: starting today or later but
+ *  before `to` (only the school-event feed is range-limited, so a distant
+ *  test mustn't jump an unfetched nearer event), not yet over, and not
+ *  long-running (those would sit at the top all term). */
+export function nextEntries(items: WeekItem[], now: Date, to: Date, n: number): WeekItem[] {
+  const today = startOfDay(now).getTime();
+  return items
+    .filter(
+      (it) =>
+        it.start >= today &&
+        it.start < to.getTime() &&
+        lastIncludedMs(it) >= now.getTime() &&
+        !isLongRunning(it),
+    )
+    .sort((a, b) => a.start - b.start)
+    .slice(0, n);
+}
+
+/** Normalise a timestamp to the feeds' zone-less local "YYYY-MM-DDTHH:mm".
+ *  Eva sends ISO strings that may carry an offset (`…Z`, `+02:00`); those
+ *  are converted to local time rather than sliced, which would shift them
+ *  by the offset. Date-only and zone-less values pass through. */
+export function toLocalStamp(s: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/(?:Z|[+-]\d{2}:?\d{2})$/.test(s)) {
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) {
+      const p = (n: number) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+  }
+  return s.slice(0, 16);
 }

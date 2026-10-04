@@ -40,7 +40,7 @@ The session has exactly one child in focus server-side, so `src/api/schoolsoft.t
 Two ways to call a cookie endpoint safely:
 
 - **Cached reads** (anything stored in the query cache under child-scoped keys) must go through `useSchoolsoftContext().withCookies`, so a response served for a sibling is rejected rather than cached.
-- **Effect-local reads** may call `bootstrapSchoolsoftSession` and the endpoint directly (as `HomePage`, `SchedulePage` and `WeekCard` do), provided the effect depends on the child, ignores results once cleaned up (a `cancelled` flag), and tags any state it keeps with the child so a sibling's data is never rendered. A child switch re-runs the effect, whose own bootstrap is serialized after the old one.
+- **Effect-local reads** (`HomePage`, `SchedulePage`, `WeekCard`, the assessment, assignment and planning pages, `useCalendarAgenda`) take `const focus = await acquireCookieFocus(…)`, read, then call `assertCookieFocus(focus)` before using the result. A re-focus can come from outside the effect (e.g. queued Subjects-page reads still running after navigation), so cancelling the effect isn't enough. They also tag kept state with the child.
 
 ### Removed: legacy app token
 
