@@ -1,287 +1,340 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { CalendarClock, ChevronLeft, ChevronRight, ClipboardCheck, Star } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
   bootstrapSchoolsoftSession,
-  fetchEvaLessonsWeek,
+  fetchCalendarEvents,
+  fetchCalendarPsEntities,
+  fetchCalendarTimeBookings,
   fetchScheduleLessons,
   formatLessonTime,
   lessonDayIndex,
-  type EvaLessonTile,
+  type CalendarItem,
   type Lesson,
 } from "../api/schoolsoft.ts";
 import { cn } from "../lib/utils.ts";
-import { schoolSoftUrl } from "../lib/safe-url.ts";
-import { isoDay, isoWeek } from "../lib/dates.ts";
-import { scheduleLessonToLesson } from "../lib/schedule.ts";
+import {
+  addDays,
+  formatDate,
+  formatTime,
+  formatWeekRange,
+  isoWeek,
+  isoWeekYear,
+  mondayOf,
+  sameLocalDate,
+} from "../lib/dates.ts";
+import { scheduleLessonToLesson, weekItems, type WeekItem } from "../lib/schedule.ts";
 
-const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
-  { idx: 1, label: "Monday" },
-  { idx: 2, label: "Tuesday" },
-  { idx: 3, label: "Wednesday" },
-  { idx: 4, label: "Thursday" },
-  { idx: 5, label: "Friday" },
-];
+const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-/** Treat a row from any source as a Lesson for display. */
-type ScheduleRow = {
-  id: string;
-  startTime: string;
-  endTime?: string;
-  subject?: string;
-  location?: string;
-  teacher?: string;
-};
+const navButtonClass =
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700";
 
-function lessonToRow(l: Lesson): ScheduleRow {
-  return {
-    id: `rest-${l.id}`,
-    startTime: l.startTime,
-    endTime: l.endTime,
-    subject: l.groupName ?? l.subjectName ?? `Subject ${l.subjectId}`,
-    location: l.location,
-    teacher: l.teacherName,
-  };
+interface WeekData {
+  /** Child + week the data was loaded for; nothing else is ever shown. */
+  key: string;
+  lessons: Lesson[];
+  items: CalendarItem[];
 }
 
-function evaToRow(l: EvaLessonTile, idx: number): ScheduleRow {
-  return {
-    id: `eva-${l.lessonId ?? idx}-${l.startTime ?? ""}`,
-    startTime: l.startTime ?? "",
-    endTime: l.endTime,
-    subject: l.subjectName ?? l.groupName ?? "Lesson",
-    location: l.location,
-    teacher: l.teacherName,
-  };
-}
-
+/** Week view built from the same feeds as SchoolSoft's web calendar
+ *  ("Kalender (Ny)"): lessons, plus tests, school events and time bookings. */
 export default function SchedulePage() {
   const { session, getEvaToken } = useAuth();
   const { parentUserId, child } = useHeroData();
-  const childStudentId = child?.studentId ?? null;
-  const childOrgId = child?.schools[0]?.orgId ?? null;
-  const [rows, setRows] = useState<ScheduleRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState<"rest" | "eva" | "empty">("empty");
+  const studentId = child?.studentId ?? null;
+  const orgId = child?.schools[0]?.orgId ?? session?.orgId ?? null;
 
   const now = useNow();
-  const currentWeek = isoWeek(now);
-  const todayIdx = isoDay(now);
-  const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+  const [monday, setMonday] = useState<Date>(() => mondayOf(new Date()));
+  const week = isoWeek(monday);
+  const year = isoWeekYear(monday);
+  const currentMonday = useMemo(() => mondayOf(now), [now]);
+  const isCurrentWeek = monday.getTime() === currentMonday.getTime();
+  const key = `${orgId}:${studentId}@${year}-${week}`;
+
+  const [data, setData] = useState<WeekData | null>(null);
+  const [error, setError] = useState<{ key: string; message: string } | null>(null);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || !parentUserId || !studentId || !orgId) return;
     let cancelled = false;
-    setLoading(true);
+    const school = session.school;
 
-    async function load() {
-      const evaToken = await getEvaToken().catch(() => null);
-      /* The confirmed week schedule (HomePage's source too). It reads the
-       * cookie session's child in focus, so bootstrap for the selected child —
-       * that keeps siblings apart. */
-      if (evaToken && parentUserId && childStudentId) {
-        try {
-          await bootstrapSchoolsoftSession(
-            session!.school,
-            evaToken,
-            parentUserId,
-            childOrgId ?? session!.orgId,
-            childStudentId,
-          );
-          const lessons = await fetchScheduleLessons(session!.school, selectedWeek);
-          const rest = lessons
-            .filter((l) => l.category === "lesson")
-            .map((l) => lessonToRow(scheduleLessonToLesson(l)));
-          if (rest.length) {
-            if (!cancelled) {
-              setRows(rest);
-              setSource("rest");
-            }
-            return;
-          }
-        } catch {
-          /* fall through to the Eva probe */
+    void (async () => {
+      try {
+        const token = await getEvaToken();
+        if (!token) throw new Error("You are signed out. Sign in again to continue.");
+        /* The calendar feeds read the cookie session's child in focus. */
+        await bootstrapSchoolsoftSession(school, token, parentUserId, orgId, studentId);
+        const [lessons, ...extras] = await Promise.allSettled([
+          fetchScheduleLessons(school, week),
+          fetchCalendarEvents(school, year, week),
+          fetchCalendarTimeBookings(school),
+          fetchCalendarPsEntities(school),
+        ]);
+        if (cancelled) return;
+        /* Lessons are the page; the overlays are best-effort. */
+        if (lessons.status === "rejected") throw lessons.reason;
+        setData({
+          key,
+          lessons: lessons.value.filter((l) => l.category === "lesson").map(scheduleLessonToLesson),
+          items: extras.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
+        });
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setError({ key, message: e instanceof Error ? e.message : "Failed to load schedule" });
         }
       }
-      /* Unconfirmed Eva week endpoints (see fetchEvaLessonsWeek), kept as a
-       * fallback for tenants whose rest-api schedule comes back empty. */
-      if (evaToken) {
-        try {
-          /* The Eva endpoint needs the child in focus, which the hero data
-           * resolves (and lets the guardian switch). */
-          const studentId = childStudentId;
-          if (studentId) {
-            const tiles = await fetchEvaLessonsWeek(
-              session!.school,
-              evaToken,
-              childOrgId ?? session!.orgId,
-              studentId,
-              selectedWeek,
-            );
-            if (tiles.length && !cancelled) {
-              setRows(tiles.map(evaToRow));
-              setSource("eva");
-              return;
-            }
-          }
-        } catch {
-          /* fall through to empty */
-        }
-      }
-      if (!cancelled) {
-        setRows([]);
-        setSource("empty");
-      }
-    }
-
-    void load().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [session, getEvaToken, selectedWeek, parentUserId, childStudentId, childOrgId]);
+  }, [session, getEvaToken, parentUserId, studentId, orgId, week, year, key]);
 
-  const byDay = useMemo(() => {
-    const map: Record<number, ScheduleRow[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-    for (const r of rows) {
-      const day = r.startTime ? lessonDayIndex(r.startTime) : 0;
-      if (day >= 1 && day <= 5) (map[day] ??= []).push(r);
+  const current = data?.key === key ? data : null;
+  const failed = error?.key === key && !current ? error.message : null;
+
+  const lessonsByDay = useMemo(() => {
+    const map: Record<number, Lesson[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    for (const l of current?.lessons ?? []) {
+      const day = lessonDayIndex(l.startTime);
+      if (day >= 1 && day <= 5) map[day]!.push(l);
     }
-    for (const k of Object.keys(map)) {
-      map[Number(k)]?.sort((a, b) => a.startTime.localeCompare(b.startTime));
-    }
+    for (const list of Object.values(map))
+      list.sort((a, b) => a.startTime.localeCompare(b.startTime));
     return map;
-  }, [rows]);
+  }, [current]);
 
-  if (loading)
-    return (
-      <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">Loading schedule…</div>
-    );
+  const items = useMemo(() => weekItems(current?.items ?? [], monday), [current, monday]);
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold tracking-tight">Schedule</h2>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Schedule</h2>
+          <p className="text-sm text-slate-500">{formatWeekRange(monday)}</p>
+        </div>
         <div className="flex items-center gap-2">
+          {!isCurrentWeek && (
+            <button
+              type="button"
+              onClick={() => setMonday(currentMonday)}
+              className="mr-1 text-sm font-medium text-slate-500 transition-colors hover:text-blue-600"
+            >
+              Today
+            </button>
+          )}
           <button
-            className="cursor-pointer rounded-md border border-slate-200 bg-transparent px-2.5 py-0.5 text-[1.1rem] text-slate-900 transition-colors hover:border-blue-600 hover:bg-blue-100"
-            onClick={() => {
-              setSelectedWeek((w) => Math.max(1, w - 1));
-            }}
+            type="button"
+            className={navButtonClass}
+            onClick={() => setMonday((m) => addDays(m, -7))}
             aria-label="Previous week"
           >
-            ‹
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
           <span className="min-w-[7rem] text-center text-[0.95rem] font-semibold">
-            Week {selectedWeek}
-            {selectedWeek === currentWeek && (
+            Week {week}
+            {isCurrentWeek && (
               <span className="ml-2 inline-block rounded-full bg-blue-600 px-[0.6em] py-[0.15em] align-middle text-[0.7rem] font-semibold tracking-[0.02em] text-white">
                 current
               </span>
             )}
           </span>
           <button
-            className="cursor-pointer rounded-md border border-slate-200 bg-transparent px-2.5 py-0.5 text-[1.1rem] text-slate-900 transition-colors hover:border-blue-600 hover:bg-blue-100"
-            onClick={() => {
-              setSelectedWeek((w) => Math.min(53, w + 1));
-            }}
+            type="button"
+            className={navButtonClass}
+            onClick={() => setMonday((m) => addDays(m, 7))}
             aria-label="Next week"
           >
-            ›
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      {source === "empty" ? (
-        <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
-          <p>
-            <strong>Full schedule not available as JSON.</strong>
-          </p>
-          <p className="mt-3">
-            SchoolSoft's iOS app embeds the schedule as a webview rather than fetching JSON, and no
-            equivalent endpoint exists. The current and next lesson tiles on the home page do work —
-            those are exposed via Eva.
-          </p>
-          {/* A session stored before slug validation existed can hold a school that no longer
-              builds a URL; render plain text rather than a dead link in that case. */}
-          {(() => {
-            const scheduleUrl = schoolSoftUrl(
-              session!.school,
-              "jsp/student/right_student_schedule.jsp",
-            );
-            return scheduleUrl ? (
-              <p className="mt-3">
-                You can{" "}
-                <a href={scheduleUrl} target="_blank" rel="noreferrer">
-                  open the schedule directly in SchoolSoft
-                </a>{" "}
-                for now.
-              </p>
-            ) : (
-              <p className="mt-3">You can open the schedule directly in SchoolSoft for now.</p>
-            );
-          })()}
+      {failed ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {failed}
+        </div>
+      ) : !current ? (
+        <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">
+          Loading schedule…
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-[0.85rem] md:grid-cols-3 lg:grid-cols-5">
-          {ORDERED_DAYS.map(({ idx, label }) => {
-            const dayLessons = byDay[idx] ?? [];
-            const isToday = selectedWeek === currentWeek && idx === todayIdx;
-            return (
-              <div
-                key={idx}
-                className={cn(
-                  "flex flex-col gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3",
-                  isToday && "border-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.08)]",
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex items-center justify-between border-b-2 border-blue-600 pb-2 text-[0.8rem] font-bold tracking-[0.05em] text-slate-500 uppercase",
-                    isToday && "text-blue-600",
-                  )}
-                >
-                  {label}
-                  {isToday && (
-                    <span className="ml-2 inline-block rounded-full bg-blue-600 px-[0.6em] py-[0.15em] align-middle text-[0.7rem] font-semibold tracking-[0.02em] text-white">
-                      today
-                    </span>
-                  )}
-                </div>
-                {dayLessons.length === 0 ? (
-                  <div className="py-2 text-[0.8rem] text-slate-500 italic">Free</div>
-                ) : (
-                  dayLessons.map((row) => (
+        <>
+          {items.allWeek.length > 0 && (
+            <section className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
+              <h3 className="mb-2 text-[0.75rem] font-bold tracking-[0.05em] text-slate-500 uppercase">
+                This week
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {items.allWeek.map((it) => (
+                  <li key={it.key}>
+                    <ItemChip item={it} spanLabel />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {current.lessons.length === 0 && Object.values(items.byDay).every((l) => !l.length) ? (
+            <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
+              No lessons this week.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-[0.85rem] md:grid-cols-3 lg:grid-cols-5">
+              {DAY_LABELS.map((label, i) => {
+                const idx = i + 1;
+                const date = addDays(monday, i);
+                const isToday = sameLocalDate(date, now);
+                const dayLessons = lessonsByDay[idx] ?? [];
+                const dayItems = items.byDay[idx] ?? [];
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex flex-col gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3",
+                      isToday && "border-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.08)]",
+                    )}
+                  >
                     <div
-                      key={row.id}
-                      className="rounded-md border border-slate-200 bg-slate-50 px-[0.85rem] py-[0.7rem] transition-all hover:-translate-y-px hover:border-slate-300 hover:shadow-[var(--shadow)]"
-                    >
-                      <div className="mb-1 text-[0.75rem] font-bold text-blue-600">
-                        {formatLessonTime(row.startTime)}
-                        {row.endTime && `–${formatLessonTime(row.endTime)}`}
-                      </div>
-                      <div className="text-[0.92rem] leading-tight font-semibold">
-                        {row.subject}
-                      </div>
-                      {row.location && (
-                        <div className="mt-0.5 text-[0.78rem] text-slate-500">
-                          📍 {row.location}
-                        </div>
+                      className={cn(
+                        "flex items-center justify-between border-b-2 border-blue-600 pb-2 text-[0.8rem] font-bold tracking-[0.05em] text-slate-500 uppercase",
+                        isToday && "text-blue-600",
                       )}
-                      {row.teacher && (
-                        <div className="mt-0.5 text-[0.78rem] text-slate-500">👤 {row.teacher}</div>
+                    >
+                      <span>
+                        {label}
+                        <span className="ml-1.5 font-semibold tracking-normal normal-case">
+                          {formatDate(date.getTime(), { day: "numeric", month: "short" })}
+                        </span>
+                      </span>
+                      {isToday && (
+                        <span className="ml-2 inline-block rounded-full bg-blue-600 px-[0.6em] py-[0.15em] align-middle text-[0.7rem] font-semibold tracking-[0.02em] text-white">
+                          today
+                        </span>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    {dayItems.map((it) => (
+                      <ItemChip key={it.key} item={it} />
+                    ))}
+                    {dayLessons.length === 0 ? (
+                      <div className="py-2 text-[0.8rem] text-slate-500 italic">No lessons</div>
+                    ) : (
+                      dayLessons.map((l) => <LessonCard key={l.id} lesson={l} />)
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
+}
+
+function LessonCard({ lesson }: { lesson: Lesson }) {
+  const subject = lesson.groupName ?? lesson.subjectName ?? `Subject ${lesson.subjectId}`;
+  return (
+    <div
+      className={cn(
+        "rounded-md border border-l-4 border-slate-200 bg-slate-50 px-[0.85rem] py-[0.7rem] transition-all hover:-translate-y-px hover:border-slate-300 hover:shadow-[var(--shadow)]",
+        lesson.cancelled && "opacity-60",
+      )}
+      style={{ borderLeftColor: lesson.color ?? undefined }}
+    >
+      <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[0.75rem] font-bold text-blue-600">
+        <span className={cn(lesson.cancelled && "line-through")}>
+          {formatLessonTime(lesson.startTime)}
+          {lesson.endTime && `–${formatLessonTime(lesson.endTime)}`}
+        </span>
+        {lesson.cancelled && <Badge className="bg-slate-200 text-slate-700">Cancelled</Badge>}
+        {lesson.absence === "approved" && (
+          <Badge className="bg-amber-100 text-amber-800">Absent · excused</Badge>
+        )}
+        {lesson.absence === "unapproved" && (
+          <Badge className="bg-red-100 text-red-800">Absent</Badge>
+        )}
+      </div>
+      <div
+        className={cn(
+          "text-[0.92rem] leading-tight font-semibold",
+          lesson.cancelled && "line-through",
+        )}
+      >
+        {subject}
+      </div>
+      {lesson.location && (
+        <div className="mt-0.5 text-[0.78rem] text-slate-500">📍 {lesson.location}</div>
+      )}
+      {lesson.teacherName && (
+        <div className="mt-0.5 text-[0.78rem] text-slate-500">👤 {lesson.teacherName}</div>
+      )}
+    </div>
+  );
+}
+
+function Badge({ className, children }: { className: string; children: string }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-1.5 py-px text-[0.68rem] leading-[1.4] font-semibold tracking-normal",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+const ITEM_STYLE: Record<WeekItem["kind"], { icon: typeof Star; className: string }> = {
+  test: { icon: ClipboardCheck, className: "border-rose-200 bg-rose-50 text-rose-900" },
+  booking: { icon: CalendarClock, className: "border-sky-200 bg-sky-50 text-sky-900" },
+  event: { icon: Star, className: "border-green-200 bg-green-50 text-green-900" },
+};
+
+/** A test, booking or school event. Timed ones show their time; the week
+ *  strip shows the date span instead. Tests link to their subject. */
+function ItemChip({ item, spanLabel }: { item: WeekItem; spanLabel?: boolean }) {
+  const { icon: Icon, className } = ITEM_STYLE[item.kind];
+  const when = spanLabel
+    ? sameLocalDate(new Date(item.start), new Date(item.end))
+      ? formatDate(item.start)
+      : `${formatDate(item.start)} – ${formatDate(item.end)}`
+    : `${formatTime(item.start)}–${formatTime(item.end)}`;
+  const body = (
+    <>
+      <Icon className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0">
+        <span className="block text-[0.82rem] leading-tight font-semibold">{item.title}</span>
+        <span className="block text-[0.72rem] opacity-80">
+          {when}
+          {item.detail && ` · ${item.detail}`}
+        </span>
+      </span>
+    </>
+  );
+  const chipClass = cn(
+    "flex items-start gap-1.5 rounded-md border px-2.5 py-1.5 text-inherit no-underline",
+    className,
+  );
+  if (item.kind === "test" && item.activityId) {
+    return (
+      <Link to={`/subjects/${item.activityId}`} className={cn(chipClass, "hover:brightness-95")}>
+        {body}
+      </Link>
+    );
+  }
+  if (item.kind === "booking") {
+    return (
+      <Link to="/bookings" className={cn(chipClass, "hover:brightness-95")}>
+        {body}
+      </Link>
+    );
+  }
+  return <div className={chipClass}>{body}</div>;
 }

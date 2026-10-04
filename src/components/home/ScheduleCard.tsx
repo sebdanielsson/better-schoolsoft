@@ -234,8 +234,24 @@ function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean 
         )}
       </div>
       <div className="min-w-0">
-        <div className="overflow-hidden text-[0.92rem] font-semibold text-ellipsis whitespace-nowrap">
-          {subject}
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "overflow-hidden text-[0.92rem] font-semibold text-ellipsis whitespace-nowrap",
+              lesson.cancelled && "text-slate-400 line-through",
+            )}
+          >
+            {subject}
+          </span>
+          {lesson.cancelled && (
+            <RowBadge className="bg-slate-200 text-slate-700">Cancelled</RowBadge>
+          )}
+          {lesson.absence === "approved" && (
+            <RowBadge className="bg-amber-100 text-amber-800">Absent · excused</RowBadge>
+          )}
+          {lesson.absence === "unapproved" && (
+            <RowBadge className="bg-red-100 text-red-800">Absent</RowBadge>
+          )}
         </div>
         <div className="mt-0.5 overflow-hidden text-[0.78rem] text-ellipsis whitespace-nowrap text-slate-500">
           {lesson.location}
@@ -244,5 +260,18 @@ function LessonRow({ lesson, highlight }: { lesson: Lesson; highlight?: boolean 
         </div>
       </div>
     </li>
+  );
+}
+
+function RowBadge({ className, children }: { className: string; children: string }) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-1.5 py-px text-[0.68rem] leading-[1.4] font-semibold",
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
