@@ -223,3 +223,19 @@ export function nextEntries(items: WeekItem[], now: Date, n: number): WeekItem[]
     .sort((a, b) => a.start - b.start)
     .slice(0, n);
 }
+
+/** Normalise a timestamp to the feeds' zone-less local "YYYY-MM-DDTHH:mm".
+ *  Eva sends ISO strings that may carry an offset (`…Z`, `+02:00`); those
+ *  are converted to local time rather than sliced, which would shift them
+ *  by the offset. Date-only and zone-less values pass through. */
+export function toLocalStamp(s: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/(?:Z|[+-]\d{2}:?\d{2})$/.test(s)) {
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) {
+      const p = (n: number) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+  }
+  return s.slice(0, 16);
+}

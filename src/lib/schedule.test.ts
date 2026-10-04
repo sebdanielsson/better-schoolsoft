@@ -9,6 +9,7 @@ import {
   lastIncludedMs,
   lessonStartMs,
   nextEntries,
+  toLocalStamp,
   lessonAbsence,
   scheduleLessonToLesson,
   scheduleLessonsForDate,
@@ -364,4 +365,15 @@ void test("nextEntries picks the next upcoming, unfinished, short entries", () =
     picked.map((i) => i.title),
     ["All day today", "This afternoon", "Tomorrow"],
   );
+});
+
+void test("toLocalStamp converts zoned timestamps to local time", () => {
+  const d = new Date("2026-10-04T22:00:00Z");
+  const p = (n: number) => String(n).padStart(2, "0");
+  const local = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  assert.equal(toLocalStamp("2026-10-04T22:00:00Z"), local);
+  assert.equal(toLocalStamp("2026-10-04T22:00:00.000Z"), local);
+  assert.equal(toLocalStamp("2026-10-05T00:00:00+02:00"), local, "same instant, other offset");
+  assert.equal(toLocalStamp("2026-10-05T09:30:00"), "2026-10-05T09:30", "zone-less passes through");
+  assert.equal(toLocalStamp("2026-10-05"), "2026-10-05", "date-only passes through");
 });

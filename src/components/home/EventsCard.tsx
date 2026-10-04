@@ -16,9 +16,11 @@ const LOOKAHEAD_WEEKS = 8;
  *  the Calendar page. */
 export default function EventsCard() {
   const now = useNow();
-  const from = useMemo(() => startOfDay(now), [now]);
+  /* Keyed on the day, so the minute clock doesn't rebuild the range. */
+  const today = startOfDay(now).getTime();
+  const from = useMemo(() => new Date(today), [today]);
   const to = useMemo(() => addDays(from, LOOKAHEAD_WEEKS * 7), [from]);
-  const { items, error } = useCalendarAgenda(from, to);
+  const { items, incomplete, error } = useCalendarAgenda(from, to);
   const next = useMemo(() => nextEntries(toWeekItems(items ?? []), now, SHOWN), [items, now]);
 
   return (
@@ -33,12 +35,21 @@ export default function EventsCard() {
       ) : !items ? (
         <div className={cardLoadingClass}>Loading…</div>
       ) : next.length === 0 ? (
-        <Empty>Nothing coming up in the next {LOOKAHEAD_WEEKS} weeks.</Empty>
+        <Empty>
+          {incomplete
+            ? "Couldn't load all calendar sources."
+            : `Nothing coming up in the next ${LOOKAHEAD_WEEKS} weeks.`}
+        </Empty>
       ) : (
         <ul className="flex list-none flex-col gap-1.5">
           {next.map((it) => (
             <EventRow key={it.key} item={it} />
           ))}
+          {incomplete && (
+            <li className="text-[0.75rem] text-amber-700">
+              Some calendar sources couldn't be loaded.
+            </li>
+          )}
         </ul>
       )}
     </DashboardCard>

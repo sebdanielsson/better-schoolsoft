@@ -21,11 +21,13 @@ const RANGE_WEEKS = 8;
  *  calendar's feeds minus the lessons, which the Schedule page shows. */
 export default function CalendarPage() {
   const now = useNow();
-  const from = useMemo(() => startOfDay(now), [now]);
+  /* Keyed on the day, so the minute clock doesn't rebuild the range. */
+  const today = startOfDay(now).getTime();
+  const from = useMemo(() => new Date(today), [today]);
   const [weeks, setWeeks] = useState(RANGE_WEEKS);
   const to = useMemo(() => addDays(from, weeks * 7), [from, weeks]);
 
-  const { items, error: failed } = useCalendarAgenda(from, to);
+  const { items, incomplete, error: failed } = useCalendarAgenda(from, to);
   const [showLong, setShowLong] = useShowLongRunning();
 
   const { ongoing, days } = useMemo(
@@ -62,6 +64,11 @@ export default function CalendarPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+          {incomplete && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Some calendar sources couldn't be loaded, so this list may be incomplete.
+            </div>
+          )}
           {ongoing.length > 0 && (
             <section>
               <div className="mb-[0.65rem] flex items-center justify-between gap-3">
@@ -93,7 +100,9 @@ export default function CalendarPage() {
 
           {days.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
-              Nothing coming up in the next {weeks} weeks.
+              {incomplete
+                ? `Nothing found in the next ${weeks} weeks from the sources that loaded.`
+                : `Nothing coming up in the next ${weeks} weeks.`}
             </div>
           ) : (
             days.map(({ day, items }) => (
