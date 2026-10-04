@@ -37,6 +37,12 @@ export interface Lesson {
   teacherName?: string;
   groupName?: string;
   location?: string;
+  /** The lesson is cancelled (struck through in the web calendar). */
+  cancelled?: boolean;
+  /** Reported absence for this lesson; absent when present or unreported. */
+  absence?: "approved" | "unapproved";
+  /** Subject colour the school picked, `#rrggbb`. */
+  color?: string;
 }
 
 /** New-style "Eva" types (mirrors the captured iOS API). */
@@ -444,63 +450,6 @@ export function fetchEvaNextLesson(
     `${BASE}/${school}/eva/api/v1/schools/${orgId}/student/${studentId}/lessons/week/${week}/day/${day}/next?langId=1`,
     accessToken,
   );
-}
-
-/** All lessons for one day. The iOS app only fetches "current"/"next" tiles — the full schedule
- *  view is delegated to a webview — but this endpoint shape mirrors the lunch pattern and
- *  appears to return all dishes^Wlessons for the day. We fall back gracefully if it 404s. */
-export function fetchEvaLessonsDay(
-  school: string,
-  accessToken: string,
-  orgId: number,
-  studentId: number,
-  week: number,
-  day: number,
-): Promise<EvaLessonTile[]> {
-  return evaGetList(
-    `${BASE}/${school}/eva/api/v1/schools/${orgId}/student/${studentId}/lessons/week/${week}/day/${day}?langId=1`,
-    accessToken,
-  );
-}
-
-/** Probe a few endpoint shapes that might return the full week of lessons. The iOS app
- *  itself uses a webview here, so we don't have a confirmed URL — try the most plausible
- *  variants in order and return the first one with data. */
-export async function fetchEvaLessonsWeek(
-  school: string,
-  accessToken: string,
-  orgId: number,
-  studentId: number,
-  week: number,
-): Promise<EvaLessonTile[]> {
-  const base = `${BASE}/${school}/eva/api/v1/schools/${orgId}/student/${studentId}/lessons`;
-  const candidates = [
-    `${base}/week/${week}?langId=1`,
-    `${base}/week/${week}/all?langId=1`,
-    `${base}?week=${week}&langId=1`,
-  ];
-  for (const url of candidates) {
-    try {
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (!res.ok) continue;
-      const text = await res.text();
-      if (!text) continue;
-      const data = JSON.parse(text);
-      if (Array.isArray(data) && data.length) return data as EvaLessonTile[];
-    } catch {
-      /* try next */
-    }
-  }
-  /* Fall back to fetching each weekday tile-by-tile via the day endpoint. */
-  const days = [1, 2, 3, 4, 5];
-  const settled = await Promise.allSettled(
-    days.map((d) => fetchEvaLessonsDay(school, accessToken, orgId, studentId, week, d)),
-  );
-  const all: EvaLessonTile[] = [];
-  for (const r of settled) {
-    if (r.status === "fulfilled" && Array.isArray(r.value)) all.push(...r.value);
-  }
-  return all;
 }
 
 /** Unread message count. */
@@ -1829,6 +1778,51 @@ export interface ScheduleLesson {
 
 export function fetchScheduleLessons(school: string, week: number): Promise<ScheduleLesson[]> {
   return cookieGetList(`${BASE}/${school}/rest-api/parent/calendar/lessons/week/${week}`);
+}
+
+/** A non-lesson entry from the web calendar's other feeds: school/calendar
+ *  events, time bookings, and subject-room tests and plannings. Dates are
+ *  local ISO without a zone, `YYYY-MM-DDTHH:mm` (sometimes date-only). */
+export interface CalendarItem {
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  allDay: boolean;
+  /** "test" | "planning" | "timeBooking" | event categories. */
+  category: string;
+  eventColor?: string;
+  teacher?: string;
+  /** e.g. "Assessment", "Hemläxa" for tests. */
+  typeName?: string;
+  /** Subject-room id, for linking tests to `/subjects/:activityId`. */
+  activityId?: number;
+  eventId?: number;
+  entityId?: number;
+}
+
+/* The three feeds the SchoolSoft web calendar ("Kalender (Ny)") overlays on
+ * the lessons above, taken from its bundle. All need the cookie session. */
+
+/** School and calendar events in one ISO week. */
+export function fetchCalendarEvents(
+  school: string,
+  year: number,
+  week: number,
+): Promise<CalendarItem[]> {
+  return cookieGetList(
+    `${BASE}/${school}/rest-api/parent/calendar/event/year/${year}/week/${week}`,
+  );
+}
+
+/** The child's booked time slots (all of them; filter by date). */
+export function fetchCalendarTimeBookings(school: string): Promise<CalendarItem[]> {
+  return cookieGetList(`${BASE}/${school}/rest-api/parent/calendar/timebookings`);
+}
+
+/** Subject-room tests, homework and plannings (all of them; filter by date). */
+export function fetchCalendarPsEntities(school: string): Promise<CalendarItem[]> {
+  return cookieGetList(`${BASE}/${school}/rest-api/parent/calendar/subject_room/ps_entities`);
 }
 
 /* ---------- Material file metadata (used by assignment detail) ---------- */

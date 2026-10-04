@@ -391,3 +391,19 @@ The `/history` and `/history/read` literals belong to student leave (section 6);
 Profile name: the app uses `PUT …/profile/personal` with `{ fName, lName }`. `schoolsoft.ts` currently calls `…/profile/name`, which does not occur anywhere in the app bundle — verify that it works or switch to `/profile/personal`.
 
 Push tokens are OneSignal-specific and not useful for a web client, except that `GET`/`PUT v1/push-tokens/{playerId}` exposes the per-category notification preferences.
+
+## 9. Web calendar feeds (cookie session)
+
+Not Eva: these are what SchoolSoft's new web calendar ("Kalender (Ny)", `/{school}/react/`) loads, taken from its bundle. The legacy `jsp/student/right_student_schedule.jsp` now only says it was replaced by that calendar. All need the cookie session (see [auth.md](auth.md)) and live under `/{school}/rest-api/parent/calendar/`.
+
+| Method | Path                                                                                                     | Response                                                                                                    | Status      | Confidence |
+| ------ | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
+| GET    | `lessons/week/{week}`                                                                                    | `ScheduleLesson[]`: lessons and breaks with room, teacher, `eventColor`, `status`, `studentLessonStatus`    | implemented | confirmed  |
+| GET    | `event/year/{year}/week/{week}` (also `…/month/{m}`, `day/{YYYY-MM-DD}`, `agenda?start_date=&end_date=`) | school and calendar events                                                                                  | implemented | confirmed  |
+| GET    | `timebookings`                                                                                           | all booked time slots (`category: "timeBooking"`, teacher, `meetingLink`)                                   | implemented | confirmed  |
+| GET    | `subject_room/ps_entities`                                                                               | all subject-room tests, homework and plannings (`category: "test" \| "planning"`, `typeName`, `activityId`) | implemented | confirmed  |
+| GET    | `lessons/{lessonId}` and `lessons/{lessonId}/date/{YYYY-MM-DD}/assignments`                              | lesson detail and that day's assignments                                                                    | new         | inferred   |
+
+How the web calendar renders lessons: `status === 3` is struck through (cancelled). `studentLessonStatus` shows nothing when null, `status` 0 or `statusType` 1, an "approved absence" icon for `statusType` 3 or 4, and an absence icon otherwise. `status` −1 marks breaks and lessons without attendance yet, 2 lessons where attendance was taken. `src/lib/schedule.ts` mirrors these rules.
+
+`ps_entities` lists the same test once per teaching group (different `entityId`), so dedupe on name and times. Its date strings have no zone and are sometimes date-only.
