@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth.tsx";
 import { useHeroData } from "./useHeroData.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   fetchCalendarAgenda,
   fetchCalendarPsEntities,
   fetchCalendarTimeBookings,
@@ -74,11 +75,19 @@ export function useCalendarAgenda(
         /* The calendar feeds read the cookie session's child in focus. */
         /* Only the three web-calendar feeds need the cookie session; the Eva
          * tile goes ahead on the bearer token even if the bootstrap fails. */
-        const session = bootstrapSchoolsoftSession(school, token, parentUserId, orgId, studentId);
+        const focus = acquireCookieFocus(school, token, parentUserId, orgId, studentId);
+        /* A queued read from another page can re-focus the shared session on a
+         * sibling mid-request; reject such a result rather than keep it. */
+        const cookieRead = <T>(read: () => Promise<T>) =>
+          focus.then(async (f) => {
+            const result = await read();
+            assertCookieFocus(f);
+            return result;
+          });
         const results = await Promise.allSettled([
-          session.then(() => fetchCalendarAgenda(school, fromDay, lastDay)),
-          session.then(() => fetchCalendarTimeBookings(school)),
-          session.then(() => fetchCalendarPsEntities(school)),
+          cookieRead(() => fetchCalendarAgenda(school, fromDay, lastDay)),
+          cookieRead(() => fetchCalendarTimeBookings(school)),
+          cookieRead(() => fetchCalendarPsEntities(school)),
           fetchEvaNextCalendarEvent(school, token, parentUserId, orgId, studentId).then((e) =>
             e ? [evaEventToItem(e)] : [],
           ),

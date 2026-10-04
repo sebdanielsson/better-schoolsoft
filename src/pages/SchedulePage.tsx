@@ -6,7 +6,8 @@ import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useShowLongRunning } from "../hooks/useShowLongRunning.ts";
 import CalendarItemChip from "../components/CalendarItemChip.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   fetchCalendarEvents,
   fetchCalendarPsEntities,
   fetchCalendarTimeBookings,
@@ -75,13 +76,14 @@ export default function SchedulePage() {
         const token = await getEvaToken();
         if (!token) throw new Error("You are signed out. Sign in again to continue.");
         /* The calendar feeds read the cookie session's child in focus. */
-        await bootstrapSchoolsoftSession(school, token, parentUserId, orgId, studentId);
+        const focus = await acquireCookieFocus(school, token, parentUserId, orgId, studentId);
         const [lessons, ...extras] = await Promise.allSettled([
           fetchScheduleLessons(school, week),
           fetchCalendarEvents(school, year, week),
           fetchCalendarTimeBookings(school),
           fetchCalendarPsEntities(school),
         ]);
+        assertCookieFocus(focus);
         if (cancelled) return;
         /* Lessons are the page; the overlays are best-effort. */
         if (lessons.status === "rejected") throw lessons.reason;

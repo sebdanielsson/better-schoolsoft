@@ -4,7 +4,8 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   confirmHolisticAssessmentSubjectWarning,
   fetchHolisticAssessmentConfirmStatus,
   fetchHolisticAssessmentDetail,
@@ -65,7 +66,7 @@ export default function AssessmentDetailPage() {
         const token = await getEvaToken();
         if (!token) throw new Error("No access token available");
         const orgId = child.schools[0]?.orgId ?? session.orgId;
-        await bootstrapSchoolsoftSession(
+        const focus = await acquireCookieFocus(
           session.school,
           token,
           parentUserId,
@@ -80,6 +81,7 @@ export default function AssessmentDetailPage() {
             fetchHolisticAssessmentKnowledgeDevelopment(session.school, id),
             fetchHolisticAssessmentSections(session.school, id),
           ]);
+        assertCookieFocus(focus);
         if (cancelled) return;
         setState({
           detail: detailRes.status === "fulfilled" ? detailRes.value : null,

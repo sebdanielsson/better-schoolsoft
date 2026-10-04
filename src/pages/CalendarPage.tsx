@@ -175,9 +175,7 @@ function AgendaRow({ item }: { item: WeekItem }) {
           <div className="mt-0.5 text-[0.82rem] text-slate-500">{meta}</div>
           {/* Events have no page to link to, so their details live here. */}
           {item.kind === "event" && item.description && (
-            <p className="mt-1.5 line-clamp-3 text-[0.88rem] leading-snug text-slate-700">
-              {item.description}
-            </p>
+            <p className="mt-1.5 text-[0.88rem] leading-snug text-slate-700">{item.description}</p>
           )}
         </div>
       </div>

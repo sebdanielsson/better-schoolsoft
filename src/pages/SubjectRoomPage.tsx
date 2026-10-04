@@ -368,7 +368,10 @@ function SubjectPicker({
           <ChevronDown aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-400" />
         </DropdownMenuTrigger>
       </h2>
-      <DropdownMenuContent align="start" className="max-h-[420px] w-[280px] overflow-y-auto">
+      <DropdownMenuContent
+        align="start"
+        className="max-h-[min(420px,var(--available-height))] w-[280px] overflow-y-auto"
+      >
         <DropdownMenuRadioGroup
           value={String(current)}
           onValueChange={(value) => {

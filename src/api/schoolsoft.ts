@@ -1306,6 +1306,16 @@ export async function acquireCookieFocus(
   return entry;
 }
 
+/** Throw if the cookie session was re-focused since `focus` was acquired:
+ *  the reads in between may have been served for another child. Effect-local
+ *  cookie reads call this after awaiting them (the `withCookies` equivalent
+ *  for code outside `useSchoolsoftContext`). */
+export function assertCookieFocus(focus: object): void {
+  if (sessionFocus !== focus) {
+    throw new Error("The child in focus changed while loading. Try again.");
+  }
+}
+
 function focusEntry(
   school: string,
   evaToken: string,

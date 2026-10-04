@@ -3,7 +3,8 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
 import {
-  bootstrapSchoolsoftSession,
+  acquireCookieFocus,
+  assertCookieFocus,
   fetchEvaCurrentLesson,
   fetchEvaNextLesson,
   fetchEvaNews,
@@ -114,7 +115,7 @@ export default function HomePage() {
         const token = await getEvaToken();
         if (!token) return;
         const orgId = child.schools[0]?.orgId ?? session.orgId;
-        await bootstrapSchoolsoftSession(
+        const focus = await acquireCookieFocus(
           session.school,
           token,
           parentUserId,
@@ -130,6 +131,7 @@ export default function HomePage() {
           fetchScheduleLessons(session.school, week).catch(() => [] as ScheduleLesson[]),
           fetchScheduleLessons(session.school, nextWeekNumber).catch(() => [] as ScheduleLesson[]),
         ]);
+        assertCookieFocus(focus);
         if (cancelled) return;
         setSchedule({ child: child.studentId, lessons: [...thisWeek, ...nextWeek] });
       } catch {
