@@ -50,8 +50,10 @@ function legacyToUnified(e: CalendarEvent): UnifiedEvent {
 }
 
 export default function CalendarPage() {
-  const { child } = useHeroData();
+  const { child, children } = useHeroData();
   const childStudentId = child?.studentId;
+  /* The legacy notices fallback can only describe the login's default child. */
+  const isDefaultChild = !child || children[0]?.studentId === child.studentId;
   const { session, getToken, getEvaToken } = useAuth();
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,15 @@ export default function CalendarPage() {
           /* fall through to legacy */
         }
       }
-      /* Legacy /api/notices. */
+      /* Legacy /api/notices — scoped to the login's default child, so never
+       * shown while a sibling is selected. */
+      if (!isDefaultChild) {
+        if (!cancelled) {
+          setEvents([]);
+          setSource("empty");
+        }
+        return;
+      }
       try {
         const token = await getToken();
         if (!token) throw new Error("No session token");
@@ -137,7 +147,7 @@ export default function CalendarPage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, childStudentId]);
+  }, [session, getToken, getEvaToken, childStudentId, isDefaultChild]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, UnifiedEvent[]>();

@@ -155,3 +155,13 @@ void test("partitionAssignments keeps a midnight-only due date upcoming all that
     [9],
   );
 });
+
+void test("a midnight-only due date lasts the whole local day across a DST change", () => {
+  /* 2026-10-25 is 25 hours long in Europe/Stockholm. */
+  const due = assignment(10, "2026-10-01 08:00", "2026-10-25 00:00");
+  const lateThatDay = new Date(2026, 9, 25, 23, 30);
+  assert.deepEqual(
+    partitionAssignments([due], lateThatDay).upcoming.map((a) => a.assignmentId),
+    [10],
+  );
+});

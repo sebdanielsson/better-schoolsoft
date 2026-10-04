@@ -39,11 +39,14 @@ export function preloadStaffDetail(
 
   const p = schedule("high", () => fetchEvaStaffDetail(school, accessToken, orgId, teacherId))
     .then((data) => {
-      staffDetailCache.set(key, data);
+      /* Only if this request is still the current one: a logout/account
+       * switch clears the inflight map, so a late response must not refill
+       * the cache with the previous session's data. */
+      if (staffDetailInflight.get(key) === p) staffDetailCache.set(key, data);
       return data;
     })
     .finally(() => {
-      staffDetailInflight.delete(key);
+      if (staffDetailInflight.get(key) === p) staffDetailInflight.delete(key);
     });
 
   staffDetailInflight.set(key, p);

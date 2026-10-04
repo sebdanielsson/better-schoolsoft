@@ -33,8 +33,11 @@ function time(s: string): number {
  *  particular time" (see formatRoomDate), so it means the end of that day,
  *  not its first minute. */
 function dueTime(s: string): number {
-  const t = time(s);
-  return s.trim().endsWith(" 00:00") ? t + 86_400_000 - 1 : t;
+  const d = parseLocalDateTime(s);
+  if (!d) return 0;
+  if (!s.trim().endsWith(" 00:00")) return d.getTime();
+  /* Next local midnight, not +24 h: DST days are 23 or 25 hours long. */
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime() - 1;
 }
 
 /** Split assignments into upcoming (soonest first) and past (most recent
