@@ -580,6 +580,61 @@ export function installMocks() {
     }
     /* Calendar lessons (rest-api). Derives concrete ISO dates for the asked
      * week using the same lesson definitions the legacy endpoint serves. */
+    /* Web calendar overlays: one test and a week-long homework this week, a
+     * booking on Thursday, no school events. Dates are relative to today. */
+    if (
+      /\/rest-api\/parent\/calendar\/(subject_room\/ps_entities|timebookings|event\/)/.exec(url)
+    ) {
+      const mon = new Date();
+      mon.setDate(mon.getDate() - ((mon.getDay() || 7) - 1));
+      const at = (day: number, hhmm: string) => {
+        const d = new Date(mon);
+        d.setDate(mon.getDate() + day - 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${hhmm}`;
+      };
+      if (url.includes("ps_entities")) {
+        return Promise.resolve(
+          json([
+            {
+              name: "Chemistry test",
+              startDate: at(3, "09:30"),
+              endDate: at(3, "10:20"),
+              allDay: false,
+              category: "test",
+              typeName: "Assessment",
+              activityId: 72261,
+              entityId: 1,
+            },
+            {
+              name: "Reading log",
+              startDate: at(1, "00:00"),
+              endDate: at(5, "00:00"),
+              allDay: true,
+              category: "test",
+              typeName: "Homework",
+              activityId: 72262,
+              entityId: 2,
+            },
+          ]),
+        );
+      }
+      if (url.includes("timebookings")) {
+        return Promise.resolve(
+          json([
+            {
+              eventId: 1,
+              name: "Development talk",
+              startDate: at(4, "15:00"),
+              endDate: at(4, "15:30"),
+              allDay: false,
+              category: "timeBooking",
+              teacher: "Mr. Johansson",
+            },
+          ]),
+        );
+      }
+      return Promise.resolve(json([]));
+    }
     const calendarLessonsMatch = url.match(/\/rest-api\/parent\/calendar\/lessons\/week\/(\d+)/);
     if (calendarLessonsMatch) {
       const askedWeek = Number(calendarLessonsMatch[1]);
