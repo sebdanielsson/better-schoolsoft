@@ -41,16 +41,17 @@ export default function WeekCard<T extends WeekRow>(props: WeekCardProps<T>) {
   const { fetchWeek, noun } = props;
 
   const [weekMonday, setWeekMonday] = useState<Date>(() => mondayOf(new Date()));
-  /* Rows remember the week they were fetched for. While a new week loads the
-   * old rows stay up (no skeleton flicker); if that load fails they must not
-   * be passed off as the new week's. */
-  const [data, setData] = useState<{ key: string; rows: T[] } | null>(null);
-  const [loading, setLoading] = useState(true);
+  /* Rows remember the child and week they were fetched for. While another
+   * week of the same child loads, the old rows stay up (no skeleton flicker);
+   * if that load fails they must not be passed off as the new week's, and
+   * another child's rows are never shown at all. */
+  const [data, setData] = useState<{ child: string; key: string; rows: T[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const week = isoWeek(weekMonday);
   const year = isoWeekYear(weekMonday);
-  const key = `${year}-${week}`;
+  const childKey = child ? `${child.schools[0]?.orgId ?? ""}:${child.studentId}` : "";
+  const key = `${childKey}@${year}-${week}`;
   const range = useMemo(() => formatWeekRange(weekMonday), [weekMonday]);
   const now = useNow();
   const currentWeekMonday = useMemo(() => mondayOf(now), [now]);
@@ -74,24 +75,22 @@ export default function WeekCard<T extends WeekRow>(props: WeekCardProps<T>) {
           child.studentId,
         );
         const rows = await fetchWeek(session.school, week, year);
-        if (!cancelled) setData({ key: `${year}-${week}`, rows });
+        if (!cancelled) setData({ child: childKey, key, rows });
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : `Failed to load ${noun}`);
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [session, getEvaToken, parentUserId, child, week, year, fetchWeek, noun]);
+  }, [session, getEvaToken, parentUserId, child, childKey, key, week, year, fetchWeek, noun]);
 
   /* Hide entirely on schools without the PS module. `null` means the gate
    * hasn't resolved yet — render nothing rather than flashing the card. */
   if (!params?.useFunctionPS) return null;
 
-  const rows = data && (data.key === key || !error) ? data.rows : null;
+  const rows = data && (data.key === key || (data.child === childKey && !error)) ? data.rows : null;
 
   return (
     <section
@@ -143,7 +142,8 @@ export default function WeekCard<T extends WeekRow>(props: WeekCardProps<T>) {
               {error}
             </div>
           )}
-          {loading && !rows ? (
+          {/* No rows for this child yet and no error: still loading. */}
+          {!rows && !error ? (
             <SkeletonList />
           ) : !rows ? null : rows.length === 0 ? (
             <div className="py-4 text-sm text-slate-500">

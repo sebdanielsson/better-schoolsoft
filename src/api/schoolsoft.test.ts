@@ -7,6 +7,7 @@ import {
   bootstrapSchoolsoftSession,
   cookieSessionFocus,
   fetchHolisticAssessments,
+  fetchScheduleLessons,
 } from "./schoolsoft.ts";
 import { clearSessionCaches } from "../lib/session-caches.ts";
 import { isoWeek } from "../lib/dates.ts";
@@ -147,6 +148,45 @@ void test("cookie requests give up after one failed renewal", async () => {
     await assert.rejects(fetchHolisticAssessments("s"), /\(401\)/);
     assert.equal(bootstraps, 2);
     assert.equal(cookieSessionFocus(), null, "a failed renewal isn't cached");
+  } finally {
+    globalThis.fetch = realFetch;
+    clearSessionCaches();
+  }
+});
+
+/* A request sent with the expired cookie whose 401 lands after another
+ * request already renewed must reuse that renewal, not mint again. */
+void test("a late 401 after a finished renewal retries without re-minting", async () => {
+  const realFetch = globalThis.fetch;
+  let bootstraps = 0;
+  let expired = false;
+  let releaseSlow: (() => void) | null = null;
+  globalThis.fetch = ((url: string) => {
+    if (url.includes("/eva-apps/auth/login/parent")) {
+      bootstraps++;
+      expired = false;
+      return Promise.resolve(new Response(null, { status: 200 }));
+    }
+    const status = expired ? 401 : 200;
+    const res = () => (status === 200 ? new Response("[1]") : new Response(null, { status }));
+    if (url.includes("/lessons/week/") && !releaseSlow) {
+      return new Promise<Response>((resolve) => {
+        releaseSlow = () => resolve(res());
+      });
+    }
+    return Promise.resolve(res());
+  }) as typeof fetch;
+  try {
+    clearSessionCaches();
+    await bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
+    expired = true;
+    /* The schedule request is sent while expired; its 401 is held back. */
+    const slow = fetchScheduleLessons("s", 1);
+    await fetchHolisticAssessments("s");
+    assert.equal(bootstraps, 2, "the fast request renewed once");
+    releaseSlow!();
+    assert.deepEqual(await slow, [1]);
+    assert.equal(bootstraps, 2, "the late 401 reused that renewal");
   } finally {
     globalThis.fetch = realFetch;
     clearSessionCaches();

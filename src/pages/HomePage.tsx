@@ -30,6 +30,7 @@ interface Tiles {
 }
 
 const noTiles: Tiles = { currentLesson: null, nextLesson: null, nextEvent: null };
+const NO_LESSONS: ScheduleLesson[] = [];
 
 export default function HomePage() {
   const { session, getEvaToken } = useAuth();
@@ -38,7 +39,11 @@ export default function HomePage() {
    * re-fetching the parent record. */
   const { parentUserId, child } = useHeroData();
 
-  const [scheduleLessons, setScheduleLessons] = useState<ScheduleLesson[]>([]);
+  /* Tagged with the child they belong to, so a sibling switch never shows the
+   * previous child's lessons while (or if) the new ones fail to load. */
+  const [schedule, setSchedule] = useState<{ child: number; lessons: ScheduleLesson[] } | null>(
+    null,
+  );
   const [tiles, setTiles] = useState<Tiles>(noTiles);
   const [news, setNews] = useState<EvaNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +60,8 @@ export default function HomePage() {
     let cancelled = false;
     setLoading(true);
     setNewsLoading(true);
+    /* News is per child; the skeleton covers the gap. */
+    setNews([]);
 
     void (async () => {
       const token = await getEvaToken().catch(() => null);
@@ -129,7 +136,7 @@ export default function HomePage() {
           fetchScheduleLessons(session.school, nextWeekNumber).catch(() => [] as ScheduleLesson[]),
         ]);
         if (cancelled) return;
-        setScheduleLessons([...thisWeek, ...nextWeek]);
+        setSchedule({ child: child.studentId, lessons: [...thisWeek, ...nextWeek] });
       } catch {
         /* the card falls back to Eva's tiles alone */
       }
@@ -146,7 +153,9 @@ export default function HomePage() {
       <NextBookingCard />
       <ScheduleCard
         loading={loading}
-        scheduleLessons={scheduleLessons}
+        scheduleLessons={
+          schedule && schedule.child === child?.studentId ? schedule.lessons : NO_LESSONS
+        }
         currentTile={tiles.currentLesson}
         nextTile={tiles.nextLesson}
         today={today}

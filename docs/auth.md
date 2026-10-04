@@ -37,7 +37,10 @@ The session has exactly one child in focus server-side, so `src/api/schoolsoft.t
 - `useSchoolsoftContext().withCookies` rejects a response if the focus changed mid-request, so one child's data is never cached under a sibling's keys.
 - Upstream drops idle sessions and answers 401. `cookieFetch` then re-mints the same focus with the newest Eva token and retries once; concurrent 401s share one renewal.
 
-Pages should call cookie endpoints through `useSchoolsoftContext` rather than bootstrapping by hand.
+Two ways to call a cookie endpoint safely:
+
+- **Cached reads** (anything stored in the query cache under child-scoped keys) must go through `useSchoolsoftContext().withCookies`, so a response served for a sibling is rejected rather than cached.
+- **Effect-local reads** may call `bootstrapSchoolsoftSession` and the endpoint directly (as `HomePage`, `SchedulePage` and `WeekCard` do), provided the effect depends on the child, ignores results once cleaned up (a `cancelled` flag), and tags any state it keeps with the child so a sibling's data is never rendered. A child switch re-runs the effect, whose own bootstrap is serialized after the old one.
 
 ### Removed: legacy app token
 

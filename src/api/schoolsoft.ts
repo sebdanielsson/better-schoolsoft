@@ -1296,6 +1296,9 @@ interface FocusEntry {
   args: BootstrapArgs;
   /** In-flight re-bootstrap after a 401, shared by every request that hit it. */
   renewal?: Promise<void>;
+  /** Completed renewals. A request remembers the count it was sent under, so
+   *  a 401 that arrives after someone else already renewed just retries. */
+  renewals: number;
 }
 type BootstrapArgs = [
   school: string,
@@ -1375,7 +1378,7 @@ function focusEntry(
   const previous = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
   const args: BootstrapArgs = [school, evaToken, userId, orgId, studentId];
   const promise = previous.then(() => mintCookies(...args));
-  const entry: FocusEntry = { key, promise, args };
+  const entry: FocusEntry = { key, promise, args, renewals: 0 };
   sessionFocus = entry;
   /* Don't cache a failure: the next caller should try again. */
   promise.catch(() => {
@@ -1388,13 +1391,19 @@ function focusEntry(
  *  session (idle timeout answers 401). The entry is kept, not replaced: its
  *  identity is the focus token `withCookies` compares, and the focus hasn't
  *  changed. Returns false when there is nothing to renew or it failed. */
-async function renewFocus(entry: FocusEntry): Promise<boolean> {
+async function renewFocus(entry: FocusEntry, sentUnder: number): Promise<boolean> {
   if (sessionFocus !== entry) return false;
+  /* Renewed since this request went out: its 401 is stale, just retry. */
+  if (!entry.renewal && entry.renewals !== sentUnder) return true;
   /* Also becomes the entry's promise, so a child switch queued meanwhile
    * chains behind the renewal instead of racing it. */
-  entry.renewal ??= entry.promise = mintCookies(...entry.args).finally(() => {
-    entry.renewal = undefined;
-  });
+  entry.renewal ??= entry.promise = mintCookies(...entry.args)
+    .then(() => {
+      entry.renewals++;
+    })
+    .finally(() => {
+      entry.renewal = undefined;
+    });
   try {
     await entry.renewal;
     return true;
@@ -1409,8 +1418,9 @@ async function renewFocus(entry: FocusEntry): Promise<boolean> {
 async function cookieFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const req = (): Promise<Response> => fetch(url, { ...init, credentials: "include" });
   const focus = sessionFocus;
+  const sentUnder = focus?.renewals ?? 0;
   const res = await req();
-  if (res.status !== 401 || !focus || !(await renewFocus(focus))) return res;
+  if (res.status !== 401 || !focus || !(await renewFocus(focus, sentUnder))) return res;
   return req();
 }
 
