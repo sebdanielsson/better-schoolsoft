@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  acquireCookieFocus,
   bitmaskToWeeks,
   bootstrapSchoolsoftSession,
   cookieSessionFocus,
@@ -114,6 +115,31 @@ void test("cookieSessionFocus changes on every re-focus, even back to the same c
     await bootstrapSchoolsoftSession("s", "t", 1, 2, 200);
     await bootstrapSchoolsoftSession("s", "t", 1, 2, 100);
     assert.notEqual(cookieSessionFocus(), first, "A → B → A yields a new token");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+void test("acquireCookieFocus returns the awaited exchange's token, not a queued sibling's", async () => {
+  const realFetch = globalThis.fetch;
+  const pending: Array<() => void> = [];
+  globalThis.fetch = (() =>
+    new Promise<Response>((resolve) => {
+      pending.push(() => resolve(new Response(null, { status: 200 })));
+    })) as typeof fetch;
+  try {
+    clearSessionCaches();
+    const forA = acquireCookieFocus("s", "t", 1, 2, 100);
+    /* The guardian switches to B before A's exchange has finished. */
+    const switchToB = bootstrapSchoolsoftSession("s", "t", 1, 2, 200);
+    await new Promise((r) => setTimeout(r, 0));
+    pending.shift()!();
+    const tokenA = await forA;
+    /* A's caller must not see B's token as its own. */
+    assert.notEqual(tokenA, cookieSessionFocus());
+    await new Promise((r) => setTimeout(r, 0));
+    pending.shift()!();
+    await switchToB;
   } finally {
     globalThis.fetch = realFetch;
   }

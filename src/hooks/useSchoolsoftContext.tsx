@@ -1,7 +1,11 @@
 import { useCallback, useMemo } from "react";
 import { useAuth } from "./useAuth.tsx";
 import { useHeroData } from "./useHeroData.tsx";
-import { bootstrapSchoolsoftSession, cookieSessionFocus } from "../api/schoolsoft.ts";
+import {
+  acquireCookieFocus,
+  bootstrapSchoolsoftSession,
+  cookieSessionFocus,
+} from "../api/schoolsoft.ts";
 
 export interface SchoolsoftContext {
   school: string;
@@ -50,17 +54,21 @@ export function useSchoolsoftContext(): SchoolsoftContext | null {
 
   const withCookies = useCallback(
     async <T,>(fn: () => Promise<T>): Promise<T> => {
-      await cookieSession();
-      const focus = cookieSessionFocus();
+      if (!school || !parentUserId || !orgId || !studentId) {
+        throw new Error("Session is not ready yet");
+      }
+      /* The token of the exchange we actually waited on — not a re-read of
+       * the global, which may already name a sibling's queued switch. */
+      const focus = await acquireCookieFocus(school, await token(), parentUserId, orgId, studentId);
       const result = await fn();
-      /* Any re-bootstrap since (even back to this same child) replaced the
-       * focus token, so the response may have been served for a sibling. */
-      if (focus === null || cookieSessionFocus() !== focus) {
+      /* Any re-bootstrap since (another child, or back to this one) replaced
+       * the focus token, so the response may have been served for a sibling. */
+      if (cookieSessionFocus() !== focus) {
         throw new Error("The child in focus changed while loading. Try again.");
       }
       return result;
     },
-    [cookieSession],
+    [school, parentUserId, orgId, studentId, token],
   );
 
   return useMemo(() => {

@@ -1407,8 +1407,34 @@ export function bootstrapSchoolsoftSession(
   orgId: number,
   studentId: number,
 ): Promise<void> {
+  return focusEntry(school, evaToken, userId, orgId, studentId).promise;
+}
+
+/** Bootstrap the cookie session for this focus and resolve to the focus
+ *  token of the exchange that was actually awaited. Callers compare it with
+ *  `cookieSessionFocus()` after their request: re-reading the global after
+ *  the await could already return a sibling's queued token. */
+export async function acquireCookieFocus(
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): Promise<object> {
+  const entry = focusEntry(school, evaToken, userId, orgId, studentId);
+  await entry.promise;
+  return entry;
+}
+
+function focusEntry(
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): { key: string; promise: Promise<void> } {
   const key = cookieFocusKey(school, userId, orgId, studentId);
-  if (sessionFocus?.key === key) return sessionFocus.promise;
+  if (sessionFocus?.key === key) return sessionFocus;
   /* Run exchanges one after another: if two overlapped and the older one
    * landed last, the cookies would point at the old child while
    * sessionFocus named the new one. Chaining keeps "last started" equal to
@@ -1435,12 +1461,13 @@ export function bootstrapSchoolsoftSession(
       throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
     }
   });
-  sessionFocus = { key, promise };
+  const entry = { key, promise };
+  sessionFocus = entry;
   /* Don't cache a failure: the next caller should try again. */
   promise.catch(() => {
-    if (sessionFocus?.promise === promise) sessionFocus = null;
+    if (sessionFocus === entry) sessionFocus = null;
   });
-  return promise;
+  return entry;
 }
 
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
