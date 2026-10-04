@@ -51,16 +51,15 @@ async function handler(request: Request): Promise<Response> {
    * POSTs (the OAuth code/refresh exchange, subject-warning confirm) carry
    * everything in the query string and send no body — passing `body` +
    * `duplex: "half"` for those made the runtime answer 500. */
-  const contentLength = request.headers.get("content-length");
-  /* A body arrives either with a non-zero Content-Length or streamed
-   * (Transfer-Encoding: chunked, no length). Neither is true for the
-   * query-string-only POSTs above. */
-  const chunked = /\bchunked\b/i.test(request.headers.get("transfer-encoding") ?? "");
+  /* A Web Request knows whether it carries a body: `request.body` is null
+   * for the query-string-only POSTs above, and non-null for any payload,
+   * whether it arrived with Content-Length, chunked, or with the framing
+   * headers stripped by an adapter. An explicit zero length is no body. */
   const hasBody =
     request.method !== "GET" &&
     request.method !== "HEAD" &&
     request.body !== null &&
-    ((contentLength !== null && contentLength !== "0") || chunked);
+    request.headers.get("content-length") !== "0";
   if (hasBody) {
     init.body = request.body;
     // @ts-expect-error — duplex is required for streaming request bodies
