@@ -69,6 +69,17 @@ export interface WeekItem {
   activityId?: number;
 }
 
+/** True for entries spanning more than a week (term projects, standing
+ *  assessments), which the week strip can hide. Counted in calendar days so
+ *  a DST change inside the span doesn't tip an exact week over. */
+export function isLongRunning(item: WeekItem): boolean {
+  const days = Math.round(
+    (startOfDay(new Date(item.end)).getTime() - startOfDay(new Date(item.start)).getTime()) /
+      86_400_000,
+  );
+  return days > 7;
+}
+
 /** Parse SchoolSoft's zone-less "YYYY-MM-DD[THH:mm]" as local time. */
 function localMs(s: string): number {
   const [d, t = "00:00"] = s.split("T");

@@ -26,9 +26,38 @@ import {
   mondayOf,
   sameLocalDate,
 } from "../lib/dates.ts";
-import { scheduleLessonToLesson, weekItems, type WeekItem } from "../lib/schedule.ts";
+import {
+  isLongRunning,
+  scheduleLessonToLesson,
+  weekItems,
+  type WeekItem,
+} from "../lib/schedule.ts";
 
 const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+const SHOW_LONG_KEY = "bss_schedule_show_long";
+
+/** Whether to show long-running items (term projects and the like), which
+ *  otherwise sit in the week strip every week. Remembered per browser. */
+function useShowLongRunning(): [boolean, (show: boolean) => void] {
+  const [show, setShow] = useState(() => {
+    try {
+      return localStorage.getItem(SHOW_LONG_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const update = (next: boolean) => {
+    setShow(next);
+    try {
+      if (next) localStorage.setItem(SHOW_LONG_KEY, "1");
+      else localStorage.removeItem(SHOW_LONG_KEY);
+    } catch {
+      /* storage unavailable: the choice lasts for this visit */
+    }
+  };
+  return [show, update];
+}
 
 const navButtonClass =
   "inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-600 transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-700";
@@ -111,6 +140,9 @@ export default function SchedulePage() {
   }, [current]);
 
   const items = useMemo(() => weekItems(current?.items ?? [], monday), [current, monday]);
+  const [showLong, setShowLong] = useShowLongRunning();
+  const longCount = items.allWeek.filter(isLongRunning).length;
+  const stripItems = showLong ? items.allWeek : items.allWeek.filter((it) => !isLongRunning(it));
 
   return (
     <div>
@@ -168,16 +200,34 @@ export default function SchedulePage() {
         <>
           {items.allWeek.length > 0 && (
             <section className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
-              <h3 className="mb-2 text-[0.75rem] font-bold tracking-[0.05em] text-slate-500 uppercase">
-                This week
-              </h3>
-              <ul className="flex flex-wrap gap-2">
-                {items.allWeek.map((it) => (
-                  <li key={it.key}>
-                    <ItemChip item={it} spanLabel />
-                  </li>
-                ))}
-              </ul>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[0.75rem] font-bold tracking-[0.05em] text-slate-500 uppercase">
+                  This week
+                </h3>
+                {longCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowLong(!showLong)}
+                    aria-pressed={showLong}
+                    className="text-xs font-medium text-slate-500 transition-colors hover:text-blue-600"
+                  >
+                    {showLong ? "Hide long-running" : `Show ${longCount} long-running`}
+                  </button>
+                )}
+              </div>
+              {stripItems.length > 0 ? (
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {stripItems.map((it) => (
+                    <li key={it.key}>
+                      <ItemChip item={it} spanLabel />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-[0.8rem] text-slate-500">
+                  Only long-running items this week.
+                </p>
+              )}
             </section>
           )}
           {current.lessons.length === 0 && Object.values(items.byDay).every((l) => !l.length) ? (

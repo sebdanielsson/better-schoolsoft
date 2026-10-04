@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  isLongRunning,
   lessonAbsence,
   scheduleLessonToLesson,
   scheduleLessonsForDate,
@@ -163,4 +164,56 @@ void test("weekItems puts timed entries in their day and spans in the week strip
     allWeek.map((i) => i.title),
     ["Homework"],
   );
+});
+
+void test("isLongRunning flags entries spanning more than a week", () => {
+  const { allWeek } = weekItems(
+    [
+      {
+        name: "Term project",
+        startDate: "2026-08-18",
+        endDate: "2026-12-19T00:00",
+        allDay: true,
+        category: "test",
+      },
+      {
+        name: "Week homework",
+        startDate: "2026-10-02T00:00",
+        endDate: "2026-10-08T00:00",
+        allDay: true,
+        category: "test",
+      },
+      {
+        name: "Exactly a week",
+        startDate: "2026-10-05T00:00",
+        endDate: "2026-10-12T00:00",
+        allDay: true,
+        category: "test",
+      },
+    ],
+    new Date(2026, 9, 5),
+  );
+  assert.deepEqual(
+    allWeek.map((i) => [i.title, isLongRunning(i)]),
+    [
+      ["Term project", true],
+      ["Week homework", false],
+      ["Exactly a week", false],
+    ],
+  );
+});
+
+void test("isLongRunning counts calendar days, so a week across DST is not long", () => {
+  /* 19 → 26 Oct 2026 spans the 25 Oct clock change in Europe: 7 calendar
+   * days but 7 days + 1 h of elapsed time. */
+  const item = (start: Date, end: Date) => ({
+    key: "k",
+    kind: "test" as const,
+    title: "t",
+    start: start.getTime(),
+    end: end.getTime(),
+    allDay: true,
+  });
+  assert.equal(isLongRunning(item(new Date(2026, 9, 19), new Date(2026, 9, 26))), false);
+  assert.equal(isLongRunning(item(new Date(2026, 9, 19), new Date(2026, 9, 27))), true);
 });
