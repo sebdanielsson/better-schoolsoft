@@ -4,6 +4,13 @@ import { formatDate, formatTime, sameLocalDate } from "../lib/dates.ts";
 import { lastIncludedMs, type WeekItem } from "../lib/schedule.ts";
 import { cn } from "../lib/utils.ts";
 
+/** How each kind is named in lists. */
+export const KIND_LABEL: Record<WeekItem["kind"], string> = {
+  test: "Test / homework",
+  booking: "Booking",
+  event: "Event",
+};
+
 export const ITEM_STYLE: Record<WeekItem["kind"], { icon: typeof Star; className: string }> = {
   test: { icon: ClipboardCheck, className: "border-rose-200 bg-rose-50 text-rose-900" },
   booking: { icon: CalendarClock, className: "border-sky-200 bg-sky-50 text-sky-900" },

@@ -7,9 +7,7 @@ import {
   fetchEvaCurrentLesson,
   fetchEvaNextLesson,
   fetchEvaNews,
-  fetchEvaNextCalendarEvent,
   fetchScheduleLessons,
-  type EvaCalendarEvent,
   type EvaLessonTile,
   type EvaNewsItem,
   type ScheduleLesson,
@@ -26,10 +24,9 @@ import { isoDay, isoWeek } from "../lib/dates.ts";
 interface Tiles {
   currentLesson: EvaLessonTile | null;
   nextLesson: EvaLessonTile | null;
-  nextEvent: EvaCalendarEvent | null;
 }
 
-const noTiles: Tiles = { currentLesson: null, nextLesson: null, nextEvent: null };
+const noTiles: Tiles = { currentLesson: null, nextLesson: null };
 const NO_LESSONS: ScheduleLesson[] = [];
 
 export default function HomePage() {
@@ -52,7 +49,7 @@ export default function HomePage() {
   const today = useNow();
   const todayDayIdx = isoDay(today);
 
-  /* Eva tiles (current/next lesson, next event) and news. News lands on its
+  /* Eva tiles (current/next lesson) and news. News lands on its
    * own so its card can swap from skeleton to list without waiting on the
    * slower tile bundle. */
   useEffect(() => {
@@ -90,16 +87,14 @@ export default function HomePage() {
       const week = isoWeek(new Date());
       /* Tiles always describe today; the iOS app clamps the day to 1–5. */
       const day = Math.min(Math.max(todayDayIdx, 1), 5);
-      const [cur, nxt, nev] = await Promise.allSettled([
+      const [cur, nxt] = await Promise.allSettled([
         fetchEvaCurrentLesson(session.school, token, orgId, studentId, week, day),
         fetchEvaNextLesson(session.school, token, orgId, studentId, week, day),
-        fetchEvaNextCalendarEvent(session.school, token, parentUserId, orgId, studentId),
       ]);
       if (cancelled) return;
       setTiles({
         currentLesson: cur.status === "fulfilled" ? cur.value : null,
         nextLesson: nxt.status === "fulfilled" ? nxt.value : null,
-        nextEvent: nev.status === "fulfilled" ? nev.value : null,
       });
       setLoading(false);
     })();
@@ -163,7 +158,7 @@ export default function HomePage() {
       <LunchCard />
       <AssignmentsCard />
       <PlanningsCard />
-      <EventsCard loading={loading} nextEvent={tiles.nextEvent} />
+      <EventsCard />
       <NewsCard loading={newsLoading} news={news} />
     </div>
   );

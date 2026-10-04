@@ -8,6 +8,7 @@ import {
   isLongRunning,
   lastIncludedMs,
   lessonStartMs,
+  nextEntries,
   lessonAbsence,
   scheduleLessonToLesson,
   scheduleLessonsForDate,
@@ -330,4 +331,37 @@ void test("agenda lists ongoing entries, then upcoming ones by start day", () =>
     "today's earlier entries still count; duplicates, plannings and out-of-range entries are dropped",
   );
   assert.equal(days[1]!.items[1]!.subject, "Chemistry");
+});
+
+void test("nextEntries picks the next upcoming, unfinished, short entries", () => {
+  const now = new Date(2026, 9, 5, 12, 0);
+  const entry = (
+    name: string,
+    startDate: string,
+    endDate: string,
+    allDay = false,
+  ): CalendarItem => ({
+    name,
+    startDate,
+    endDate,
+    allDay,
+    category: "test",
+  });
+  const picked = nextEntries(
+    toWeekItems([
+      entry("Later", "2026-10-20T09:00", "2026-10-20T10:00"),
+      entry("Done this morning", "2026-10-05T08:00", "2026-10-05T09:00"),
+      entry("This afternoon", "2026-10-05T13:00", "2026-10-05T14:00"),
+      entry("All day today", "2026-10-05", "2026-10-06T00:00", true),
+      entry("Term task", "2026-10-05", "2026-12-19T00:00", true),
+      entry("Started last week", "2026-09-30T00:00", "2026-10-07T00:00", true),
+      entry("Tomorrow", "2026-10-06T08:30", "2026-10-06T09:30"),
+    ]),
+    now,
+    3,
+  );
+  assert.deepEqual(
+    picked.map((i) => i.title),
+    ["All day today", "This afternoon", "Tomorrow"],
+  );
 });

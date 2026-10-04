@@ -213,3 +213,13 @@ export function lastIncludedMs(item: WeekItem): number {
   const atMidnight = end.getHours() === 0 && end.getMinutes() === 0;
   return atMidnight && item.end > item.start ? item.end - 1 : item.end;
 }
+
+/** The next `n` entries for the Home card: starting today or later, not yet
+ *  over, and not long-running (those would sit at the top all term). */
+export function nextEntries(items: WeekItem[], now: Date, n: number): WeekItem[] {
+  const today = startOfDay(now).getTime();
+  return items
+    .filter((it) => it.start >= today && lastIncludedMs(it) >= now.getTime() && !isLongRunning(it))
+    .sort((a, b) => a.start - b.start)
+    .slice(0, n);
+}

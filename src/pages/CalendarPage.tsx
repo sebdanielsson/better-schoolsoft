@@ -1,19 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth.tsx";
-import { useHeroData } from "../hooks/useHeroData.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useShowLongRunning } from "../hooks/useShowLongRunning.ts";
-import {
-  bootstrapSchoolsoftSession,
-  fetchCalendarAgenda,
-  fetchCalendarPsEntities,
-  fetchCalendarTimeBookings,
-  fetchEvaNextCalendarEvent,
-  type CalendarItem,
-  type EvaCalendarEvent,
-} from "../api/schoolsoft.ts";
-import { ITEM_STYLE } from "../components/CalendarItemChip.tsx";
+import { useCalendarAgenda } from "../hooks/useCalendarAgenda.ts";
+import { ITEM_STYLE, KIND_LABEL } from "../components/CalendarItemChip.tsx";
 import { addDays, formatDate, formatTime, sameLocalDate, startOfDay } from "../lib/dates.ts";
 import {
   agenda,
@@ -27,108 +17,20 @@ import { cn } from "../lib/utils.ts";
 /** How far ahead the agenda looks, and how much "Show more" adds. */
 const RANGE_WEEKS = 8;
 
-const KIND_LABEL: Record<WeekItem["kind"], string> = {
-  test: "Test / homework",
-  booking: "Booking",
-  event: "Event",
-};
-
-function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** Eva's "next calendar event" tile, which comes from school news rather
- *  than the web calendar, in the calendar feeds' shape. */
-function evaEventToItem(e: EvaCalendarEvent): CalendarItem {
-  const start = e.fromDate.slice(0, 16);
-  return {
-    name: e.title,
-    description: e.description,
-    startDate: start,
-    endDate: (e.toDate ?? e.fromDate).slice(0, 16),
-    allDay: !start.includes("T"),
-    category: "event",
-    typeName: e.eventTypeInfo,
-  };
-}
-
-interface AgendaData {
-  /** Child + range the data was loaded for; nothing else is ever shown. */
-  key: string;
-  items: CalendarItem[];
-}
-
 /** Upcoming tests and homework, bookings and school events — the web
  *  calendar's feeds minus the lessons, which the Schedule page shows. */
 export default function CalendarPage() {
-  const { session, getEvaToken } = useAuth();
-  const { parentUserId, child, loading: heroLoading } = useHeroData();
-  const studentId = child?.studentId ?? null;
-  const orgId = child?.schools[0]?.orgId ?? session?.orgId ?? null;
-
   const now = useNow();
   const from = useMemo(() => startOfDay(now), [now]);
   const [weeks, setWeeks] = useState(RANGE_WEEKS);
   const to = useMemo(() => addDays(from, weeks * 7), [from, weeks]);
-  const key = `${orgId}:${studentId}@${isoDate(from)}+${weeks}`;
 
-  const [data, setData] = useState<AgendaData | null>(null);
-  const [error, setError] = useState<{ key: string; message: string } | null>(null);
+  const { items, error: failed } = useCalendarAgenda(from, to);
   const [showLong, setShowLong] = useShowLongRunning();
 
-  useEffect(() => {
-    if (!session || !parentUserId || !studentId || !orgId) return;
-    let cancelled = false;
-    const school = session.school;
-
-    void (async () => {
-      try {
-        const token = await getEvaToken();
-        if (!token) throw new Error("You are signed out. Sign in again to continue.");
-        /* The calendar feeds read the cookie session's child in focus. */
-        await bootstrapSchoolsoftSession(school, token, parentUserId, orgId, studentId);
-        const results = await Promise.allSettled([
-          fetchCalendarAgenda(school, isoDate(from), isoDate(addDays(to, -1))),
-          fetchCalendarTimeBookings(school),
-          fetchCalendarPsEntities(school),
-          fetchEvaNextCalendarEvent(school, token, parentUserId, orgId, studentId).then((e) =>
-            e ? [evaEventToItem(e)] : [],
-          ),
-        ]);
-        if (cancelled) return;
-        /* Each feed is optional, but if every one failed there's nothing
-         * trustworthy to show. */
-        if (results.every((r) => r.status === "rejected")) {
-          throw (results[0] as PromiseRejectedResult).reason;
-        }
-        setData({
-          key,
-          items: results.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
-        });
-      } catch (e: unknown) {
-        if (!cancelled) {
-          setData((prev) => (prev?.key === key ? null : prev));
-          setError({ key, message: e instanceof Error ? e.message : "Failed to load calendar" });
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session, getEvaToken, parentUserId, studentId, orgId, from, to, key]);
-
-  const current = data?.key === key ? data : null;
-  const noAccount = !heroLoading && (!parentUserId || !studentId);
-  const failed = noAccount
-    ? "Couldn't load your account details. Reload the page to try again."
-    : error?.key === key && !current
-      ? error.message
-      : null;
-
   const { ongoing, days } = useMemo(
-    () => agenda(toWeekItems(current?.items ?? []), from, to),
-    [current, from, to],
+    () => agenda(toWeekItems(items ?? []), from, to),
+    [items, from, to],
   );
   const longCount = ongoing.filter(isLongRunning).length;
   const shownOngoing = showLong ? ongoing : ongoing.filter((it) => !isLongRunning(it));
@@ -143,7 +45,7 @@ export default function CalendarPage() {
             Tests, homework, bookings and school events · next {weeks} weeks
           </p>
         </div>
-        {current && (
+        {items && (
           <span className="text-[0.85rem] text-slate-500">
             {upcomingCount} upcoming{ongoing.length > 0 && ` · ${ongoing.length} ongoing`}
           </span>
@@ -154,7 +56,7 @@ export default function CalendarPage() {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {failed}
         </div>
-      ) : !current ? (
+      ) : !items ? (
         <div className="px-8 py-16 text-center text-[0.95rem] text-slate-500">
           Loading calendar…
         </div>
