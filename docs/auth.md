@@ -54,11 +54,12 @@ Earlier versions also used the app-key API (`/rest/app/token`, `/api/lessons`, `
 - keep upstream redirects on our origin;
 - add `Content-Security-Policy: sandbox` and `nosniff` to every response.
 
-In production the function also refuses (#72):
+The production function and the dev proxy also refuse (#72):
 
-- methods other than GET, HEAD, POST, PUT and DELETE;
-- requests a browser marks as cross-site (`Sec-Fetch-Site`, falling back to `Origin`);
-- upstream paths outside the shapes the SPA calls (`eva/api/`, `eva-apps/auth/`, `rest-api/`, `jsp/student/`, `files/`).
+- requests a browser marks as cross-site (`Sec-Fetch-Site`, falling back to `Origin`; production only);
+- anything outside the API namespaces the SPA calls. `eva/api/` and `rest-api/` accept GET, HEAD, POST, PUT and DELETE; `eva-apps/auth/`, `jsp/student/` and `files/` are read-only (GET, HEAD).
+
+This is a namespace allowlist, not a route list: the relay only acts with the caller's own cookies or token, so enumerating routes would add upkeep without separating privileges. A new endpoint in a new namespace needs an entry in `api/_lib/proxy-rewrites.ts`; the dev proxy enforces the same rules, so a miss shows up in `pnpm dev`.
 
 A Vercel Firewall rule rate-limits `/schoolsoft/*` per IP; it lives in the project's firewall settings, not in this repo.
 

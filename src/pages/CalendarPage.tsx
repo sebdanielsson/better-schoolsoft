@@ -33,11 +33,13 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<"eva" | "empty">("empty");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
     async function load(): Promise<void> {
       /* Try Eva first. */
@@ -79,8 +81,14 @@ export default function CalendarPage() {
             }
             return;
           }
-        } catch {
-          /* fall through to empty */
+        } catch (e) {
+          /* A failed load is not an empty calendar. */
+          if (!cancelled) {
+            setEvents([]);
+            setSource("empty");
+            setError(e instanceof Error ? e.message : "Failed to load calendar");
+          }
+          return;
         }
       }
       if (!cancelled) {
@@ -124,7 +132,11 @@ export default function CalendarPage() {
         </span>
       </div>
 
-      {events.length === 0 ? (
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
+      ) : events.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-white px-8 py-12 text-center text-slate-500">
           <p>
             {source === "eva"

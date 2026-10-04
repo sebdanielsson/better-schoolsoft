@@ -79,16 +79,26 @@ export function upstreamUrlFor(requestUrl: string): string | null {
   return target.origin === UPSTREAM_ORIGIN ? target.href : null;
 }
 
-/** Upstream path shapes the SPA actually calls (see `src/api/schoolsoft.ts`),
- *  (the school list lives under the pseudo-school `internal/`), plus `files/` for the download redirects `rewriteLocation` keeps on our
- *  origin. Everything else — the React webview, JSP admin pages, arbitrary
- *  probing — is refused, so the proxy isn't a general relay to SchoolSoft. */
-const ALLOWED_PATH =
-  /^\/(?:files\/|[a-z0-9][a-z0-9-]*\/(?:eva\/api\/|eva-apps\/auth\/|rest-api\/|jsp\/student\/|files\/))/;
+/** The upstream API namespaces the SPA calls (see `src/api/schoolsoft.ts`)
+ *  and the methods it uses in each. This is a namespace allowlist, not a
+ *  per-route one: it shuts out the React webview, admin JSPs and everything
+ *  else on the host, and keeps the read-only areas read-only. It doesn't
+ *  enumerate routes — the relay only ever acts with the caller's own cookies
+ *  or token, so a route list would add upkeep, not privilege separation.
+ *  The school list lives under the pseudo-school `internal/`; `files/` covers
+ *  the download redirects `rewriteLocation` keeps on our origin. */
+const READ_WRITE_PATH = /^\/[a-z0-9][a-z0-9-]*\/(?:eva\/api|rest-api)\//;
+const READ_ONLY_PATH =
+  /^\/(?:files\/|[a-z0-9][a-z0-9-]*\/(?:eva-apps\/auth\/|jsp\/student\/|files\/))/;
+const READ_METHODS = new Set(["GET", "HEAD"]);
+const WRITE_METHODS = new Set(["POST", "PUT", "DELETE"]);
 
-/** True when the upstream URL's path is one the SPA uses. */
-export function isAllowedUpstreamPath(upstreamUrl: string): boolean {
-  return ALLOWED_PATH.test(new URL(upstreamUrl).pathname);
+/** True when the SPA makes requests of this method to this upstream path. */
+export function isAllowedUpstreamRequest(method: string, upstreamUrl: string): boolean {
+  const path = new URL(upstreamUrl).pathname;
+  if (READ_METHODS.has(method)) return READ_WRITE_PATH.test(path) || READ_ONLY_PATH.test(path);
+  if (WRITE_METHODS.has(method)) return READ_WRITE_PATH.test(path);
+  return false;
 }
 
 /** Reject requests a browser tells us came from another site.

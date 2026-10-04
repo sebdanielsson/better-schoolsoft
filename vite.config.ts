@@ -6,7 +6,7 @@ import path from "node:path";
 import {
   LOGOUT_PATH,
   PROXY_SECURITY_HEADERS,
-  isAllowedUpstreamPath,
+  isAllowedUpstreamRequest,
   logoutCookies,
   rewriteCookiePath,
   rewriteLocation,
@@ -30,7 +30,9 @@ function schoolsoftProxyGuard(): Plugin {
           res.end();
           return;
         }
-        if (!isAllowedUpstreamPath(`https://sms.schoolsoft.se${pathname}`)) {
+        if (
+          !isAllowedUpstreamRequest(req.method ?? "GET", `https://sms.schoolsoft.se${pathname}`)
+        ) {
           res.statusCode = 404;
           res.end("Not found");
           return;

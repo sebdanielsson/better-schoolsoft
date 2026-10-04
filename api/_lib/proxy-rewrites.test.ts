@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   LOGOUT_PATH,
-  isAllowedUpstreamPath,
+  isAllowedUpstreamRequest,
   logoutCookies,
   isSameOriginRequest,
   rewriteCookiePath,
@@ -124,22 +124,42 @@ test("upstreamUrlFor returns null instead of throwing on unparseable paths", () 
 
 const UP = "https://sms.schoolsoft.se";
 
-test("isAllowedUpstreamPath accepts every path shape the SPA calls", () => {
+test("isAllowedUpstreamRequest allows every read the SPA makes", () => {
   for (const p of [
     "/internal/rest-api/login/schoollist",
     "/engelska/eva/api/v1/parent",
     "/engelska/eva/api/v2/parent/1/schools/2/news?studentId=3",
     "/engelska/eva-apps/auth/login/parent",
-    "/engelska/rest-api/login/token?grant_type=refresh_token",
     "/engelska/rest-api/parent/calendar/lessons/week/40",
     "/engelska/jsp/student/right_student_library_download.jsp?requestid=1",
     "/files/abc/report.pdf",
   ]) {
-    assert.ok(isAllowedUpstreamPath(UP + p), p);
+    assert.ok(isAllowedUpstreamRequest("GET", UP + p), p);
+    assert.ok(isAllowedUpstreamRequest("HEAD", UP + p), p);
   }
 });
 
-test("isAllowedUpstreamPath refuses everything else", () => {
+test("isAllowedUpstreamRequest allows writes only to the Eva and rest-api namespaces", () => {
+  for (const [m, p] of [
+    ["POST", "/engelska/rest-api/login/token?grant_type=refresh_token"],
+    ["POST", "/engelska/rest-api/parent/holistic_assessment/1/subject_warning/confirm"],
+    ["PUT", "/engelska/eva/api/v1/parent/1/profile/contact"],
+    ["DELETE", "/engelska/eva/api/v1/parent/1/schools/2/messages/3"],
+  ]) {
+    assert.ok(isAllowedUpstreamRequest(m!, UP + p), `${m} ${p}`);
+  }
+  for (const [m, p] of [
+    ["POST", "/engelska/jsp/student/right_student_library.jsp"],
+    ["POST", "/engelska/eva-apps/auth/login/parent"],
+    ["DELETE", "/files/abc/report.pdf"],
+    ["PATCH", "/engelska/eva/api/v1/parent"],
+    ["TRACE", "/engelska/eva/api/v1/parent"],
+  ]) {
+    assert.ok(!isAllowedUpstreamRequest(m!, UP + p), `${m} ${p}`);
+  }
+});
+
+test("isAllowedUpstreamRequest refuses everything outside the namespaces", () => {
   for (const p of [
     "/",
     "/engelska",
@@ -149,16 +169,16 @@ test("isAllowedUpstreamPath refuses everything else", () => {
     "/engelska/api/lessons/student/1",
     "/Engelska/eva/api/v1/parent",
   ]) {
-    assert.ok(!isAllowedUpstreamPath(UP + p), p);
+    assert.ok(!isAllowedUpstreamRequest("GET", UP + p), p);
   }
 });
 
-test("isAllowedUpstreamPath sees the normalised path, so dot segments can't escape", () => {
+test("isAllowedUpstreamRequest sees the normalised path, so dot segments can't escape", () => {
   for (const p of ["engelska/eva/api/../../react/", "engelska/eva/api/%2e%2e/%2e%2e/react/"]) {
     const out = upstreamUrlFor(
       `https://app.example/api/schoolsoft?__proxy_path=${encodeURIComponent(p)}`,
     );
-    assert.ok(out !== null && !isAllowedUpstreamPath(out), `${p} -> ${out}`);
+    assert.ok(out !== null && !isAllowedUpstreamRequest("GET", out), `${p} -> ${out}`);
   }
 });
 
