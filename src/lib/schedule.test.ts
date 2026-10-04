@@ -249,7 +249,12 @@ void test("lastIncludedMs treats a midnight end as the previous day", () => {
   const span = item(new Date(2026, 8, 25), new Date(2026, 9, 1));
   assert.equal(new Date(lastIncludedMs(span)).getDate(), 30, "ends Wed 30 Sep, not Thu 1 Oct");
   const point = item(new Date(2026, 9, 1), new Date(2026, 9, 1));
-  assert.equal(lastIncludedMs(point), point.end, "zero-length keeps its date");
+  assert.equal(
+    new Date(lastIncludedMs(point)).toDateString(),
+    new Date(point.end).toDateString(),
+    "zero-length all-day keeps its date",
+  );
+  assert.ok(lastIncludedMs(point) > point.end, "…and covers the whole day");
   const timed = item(new Date(2026, 9, 1, 9), new Date(2026, 9, 1, 10));
   assert.equal(lastIncludedMs(timed), timed.end);
 });
@@ -441,5 +446,53 @@ void test("nextEntries ignores entries starting at or after the range end", () =
   assert.deepEqual(
     picked.map((i) => i.title),
     ["In range"],
+  );
+});
+
+void test("nextEntries keeps a zero-length all-day entry for its whole day", () => {
+  const now = new Date(2026, 9, 5, 15, 0);
+  const picked = nextEntries(
+    toWeekItems([
+      {
+        name: "Sports day",
+        startDate: "2026-10-05",
+        endDate: "2026-10-05",
+        allDay: true,
+        category: "event",
+      },
+      {
+        name: "Timed, over",
+        startDate: "2026-10-05T09:00",
+        endDate: "2026-10-05T09:00",
+        allDay: false,
+        category: "event",
+      },
+    ]),
+    now,
+    new Date(2026, 10, 30),
+    3,
+  );
+  assert.deepEqual(
+    picked.map((i) => i.title),
+    ["Sports day"],
+  );
+});
+
+void test("toWeekItems keeps descriptions as plain text", () => {
+  const [item] = toWeekItems([
+    {
+      name: "Trip",
+      description: "Bring <b>lunch</b>  &amp; water",
+      startDate: "2026-10-05",
+      endDate: "2026-10-05",
+      allDay: true,
+      category: "event",
+    },
+  ]);
+  assert.equal(
+    item!.description,
+    "Bring lunch & water"
+      .replace("&", "&amp;")
+      .replace("&amp;", typeof DOMParser === "undefined" ? "&amp;" : "&"),
   );
 });

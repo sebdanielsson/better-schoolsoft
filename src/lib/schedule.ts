@@ -6,6 +6,7 @@ import type {
 } from "../api/schoolsoft.ts";
 import { addDays, isoDay, isoWeek, isoWeekYear, sameLocalDate, startOfDay } from "./dates.ts";
 import { expandSubjectCode } from "./subject-codes.ts";
+import { htmlToText } from "./text.ts";
 
 /** Map a `ScheduleLesson` from the rest-api schedule onto the `Lesson` shape
  *  the lesson rows render.
@@ -69,6 +70,8 @@ export interface WeekItem {
   activityId?: number;
   /** Long subject name for tests ("Chemistry"), when the code is known. */
   subject?: string;
+  /** Plain-text description, when the feed has one. */
+  description?: string;
 }
 
 /** True for entries spanning more than a week (term projects, standing
@@ -127,6 +130,7 @@ export function toWeekItems(items: CalendarItem[]): WeekItem[] {
       allDay: it.allDay,
       activityId: it.activityId || undefined,
       subject: subject && subject !== it.activity ? subject : undefined,
+      description: it.description ? htmlToText(it.description) || undefined : undefined,
     });
   }
   return out;
@@ -209,8 +213,13 @@ export function lessonStartMs(l: Lesson): number {
 
 /** The last instant an entry covers, for labelling its date span. A span
  *  that ends exactly at midnight ends the day before (as `weekItems`
- *  already assumes); timed entries and zero-length ones keep their end. */
+ *  already assumes), a zero-length all-day entry covers its whole day, and
+ *  other timed or zero-length entries keep their end. */
 export function lastIncludedMs(item: WeekItem): number {
+  /* A zero-length all-day entry (same start and end date) is that whole day. */
+  if (item.allDay && item.end <= item.start) {
+    return addDays(startOfDay(new Date(item.start)), 1).getTime() - 1;
+  }
   const end = new Date(item.end);
   const atMidnight = end.getHours() === 0 && end.getMinutes() === 0;
   return atMidnight && item.end > item.start ? item.end - 1 : item.end;

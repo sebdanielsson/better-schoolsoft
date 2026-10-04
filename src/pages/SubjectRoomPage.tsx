@@ -359,13 +359,15 @@ function SubjectPicker({
   }
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className="-mx-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 text-left transition-colors hover:bg-slate-100 data-popup-open:bg-slate-100"
-        aria-label={`${title}, switch subject`}
-      >
-        <h2 className="truncate text-2xl font-bold tracking-tight">{title}</h2>
-        <ChevronDown aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-400" />
-      </DropdownMenuTrigger>
+      {/* The heading wraps the button (not the reverse): a button can't
+       * contain a heading, and this keeps it in heading navigation. */}
+      <h2 className="text-2xl font-bold tracking-tight">
+        <DropdownMenuTrigger className="-mx-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 text-left transition-colors hover:bg-slate-100 data-popup-open:bg-slate-100">
+          <span className="truncate">{title}</span>
+          <span className="sr-only"> (switch subject)</span>
+          <ChevronDown aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-400" />
+        </DropdownMenuTrigger>
+      </h2>
       <DropdownMenuContent align="start" className="max-h-[420px] w-[280px] overflow-y-auto">
         <DropdownMenuRadioGroup
           value={String(current)}
