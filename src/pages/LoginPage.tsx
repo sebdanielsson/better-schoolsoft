@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [schoolOptions, setSchoolOptions] = useState<SchoolOption[]>([]);
   const [schoolsLoading, setSchoolsLoading] = useState(true);
   const [schoolsError, setSchoolsError] = useState<string | null>(null);
-  const [usertypeOauth, setUsertypeOauth] = useState<"parent" | "student" | "staff">("parent");
+  const [role, setRole] = useState<"parent" | "student" | "staff">("parent");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,13 +53,13 @@ export default function LoginPage() {
     savePkce({
       ...pkce,
       school: schoolSlug,
-      usertype: usertypeOauth,
+      usertype: role,
       ts: Date.now(),
     });
     window.location.assign(
       buildAuthorizeUrl({
         school: schoolSlug,
-        usertype: usertypeOauth,
+        usertype: role,
         redirectUri,
         pkce,
       }),
@@ -98,9 +98,9 @@ export default function LoginPage() {
           </label>
           <select
             id="oauth-usertype"
-            value={usertypeOauth}
+            value={role}
             onChange={(e) => {
-              setUsertypeOauth(e.target.value as "parent" | "student" | "staff");
+              setRole(e.target.value as "parent" | "student" | "staff");
             }}
             className={inputClass}
           >

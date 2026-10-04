@@ -5,6 +5,10 @@
  *  After successful auth, it redirects to `redirect_uri?code=<6char>&state=<state>`.
  */
 
+import { isSchoolSlug } from "../lib/safe-url.ts";
+
+const USERTYPES: readonly string[] = ["parent", "student", "staff"];
+
 const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 
 function randomString(len: number): string {
@@ -73,9 +77,11 @@ export function buildAuthorizeUrl(args: {
   usertype: "parent" | "student" | "staff";
   redirectUri: string;
   pkce: PkcePair;
-  origin?: string;
 }): string {
-  const origin = args.origin ?? "https://sms.schoolsoft.se";
+  /* Both values come from form controls and land in the URL path, so re-check them here at the
+   * sink rather than trusting the caller's types — a tampered <select> can submit anything. */
+  if (!isSchoolSlug(args.school)) throw new Error("Invalid school identifier");
+  if (!USERTYPES.includes(args.usertype)) throw new Error("Invalid user type");
   const qs = new URLSearchParams({
     state: args.pkce.state,
     client_id: "vApp",
@@ -83,5 +89,5 @@ export function buildAuthorizeUrl(args: {
     code_challenge: args.pkce.codeChallenge,
     code_challenge_method: "S256",
   });
-  return `${origin}/${args.school}/react/#/login/${args.usertype}?${qs.toString()}`;
+  return `https://sms.schoolsoft.se/${args.school}/react/#/login/${args.usertype}?${qs.toString()}`;
 }
