@@ -58,7 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as Session) : null;
+      const stored = raw ? (JSON.parse(raw) as Session) : null;
+      /* Sessions from the removed password login carry only the legacy app
+       * token, which nothing reads any more. Treat them as signed out so the
+       * user re-authenticates (and the OAuth callback starts from a clean
+       * slate instead of patching tokens onto the stale record). */
+      if (stored && !stored.eva) {
+        localStorage.removeItem(STORAGE_KEY);
+        return null;
+      }
+      return stored;
     } catch {
       return null;
     }
