@@ -3,8 +3,10 @@ import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData, useIsDefaultChild } from "../hooks/useHeroData.tsx";
 import {
+  bootstrapSchoolsoftSession,
   fetchLessons,
   fetchEvaLessonsWeek,
+  fetchScheduleLessons,
   bitmaskToWeeks,
   formatLessonTime,
   lessonDayIndex,
@@ -14,6 +16,7 @@ import {
 import { cn } from "../lib/utils.ts";
 import { schoolSoftUrl } from "../lib/safe-url.ts";
 import { isoDay, isoWeek } from "../lib/dates.ts";
+import { scheduleLessonToLesson } from "../lib/schedule.ts";
 
 const ORDERED_DAYS: Array<{ idx: number; label: string }> = [
   { idx: 1, label: "Monday" },
@@ -33,9 +36,9 @@ type ScheduleRow = {
   teacher?: string;
 };
 
-function legacyToRow(l: Lesson): ScheduleRow {
+function legacyToRow(l: Lesson, source = "legacy"): ScheduleRow {
   return {
-    id: `legacy-${l.id}`,
+    id: `${source}-${l.id}`,
     startTime: l.startTime,
     endTime: l.endTime,
     subject: l.groupName ?? l.subjectName ?? `Subject ${l.subjectId}`,
@@ -57,14 +60,14 @@ function evaToRow(l: EvaLessonTile, idx: number): ScheduleRow {
 
 export default function SchedulePage() {
   const { session, getToken, getEvaToken } = useAuth();
-  const { child } = useHeroData();
+  const { parentUserId, child } = useHeroData();
   const childStudentId = child?.studentId ?? null;
   const childOrgId = child?.schools[0]?.orgId ?? null;
   const isDefaultChild = useIsDefaultChild();
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<"eva" | "legacy" | "empty">("empty");
+  const [source, setSource] = useState<"rest" | "eva" | "legacy" | "empty">("empty");
 
   const now = useNow();
   const currentWeek = isoWeek(now);
@@ -78,8 +81,36 @@ export default function SchedulePage() {
     setError(null);
 
     async function load() {
-      /* Try Eva first when an OAuth token is available. */
       const evaToken = await getEvaToken().catch(() => null);
+      /* The confirmed week schedule (HomePage's source too). It reads the
+       * cookie session's child in focus, so bootstrap for the selected child —
+       * that keeps siblings apart. */
+      if (evaToken && parentUserId && childStudentId) {
+        try {
+          await bootstrapSchoolsoftSession(
+            session!.school,
+            evaToken,
+            parentUserId,
+            childOrgId ?? session!.orgId,
+            childStudentId,
+          );
+          const lessons = await fetchScheduleLessons(session!.school, selectedWeek);
+          const rest = lessons
+            .filter((l) => l.category === "lesson")
+            .map((l) => legacyToRow(scheduleLessonToLesson(l), "rest"));
+          if (rest.length) {
+            if (!cancelled) {
+              setRows(rest);
+              setSource("rest");
+            }
+            return;
+          }
+        } catch {
+          /* fall through to the Eva probe */
+        }
+      }
+      /* Unconfirmed Eva week endpoints (see fetchEvaLessonsWeek), kept as a
+       * fallback for tenants whose rest-api schedule comes back empty. */
       if (evaToken) {
         try {
           /* The Eva endpoint needs the child in focus, which the hero data
@@ -121,7 +152,7 @@ export default function SchedulePage() {
           (l) => l.weeks && bitmaskToWeeks(l.weeks).includes(selectedWeek),
         );
         if (!cancelled) {
-          setRows(filtered.map(legacyToRow));
+          setRows(filtered.map((l) => legacyToRow(l)));
           setSource(filtered.length ? "legacy" : "empty");
         }
       } catch {
@@ -141,7 +172,16 @@ export default function SchedulePage() {
     return () => {
       cancelled = true;
     };
-  }, [session, getToken, getEvaToken, selectedWeek, childStudentId, childOrgId, isDefaultChild]);
+  }, [
+    session,
+    getToken,
+    getEvaToken,
+    selectedWeek,
+    parentUserId,
+    childStudentId,
+    childOrgId,
+    isDefaultChild,
+  ]);
 
   const byDay = useMemo(() => {
     const map: Record<number, ScheduleRow[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };

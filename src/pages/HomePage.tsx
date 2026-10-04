@@ -31,12 +31,12 @@ import LunchCard from "../components/LunchCard.tsx";
 import PlanningsCard from "../components/PlanningsCard.tsx";
 import NextBookingCard from "../components/NextBookingCard.tsx";
 import Avatar from "../components/Avatar.tsx";
-import { expandSubjectCode } from "../lib/subject-codes.ts";
 import NewsPopover, { type NewsPopoverData } from "../components/NewsPopover.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
-import { addDays, isoDay, isoWeek, startOfDay } from "../lib/dates.ts";
+import { addDays, isoDay, isoWeek, sameLocalDate, startOfDay } from "../lib/dates.ts";
 import { decodeEntities } from "../lib/text.ts";
+import { scheduleLessonsForDate } from "../lib/schedule.ts";
 
 /** Preview text: take the first 5 non-empty lines so posts that open with a one-line
  *  greeting (e.g. "Kära vårdnadshavare,") still show meaningful content underneath. */
@@ -98,10 +98,6 @@ function relativeDay(ms: number): string {
 }
 
 /* ---------- Day-nav helpers for the combined schedule card ---------- */
-
-function sameLocalDate(a: Date, b: Date): boolean {
-  return startOfDay(a).getTime() === startOfDay(b).getTime();
-}
 
 /** The school day a card should land on by default — today during school
  *  hours, otherwise the next Mon–Fri. */
@@ -745,34 +741,6 @@ export default function HomePage() {
       />
     </div>
   );
-}
-
-/** Map a `ScheduleLesson` from the rest-api schedule onto the legacy `Lesson`
- *  shape so the existing `LessonRow` keeps working unchanged.
- *  - Standard Skolverket subject codes ("Ma", "SO", …) expanded to long names.
- *  - Teacher fields come back as "A,B" without a space — normalize so the row
- *    reads "A, B" cleanly. */
-function scheduleLessonsForDate(scheduleLessons: ScheduleLesson[], date: Date): Lesson[] {
-  return scheduleLessons
-    .filter((l) => l.category === "lesson")
-    .filter((l) => sameLocalDate(new Date(l.startDate), date))
-    .sort((a, b) => a.startDate.localeCompare(b.startDate))
-    .map((l) => {
-      const name = expandSubjectCode(l.name);
-      const teacher = l.teacher ? l.teacher.replace(/,\s*/g, ", ") : undefined;
-      return {
-        id: l.eventId,
-        subjectId: l.eventId,
-        /* LessonRow / formatLessonTime expects "YYYY-MM-DD HH:MM:SS.0". */
-        startTime: `${l.startDate.replace("T", " ")}:00.0`,
-        endTime: `${l.endDate.replace("T", " ")}:00.0`,
-        groupName: name,
-        subjectName: name,
-        teacherName: teacher,
-        location: l.room || undefined,
-        weeks: 0,
-      };
-    });
 }
 
 /** Combine an Eva lesson tile with the schedule-derived fallback. Eva wins

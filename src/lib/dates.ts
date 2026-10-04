@@ -30,6 +30,11 @@ export function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+/** True when `a` and `b` fall on the same local calendar day. */
+export function sameLocalDate(a: Date, b: Date): boolean {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
 /** Monday 00:00 (local) of the ISO week containing `d`. */
 export function mondayOf(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - (isoDay(d) - 1));
