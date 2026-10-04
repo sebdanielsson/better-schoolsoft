@@ -34,6 +34,7 @@ pnpm preview         # serve the production build
 - Type-aware lint rules run through `oxlint-tsgolint`; it is a devDependency and needs no extra flags beyond `options.typeAware` in `oxlint.config.ts`.
 - Tests use Node's built-in runner with native TypeScript type stripping, so Node >= 22.18 is required. `mise.toml` and `devEngines` both pin Node 24.
 - Oxfmt sorts Tailwind classes using `src/index.css` as the v4 stylesheet entry point. Re-run `pnpm run fmt` after touching `className` strings.
+- SchoolSoft is reached through two transports (Eva bearer and a cookie session) behind the `/schoolsoft/*` proxy. Read `docs/auth.md` before adding an endpoint; `docs/eva-api.md` lists the endpoints.
 - `.agents/` and `.claude/` hold vendored agent skills pinned by `skills-lock.json`. They are excluded from both oxfmt and oxlint — do not reformat them.
 
 ## Checklist

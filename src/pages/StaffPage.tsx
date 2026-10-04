@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronDown, Search, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
@@ -51,10 +51,11 @@ export default function StaffPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [activeRoles, setActiveRoles] = useState<Set<string>>(new Set());
-  /* Bumped (throttled) as staff details land so the Roles column / dropdown fill
-   * in progressively. The cache itself lives in staff-cache; this is just a
-   * "something changed, re-render" pulse. */
-  const [detailsTick, setDetailsTick] = useState(0);
+  /* Roles by teacherId, snapshotted from the staff cache (throttled) as the
+   * preloads land, so the Roles column and dropdown fill in progressively.
+   * Each value is the cached detail's own array, so a row's roles keep their
+   * identity across snapshots and memoized rows skip re-rendering. */
+  const [rolesById, setRolesById] = useState<ReadonlyMap<number, readonly string[]>>(new Map());
 
   const [searchParams, setSearchParams] = useSearchParams();
   const staffParam = searchParams.get("staff");
@@ -67,11 +68,20 @@ export default function StaffPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    let members: EvaStaffMember[] = [];
+    const snapshotRoles = () => {
+      const next = new Map<number, readonly string[]>();
+      for (const m of members) {
+        const roles = getCachedStaffDetail(orgId, m.teacherId)?.roles;
+        if (roles) next.set(m.teacherId, roles);
+      }
+      setRolesById(next);
+    };
     const scheduleRefresh = () => {
       if (cancelled || refreshTimer.current !== null) return;
       refreshTimer.current = window.setTimeout(() => {
         refreshTimer.current = null;
-        if (!cancelled) setDetailsTick((t) => t + 1);
+        if (!cancelled) snapshotRoles();
       }, 200);
     };
 
@@ -94,7 +104,10 @@ export default function StaffPage() {
               });
           }
         }
+        members = (data ?? []).flatMap((g) => g.data);
         setGroups(data ?? []);
+        /* Details cached by an earlier visit show up immediately. */
+        snapshotRoles();
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load staff");
       } finally {
@@ -110,23 +123,12 @@ export default function StaffPage() {
     };
   }, [session, getEvaToken, orgId]);
 
-  /* Union of every role ever seen in the cache, sorted. Recomputes on detailsTick
-   * so the dropdown fills in as preloads land. */
+  /* Union of every role loaded so far, sorted. */
   const allRoles = useMemo(() => {
     const set = new Set<string>();
-    for (const g of groups) {
-      for (const m of g.data) {
-        for (const r of getCachedStaffDetail(orgId ?? 0, m.teacherId)?.roles ?? []) set.add(r);
-      }
-    }
+    for (const roles of rolesById.values()) for (const r of roles) set.add(r);
     return Array.from(set).sort((a, b) => a.localeCompare(b, "sv"));
-    /* detailsTick is a change signal, not a value the memo reads: the staff cache is a
-     * module-level Map filled by background preloads, so the tick is what tells React the
-     * derived value is stale. Dropping it (as the rule suggests) freezes the roles dropdown
-     * at whatever had loaded on first render. Fixing it properly means moving the cache into
-     * state, which is a refactor of this page rather than a lint fix. */
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailsTick, groups, orgId]);
+  }, [rolesById]);
 
   const visibleGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -137,15 +139,14 @@ export default function StaffPage() {
         data: g.data.filter((m) => {
           if (q && !fullName(m).toLowerCase().includes(q)) return false;
           if (filteringByRole) {
-            const roles = getCachedStaffDetail(orgId ?? 0, m.teacherId)?.roles ?? [];
+            const roles = rolesById.get(m.teacherId) ?? [];
             if (!roles.some((r) => activeRoles.has(r))) return false;
           }
           return true;
         }),
       }))
       .filter((g) => g.data.length > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- see the note on allRoles above
-  }, [groups, query, activeRoles, detailsTick]);
+  }, [groups, query, activeRoles, rolesById]);
 
   const totalShown = visibleGroups.reduce((n, g) => n + g.data.length, 0);
   const totalAll = groups.reduce((n, g) => n + g.data.length, 0);
@@ -159,11 +160,20 @@ export default function StaffPage() {
     });
   }
 
-  function openMember(id: number) {
-    const next = new URLSearchParams(searchParams);
-    next.set("staff", String(id));
-    setSearchParams(next, { replace: false });
-  }
+  /* Stable so the memoized rows don't re-render when the URL changes. */
+  const openMember = useCallback(
+    (id: number) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("staff", String(id));
+          return next;
+        },
+        { replace: false },
+      );
+    },
+    [setSearchParams],
+  );
 
   function closeMember() {
     const next = new URLSearchParams(searchParams);
@@ -304,6 +314,7 @@ export default function StaffPage() {
                   type={g.type}
                   color={typeColor(g.type)}
                   members={g.data}
+                  rolesById={rolesById}
                   onOpen={openMember}
                 />
               ))}
@@ -325,10 +336,11 @@ interface GroupBlockProps {
   type: string;
   color: string;
   members: EvaStaffMember[];
+  rolesById: ReadonlyMap<number, readonly string[]>;
   onOpen: (id: number) => void;
 }
 
-function GroupBlock({ type, color, members, onOpen }: GroupBlockProps) {
+function GroupBlock({ type, color, members, rolesById, onOpen }: GroupBlockProps) {
   return (
     <>
       <TableRow className="bg-slate-50 hover:bg-slate-50">
@@ -343,18 +355,30 @@ function GroupBlock({ type, color, members, onOpen }: GroupBlockProps) {
         </TableCell>
       </TableRow>
       {members.map((m) => (
-        <StaffRow key={m.teacherId} member={m} onOpen={onOpen} />
+        <StaffRow
+          key={m.teacherId}
+          member={m}
+          roles={rolesById.get(m.teacherId) ?? NO_ROLES}
+          onOpen={onOpen}
+        />
       ))}
     </>
   );
 }
 
-function StaffRow({ member, onOpen }: { member: EvaStaffMember; onOpen: (id: number) => void }) {
-  const orgId = useChildOrgId();
-  /* Read straight from the cache. The parent re-renders (via detailsTick) as
-   * preloads land, which drags this row's read along with it — no per-row
-   * subscription needed. */
-  const roles = getCachedStaffDetail(orgId ?? 0, member.teacherId)?.roles ?? [];
+const NO_ROLES: readonly string[] = [];
+
+/* Memoized: a roles snapshot re-renders only the rows whose roles changed,
+ * not all few hundred of them every 200 ms while preloads land. */
+const StaffRow = memo(function StaffRow({
+  member,
+  roles,
+  onOpen,
+}: {
+  member: EvaStaffMember;
+  roles: readonly string[];
+  onOpen: (id: number) => void;
+}) {
   return (
     <TableRow
       onClick={() => {
@@ -391,4 +415,4 @@ function StaffRow({ member, onOpen }: { member: EvaStaffMember; onOpen: (id: num
       </TableCell>
     </TableRow>
   );
-}
+});

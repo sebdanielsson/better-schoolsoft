@@ -55,9 +55,6 @@ export default function OAuthCallbackPage() {
             "bss_session",
             JSON.stringify({
               school: stored.school,
-              appKey: "",
-              token: "",
-              expiryDate: "1970-01-01 00:00:00.0",
               orgId: firstSchool.orgId,
               orgName: firstSchool.name,
               name: parent.firstName,

@@ -21,14 +21,7 @@ import { btnPrimaryClass } from "../components/ConfirmDialog.tsx";
 import { Skeleton } from "../components/ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
 import { safeHttpUrl } from "../lib/safe-url.ts";
-
-/** Decode HTML entities (&eacute;, &bull;, &ndash;, &amp; …) using a throwaway textarea. */
-function decodeEntities(s: string): string {
-  if (typeof document === "undefined") return s;
-  const el = document.createElement("textarea");
-  el.innerHTML = s;
-  return el.value;
-}
+import { decodeEntities } from "../lib/text.ts";
 
 const URL_RE = /(https?:\/\/[^\s<>"']+)/g;
 

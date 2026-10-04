@@ -196,11 +196,3 @@ export function useChildOrgId(): number | null {
   const { child } = useHeroData();
   return child?.schools[0]?.orgId ?? session?.orgId ?? null;
 }
-
-/** True unless a sibling other than the login's first child is in focus. The
- *  legacy app-key API (schedule, calendar, notices, lunch fallbacks) can only
- *  describe that default child, so its data must not be shown for others. */
-export function useIsDefaultChild(): boolean {
-  const { child, children } = useHeroData();
-  return !child || children[0]?.studentId === child.studentId;
-}

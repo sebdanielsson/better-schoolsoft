@@ -3,19 +3,6 @@ import { registerSessionCache } from "../lib/session-caches.ts";
 
 const BASE = "/schoolsoft";
 
-const APP_HEADERS = {
-  appversion: "2.3.2",
-  appos: "android",
-} as const;
-
-/* ---------- Legacy app token (used by the older REST endpoints below;
- * issued during OAuth-bootstrapped sessions via fetchToken). ---------- */
-
-export interface TokenResponse {
-  token: string;
-  expiryDate: string;
-}
-
 export type UserType = "0" | "1" | "2";
 const USER_LABEL: Record<UserType, string> = {
   "0": "Staff",
@@ -25,28 +12,6 @@ const USER_LABEL: Record<UserType, string> = {
 
 export function userTypeLabel(t: UserType): string {
   return USER_LABEL[t];
-}
-
-export async function fetchToken(school: string, appKey: string): Promise<TokenResponse> {
-  const res = await fetch(`${BASE}/${school}/rest/app/token`, {
-    headers: { ...APP_HEADERS, appkey: appKey, deviceid: "" },
-  });
-  if (!res.ok) throw new Error(`Token refresh failed (${res.status})`);
-  return res.json() as Promise<TokenResponse>;
-}
-
-export function isTokenExpired(expiryDate: string): boolean {
-  const clean = expiryDate.replace(/\.\d+$/, "");
-  const expiry = new Date(clean.replace(" ", "T"));
-  /* An unparseable date yields NaN, and every comparison against NaN is false —
-   * which previously reported the token as *valid* and sent it anyway. Treat
-   * anything we cannot read as expired so the caller refreshes instead. */
-  if (Number.isNaN(expiry.getTime())) return true;
-  return Date.now() + 5 * 60 * 1000 > expiry.getTime();
-}
-
-function authHeaders(token: string): HeadersInit {
-  return { ...APP_HEADERS, token };
 }
 
 /* ---------- Data types ---------- */
@@ -72,17 +37,6 @@ export interface Lesson {
   teacherName?: string;
   groupName?: string;
   location?: string;
-  weeks?: number;
-}
-
-export interface CalendarEvent {
-  id: number;
-  eventStart: number;
-  eventEnd?: number;
-  title: string;
-  description?: string;
-  eventTypeInfo?: string;
-  noticeType?: string;
 }
 
 /** New-style "Eva" types (mirrors the captured iOS API). */
@@ -226,48 +180,6 @@ export interface EvaTokenResponse {
   expires: number;
 }
 
-/* ---------- Data fetchers (legacy app API — works with appKey/token auth) ---------- */
-
-export function fetchLunch(school: string, token: string, orgId: number): Promise<LunchWeek[]> {
-  return getJsonList(`${BASE}/${school}/api/lunchmenus/student/${orgId}`, token);
-}
-
-export function fetchLessons(school: string, token: string, orgId: number): Promise<Lesson[]> {
-  return getJsonList(`${BASE}/${school}/api/lessons/student/${orgId}`, token);
-}
-
-const NOTICE_TYPES = "calendar,schoolcalendar,privatecalendar";
-
-export function fetchCalendar(
-  school: string,
-  token: string,
-  orgId: number,
-  days = 30,
-): Promise<CalendarEvent[]> {
-  const now = Date.now();
-  const end = now + days * 24 * 60 * 60 * 1000;
-  const url = `${BASE}/${school}/api/notices/student/${orgId}/${now}/${end}/${NOTICE_TYPES}`;
-  return getJsonList(url, token);
-}
-
-/** Fetch all kinds of notices over a window — useful for "news" feed.
- *  Mirrors the iOS app's news/latest endpoint by accepting flexible types.
- */
-export function fetchNotices(
-  school: string,
-  token: string,
-  orgId: number,
-  types: string,
-  daysBack = 14,
-  daysAhead = 30,
-): Promise<CalendarEvent[]> {
-  const now = Date.now();
-  const start = now - daysBack * 24 * 60 * 60 * 1000;
-  const end = now + daysAhead * 24 * 60 * 60 * 1000;
-  const url = `${BASE}/${school}/api/notices/student/${orgId}/${start}/${end}/${types}`;
-  return getJsonList(url, token);
-}
-
 /* ---------- Eva (modern OAuth) API ---------- */
 
 /** Refresh an Eva access token using a refresh token. */
@@ -316,7 +228,7 @@ export function fetchEvaLunchWeek(
   return evaGetList(`${BASE}/${school}/eva/api/v1/schools/${orgId}/lunchmenu/${week}`, accessToken);
 }
 
-/** Convert Eva lunch days (Mon=1…Fri=5) into the legacy LunchWeek shape so existing UI works. */
+/** Convert Eva lunch days (Mon=1…Fri=5) into the per-weekday LunchWeek shape the card renders. */
 export function evaLunchToWeek(days: EvaLunchDay[]): LunchWeek | null {
   if (!days.length) return null;
   const week = days[0]?.week ?? 0;
@@ -1376,7 +1288,26 @@ export interface HolisticAssessmentRow {
  *  exactly one (school, guardian, org, child) at a time. Remember which one
  *  the cookies were last minted for, and share the in-flight exchange so a
  *  burst of parallel requests triggers one bootstrap rather than dozens. */
-let sessionFocus: { key: string; promise: Promise<void> } | null = null;
+interface FocusEntry {
+  key: string;
+  promise: Promise<void>;
+  /** What the cookies were minted with, so an expired session can be
+   *  re-minted for the same focus without the caller's help. */
+  args: BootstrapArgs;
+  /** In-flight re-bootstrap after a 401, shared by every request that hit it. */
+  renewal?: Promise<void>;
+  /** Completed renewals. A request remembers the count it was sent under, so
+   *  a 401 that arrives after someone else already renewed just retries. */
+  renewals: number;
+}
+type BootstrapArgs = [
+  school: string,
+  evaToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+];
+let sessionFocus: FocusEntry | null = null;
 
 /** Opaque token for the focus the cookie session was last minted for. A new
  *  token is created for every re-focus, so comparing tokens (not keys) also
@@ -1432,42 +1363,140 @@ function focusEntry(
   userId: number,
   orgId: number,
   studentId: number,
-): { key: string; promise: Promise<void> } {
+): FocusEntry {
   const key = cookieFocusKey(school, userId, orgId, studentId);
-  if (sessionFocus?.key === key) return sessionFocus;
+  if (sessionFocus?.key === key) {
+    /* Keep the newest token for renewFocus; the one we minted with may have
+     * expired by the time upstream drops the cookie session. */
+    sessionFocus.args[1] = evaToken;
+    return sessionFocus;
+  }
   /* Run exchanges one after another: if two overlapped and the older one
    * landed last, the cookies would point at the old child while
    * sessionFocus named the new one. Chaining keeps "last started" equal to
    * "last applied". */
   const previous = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
-  const promise = previous.then(async () => {
-    const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
-      method: "GET",
-      credentials: "include",
-      redirect: "manual",
-      headers: {
-        token: evaToken,
-        userId: String(userId),
-        orgId: String(orgId),
-        childInFocus: String(studentId),
-        userOS: "android",
-        language: "sw",
-      },
-    });
-    /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
-     * Cookies are applied regardless. Any non-redirect status that isn't 2xx
-     * means the bootstrap failed. */
-    if (res.type !== "opaqueredirect" && !res.ok) {
-      throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
-    }
-  });
-  const entry = { key, promise };
+  const args: BootstrapArgs = [school, evaToken, userId, orgId, studentId];
+  const promise = previous.then(() => mintCookies(...args));
+  const entry: FocusEntry = { key, promise, args, renewals: 0 };
   sessionFocus = entry;
   /* Don't cache a failure: the next caller should try again. */
   promise.catch(() => {
     if (sessionFocus === entry) sessionFocus = null;
   });
   return entry;
+}
+
+/** Re-mint the cookies for the current focus after upstream expired the
+ *  session (idle timeout answers 401). The entry is kept, not replaced: its
+ *  identity is the focus token `withCookies` compares, and the focus hasn't
+ *  changed. Returns false when there is nothing to renew or it failed. */
+async function renewFocus(entry: FocusEntry, sentUnder: number): Promise<boolean> {
+  if (sessionFocus !== entry) return false;
+  /* Renewed since this request went out: its 401 is stale, just retry. */
+  if (!entry.renewal && entry.renewals !== sentUnder) return true;
+  /* Also becomes the entry's promise, so a child switch queued meanwhile
+   * chains behind the renewal instead of racing it. */
+  entry.renewal ??= entry.promise = freshToken(entry)
+    .then(() => mintCookies(...entry.args))
+    .then(() => {
+      entry.renewals++;
+    })
+    .finally(() => {
+      entry.renewal = undefined;
+    });
+  try {
+    await entry.renewal;
+    return true;
+  } catch {
+    if (sessionFocus === entry) sessionFocus = null;
+    return false;
+  }
+}
+
+/** Supplies a valid Eva access token (refreshing if needed), registered by
+ *  the auth provider. A renewal can run long after the last bootstrap — e.g.
+ *  a button pressed on a page left idle — when the token the cookies were
+ *  minted with has expired too. */
+let evaTokenSupplier: (() => Promise<string | null>) | null = null;
+
+export function setEvaTokenSupplier(fn: (() => Promise<string | null>) | null): void {
+  evaTokenSupplier = fn;
+}
+
+/** Refresh the entry's token from the supplier when one is registered;
+ *  otherwise keep the newest token a bootstrap caller handed in. */
+async function freshToken(entry: FocusEntry): Promise<void> {
+  const token = await evaTokenSupplier?.().catch(() => null);
+  if (token) entry.args[1] = token;
+}
+
+/** A credentialed request that survives one upstream session expiry: on 401
+ *  it re-mints the cookies for the same focus and retries once. */
+async function cookieFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const req = (): Promise<Response> => fetch(url, { ...init, credentials: "include" });
+  const focus = sessionFocus;
+  const sentUnder = focus?.renewals ?? 0;
+  const res = await req();
+  if (res.status !== 401 || !focus || !(await renewFocus(focus, sentUnder))) return res;
+  return req();
+}
+
+/** Set once the user logs out. Work that was already past its auth checks
+ *  (an effect resuming from `getEvaToken`, a pending renewal) could otherwise
+ *  mint after `__logout` and plant the session cookie again. Signing back in
+ *  goes through SchoolSoft's login page and returns with a full page load,
+ *  which resets this module, so nothing needs to lift the block. */
+let cookieSessionEnded = false;
+
+async function mintCookies(...[school, evaToken, userId, orgId, studentId]: BootstrapArgs) {
+  if (cookieSessionEnded) throw new Error("Signed out");
+  const res = await fetch(`${BASE}/${school}/eva-apps/auth/login/parent`, {
+    method: "GET",
+    credentials: "include",
+    redirect: "manual",
+    headers: {
+      token: evaToken,
+      userId: String(userId),
+      orgId: String(orgId),
+      childInFocus: String(studentId),
+      userOS: "android",
+      language: "sw",
+    },
+  });
+  /* manual redirect → opaqueredirect response (status 0, type 'opaqueredirect').
+   * Cookies are applied regardless. Any non-redirect status that isn't 2xx
+   * means the bootstrap failed. */
+  if (res.type !== "opaqueredirect" && !res.ok) {
+    throw new Error(`SchoolSoft session bootstrap failed (${res.status})`);
+  }
+}
+
+/** Drop the SchoolSoft cookies the proxy planted on our origin. They're
+ *  HttpOnly, so only the proxy's `__logout` route can expire them. Upstream
+ *  has no logout or revoke endpoint — the official app's logout is local-only
+ *  too — so the server-side session simply idles out.
+ *
+ *  Expiry must land after any cookie mint already in flight, or that mint's
+ *  late `Set-Cookie` would restore the session. Every mint (re-focus or
+ *  renewal) is chained onto the current entry's promise, so waiting for it
+ *  covers them all. Call before `clearSessionCaches()` drops the entry.
+ *  Fire-and-forget: `keepalive` lets it finish while the app navigates away. */
+export function endCookieSession(school: string): Promise<void> {
+  cookieSessionEnded = true;
+  const pending = sessionFocus?.promise.catch(() => {}) ?? Promise.resolve();
+  return pending
+    .then(() =>
+      fetch(`${BASE}/${school}/__logout`, {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+      }),
+    )
+    .then(
+      () => {},
+      () => {},
+    );
 }
 
 export async function fetchHolisticAssessments(school: string): Promise<HolisticAssessmentRow[]> {
@@ -1568,9 +1597,9 @@ export async function confirmHolisticAssessmentSubjectWarning(
   school: string,
   id: number,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await cookieFetch(
     `${BASE}/${school}/rest-api/parent/holistic_assessment/${id}/subject_warning/confirm`,
-    { method: "POST", credentials: "include" },
+    { method: "POST" },
   );
   if (!res.ok) throw new Error(`Subject warning confirm failed (${res.status})`);
 }
@@ -1820,7 +1849,7 @@ export function fetchMaterialFiles(school: string, materialId: number): Promise<
 /** Fetch a server-rendered guardian page as text. Needs the cookie session.
  *  Returns null when SchoolSoft bounces app sessions to its "blocked" page. */
 export async function fetchLegacyPage(school: string, page: string): Promise<string | null> {
-  const res = await fetch(`${BASE}/${school}/jsp/student/${page}`, { credentials: "include" });
+  const res = await cookieFetch(`${BASE}/${school}/jsp/student/${page}`);
   if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status})`);
   if (res.url.includes("app_blocked")) return null;
   return decodeLegacyBody(await res.arrayBuffer(), res.headers.get("content-type"));
@@ -1828,9 +1857,8 @@ export async function fetchLegacyPage(school: string, page: string): Promise<str
 
 /** Download a "Files & links" document. */
 export async function fetchLibraryFile(school: string, requestId: number): Promise<Blob> {
-  const res = await fetch(
+  const res = await cookieFetch(
     `${BASE}/${school}/jsp/student/right_student_library_download.jsp?requestid=${encodeURIComponent(String(requestId))}`,
-    { credentials: "include" },
   );
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
   return res.blob();
@@ -2002,25 +2030,11 @@ export async function getSchoolsoftParameters(
 }
 
 async function cookieGet<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await cookieFetch(url);
   if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status}) ${url}`);
   const text = await res.text();
   if (!text) return null as T;
   return JSON.parse(text) as T;
-}
-
-/** Array-safe JSON fetch for the legacy app API. The object-returning helpers
- *  return `null as T` on
- *  an empty body, which is a lie for every fetcher whose return type is an
- *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
- *  reached the UI. An absent or non-array body means "no rows" here. */
-async function getJsonList<T>(url: string, token: string): Promise<T[]> {
-  const res = await fetch(url, { headers: authHeaders(token) });
-  if (!res.ok) throw new Error(`Request failed (${res.status}) ${url}`);
-  const text = await res.text();
-  if (!text) return [];
-  const data: unknown = JSON.parse(text);
-  return Array.isArray(data) ? (data as T[]) : [];
 }
 
 /** Array-returning sibling of `evaGet`. It returns `null as T` on
@@ -2041,7 +2055,7 @@ async function evaGetList<T>(url: string, accessToken: string): Promise<T[]> {
  *  array: callers then crashed on `.map`/`.filter` and the raw TypeError text
  *  reached the UI. An absent or non-array body means "no rows" here. */
 async function cookieGetList<T>(url: string): Promise<T[]> {
-  const res = await fetch(url, { credentials: "include" });
+  const res = await cookieFetch(url);
   if (!res.ok) throw new Error(`Schoolsoft request failed (${res.status}) ${url}`);
   const text = await res.text();
   if (!text) return [];
@@ -2124,43 +2138,6 @@ export function groupSchoolsBySlug(entries: SchoolListEntry[]): SchoolOption[] {
 }
 
 /* ---------- Helpers shared by pages ---------- */
-
-/** ISO week number for a Date (1–53). */
-export function isoWeek(d: Date = new Date()): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
-/** ISO week-numbering year for a Date — usually equal to the calendar year,
- *  but differs in early Jan / late Dec when an ISO week straddles years. */
-export function isoWeekYear(d: Date = new Date()): number {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  return date.getUTCFullYear();
-}
-
-/** ISO day-of-week (Mon=1 … Sun=7). */
-export function isoDay(d: Date = new Date()): number {
-  return d.getDay() === 0 ? 7 : d.getDay();
-}
-
-/** Convert SchoolSoft lessons' bitmask of week numbers to an array. */
-export function bitmaskToWeeks(bitmask: number): number[] {
-  const weeks: number[] = [];
-  /* Bitwise operators coerce to int32, and `1 << i` wraps at i === 32 (`1 << 32`
-   * is 1, not 2**32). The old `bitmask & (1 << i)` therefore made weeks 33+
-   * unreachable and aliased them onto weeks 1-21. A 53-week mask needs more
-   * than 32 bits, so test each bit arithmetically instead — Number is exact
-   * well past 2**53. */
-  for (let i = 0; i < 53; i++) {
-    if (Math.floor(bitmask / 2 ** i) % 2 === 1) weeks.push(i + 1);
-  }
-  return weeks;
-}
 
 /** Format a SchoolSoft start/end time string ("1970-01-01 08:20:00.0") → "08:20". */
 export function formatLessonTime(s: string): string {

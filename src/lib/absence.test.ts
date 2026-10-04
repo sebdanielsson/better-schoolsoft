@@ -7,13 +7,14 @@ import {
   canReportLesson,
   canWithdrawLesson,
   lessonAttendance,
-  mondayOf,
   schoolMidnightMs,
   schoolTimeMs,
   schoolYearWeeks,
 } from "./absence.ts";
-import { isoWeek } from "../api/schoolsoft.ts";
+
 import type { AbsenceLesson } from "../api/schoolsoft.ts";
+import { isoWeek } from "./dates.ts";
+import { mondayOf } from "./dates.ts";
 
 void test("schoolMidnightMs is Swedish midnight in summer and winter time", () => {
   /* 2026-09-30 00:00 CEST (UTC+2) = 2026-09-29T22:00Z */
