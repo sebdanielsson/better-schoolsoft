@@ -197,7 +197,7 @@ importers:
         specifier: ^7.18.4
         version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       shadcn:
-        specifier: ^4.21.2
+        specifier: ^4.21.3
         version: 4.21.4
       tw-animate-css:
         specifier: ^1.4.0
