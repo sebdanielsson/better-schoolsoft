@@ -34,6 +34,7 @@ import {
   PARENT_ID,
   schoolList,
   staffDetail,
+  staffAsTeacher,
   staffGroups,
   teachers,
 } from "./people.ts";
@@ -238,8 +239,11 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
     [
       "PUT",
       r(String.raw`^/eva/api/v1/parent/\d+/profile/(address|personal|contact|notPublish)`),
-      (_m, req) => {
-        Object.assign(s.profile, bodyOf<object>(req));
+      (m, req) => {
+        /* notPublish sends `{ active }`; the others send profile fields. */
+        const body = bodyOf<Record<string, unknown>>(req);
+        if (m[1] === "notPublish") s.profile.notPublish = body.active === true;
+        else Object.assign(s.profile, body);
         return ok();
       },
     ],
@@ -435,7 +439,8 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
       "GET",
       r(String.raw`^/eva/api/v1/schools/\d+/teachers/(\d+)`),
       (m) => {
-        const t = teachers.find((x) => x.teacherId === num(m[1]));
+        /* Any staff member can be a reply recipient, not only teachers. */
+        const t = staffAsTeacher(num(m[1]));
         return t ? json(t) : notFound();
       },
     ],
@@ -665,7 +670,15 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
       "GET",
       r(`${PS}/planning_parts/start-page`),
       (_m, req) =>
-        json(planningRows(s.plannings, weekOffset(num(req.query.get("week") ?? isoWeek())))),
+        json(
+          planningRows(
+            s.plannings,
+            weekOffset(
+              num(req.query.get("week") ?? isoWeek()),
+              num(req.query.get("year") ?? undefined) || undefined,
+            ),
+          ),
+        ),
     ],
     [
       "GET",

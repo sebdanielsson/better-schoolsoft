@@ -5,15 +5,16 @@
  *  Two guarantees:
  *  - No request reaches SchoolSoft. Every `/schoolsoft/*` call is answered
  *    here; one without a route gets a 404 and a console warning instead of
- *    being forwarded.
+ *    being forwarded. Signing in re-enters mock mode (`LoginPage`) instead
+ *    of navigating to SchoolSoft.
  *  - A real session on the same origin is set aside, not used. Entering mock
  *    mode moves it to `bss_real_session` and seeds a mock one; leaving
  *    restores it. */
 
+import { MOCK_FLAG } from "../lib/mock-mode.ts";
 import { createRoutes, type MockRequest } from "./routes.ts";
 import { ROBIN, SCHOOL, SCHOOL_NAME, ORG_ID } from "./people.ts";
 
-const FLAG = "bss_dev_mock";
 const SESSION = "bss_session";
 const CHILD = "bss_child";
 const REAL_SESSION = "bss_real_session";
@@ -32,21 +33,23 @@ export function shouldInstallMocks(): boolean {
   if (typeof window === "undefined") return false;
   const param = new URLSearchParams(window.location.search).get("mock");
   if (param === "1") {
-    localStorage.setItem(FLAG, "1");
+    localStorage.setItem(MOCK_FLAG, "1");
     return true;
   }
   if (param === "0") {
-    localStorage.removeItem(FLAG);
+    localStorage.removeItem(MOCK_FLAG);
     leaveMockSession();
     return false;
   }
-  return localStorage.getItem(FLAG) === "1";
+  return localStorage.getItem(MOCK_FLAG) === "1";
 }
 
 function enterMockSession() {
   const current = localStorage.getItem(SESSION);
   if (isMockSession(current)) return;
-  if (current) {
+  /* Never replace a stash: it holds the session from before mock mode, and
+   * anything non-mock that shows up since can't be a better one. */
+  if (current && !localStorage.getItem(REAL_SESSION)) {
     localStorage.setItem(REAL_SESSION, current);
     const child = localStorage.getItem(CHILD);
     if (child) localStorage.setItem(REAL_CHILD, child);
@@ -72,7 +75,14 @@ function enterMockSession() {
 }
 
 function leaveMockSession() {
-  if (!isMockSession(localStorage.getItem(SESSION))) return;
+  const current = localStorage.getItem(SESSION);
+  /* A real session signed in since takes precedence; drop the stale stash. */
+  if (current && !isMockSession(current)) {
+    localStorage.removeItem(REAL_SESSION);
+    localStorage.removeItem(REAL_CHILD);
+    return;
+  }
+  /* Mock session, or none after a logout in mock mode: restore the stash. */
   const real = localStorage.getItem(REAL_SESSION);
   const realChild = localStorage.getItem(REAL_CHILD);
   if (real) localStorage.setItem(SESSION, real);

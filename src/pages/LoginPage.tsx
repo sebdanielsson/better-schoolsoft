@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { fetchSchoolList, groupSchoolsBySlug, type SchoolOption } from "../api/schoolsoft.ts";
 import { buildAuthorizeUrl, generatePkce, savePkce } from "../api/pkce.ts";
+import { mockModeOn } from "../lib/mock-mode.ts";
 import SchoolCombobox from "../components/SchoolCombobox.tsx";
 import { isSchoolSlug } from "../lib/safe-url.ts";
 
@@ -36,6 +37,12 @@ export default function LoginPage() {
 
   async function startOauthSignIn(e: FormEvent) {
     e.preventDefault();
+    /* In mock mode, signing in re-enters the mock session instead of leaving
+     * for the real SchoolSoft. */
+    if (mockModeOn()) {
+      window.location.assign("/?mock=1");
+      return;
+    }
     setError(null);
     const schoolSlug = school.trim().toLowerCase();
     if (!schoolSlug) {

@@ -26,12 +26,19 @@ export function mondayOfWeek(week: number, year = isoWeekYear(new Date())): Date
   return addDays(mondayOf(jan4), (week - 1) * 7);
 }
 
-/** Offset in weeks between ISO week `week` and the current week. */
+/** Offset in weeks between ISO week `week` and the current week. Endpoints
+ *  that send only a week number mean that week of the current school year
+ *  (week 27 to week 26), as the absence page assumes. */
 export function weekOffset(week: number, year?: number): number {
   const now = new Date();
   const thisMonday = mondayOf(now);
-  const asked = mondayOfWeek(week, year ?? isoWeekYear(now));
-  return Math.round((asked.getTime() - thisMonday.getTime()) / (7 * 86_400_000));
+  let y = year;
+  if (y === undefined) {
+    let startYear = now.getFullYear();
+    if (thisMonday < mondayOfWeek(27, startYear)) startYear -= 1;
+    y = week >= 27 ? startYear : startYear + 1;
+  }
+  return Math.round((mondayOfWeek(week, y).getTime() - thisMonday.getTime()) / (7 * 86_400_000));
 }
 
 export { isoWeek, isoWeekYear };

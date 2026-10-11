@@ -166,13 +166,15 @@ export function newsDetail(x: News): EvaNewsDetail {
   };
 }
 
+/** The outdoor day: this Friday, or next week's once this one is over. */
 export function nextCalendarEvent(): EvaCalendarEvent {
+  const week = weekday(0, 5, 14, 0).getTime() > Date.now() ? 0 : 1;
   return {
     newsId: 900102,
     title: "Outdoor day",
     description: "The whole day in the forest.",
-    fromDate: iso(weekday(0, 5, 8, 15)),
-    toDate: iso(weekday(0, 5, 14, 0)),
+    fromDate: iso(weekday(week, 5, 8, 15)),
+    toDate: iso(weekday(week, 5, 14, 0)),
     eventTypeInfo: "Class 4B",
   };
 }

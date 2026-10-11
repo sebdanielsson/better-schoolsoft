@@ -156,6 +156,11 @@ export function staffDetail(id: number): EvaStaffDetail | null {
   };
 }
 
+export function staffAsTeacher(id: number): EvaTeacher | null {
+  const s = STAFF.find((m) => m.id === id);
+  return s ? { teacherId: s.id, fname: s.first, lname: s.last, picture: "", type: s.group } : null;
+}
+
 /** Message recipients: teachers only, as `/teachers` returns. */
 export const teachers: EvaTeacher[] = STAFF.filter((s) => s.group === "Lärare").map((s) => ({
   teacherId: s.id,

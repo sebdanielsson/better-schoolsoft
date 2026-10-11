@@ -39,7 +39,7 @@ export type NotificationKind =
   | "assessment";
 
 export interface NotificationItem {
-  /** Unique across kinds, e.g. "result:136214". */
+  /** Unique across kinds, e.g. "result:900405". */
   key: string;
   kind: NotificationKind;
   /** Id the mark-read call needs. */

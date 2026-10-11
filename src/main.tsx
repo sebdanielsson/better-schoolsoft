@@ -5,16 +5,12 @@ import App from "./App.tsx";
 import { AuthProvider } from "./hooks/useAuth.tsx";
 import "./index.css";
 
-/** Whether the `?mock=1` preview mode is compiled into this build.
- *
- *  `dev-mocks/` monkey-patches `fetch`, seeds a fake authenticated session
- *  into localStorage, and persists that choice across reloads. It used to be imported unconditionally, so all of it shipped to
- *  production and any visitor following a `?mock=1` link got a fabricated
- *  session on the real origin.
- *
- *  Both operands are statically analysable, so a normal production build drops
- *  the dynamic import and the module with it. Set `VITE_ENABLE_MOCKS=1` at
- *  build time to produce a demo build that keeps it. */
+/* `dev-mocks/` monkey-patches `fetch` and seeds a fake session, so it must
+ * never ship by accident: it used to be imported unconditionally, and any
+ * visitor following a `?mock=1` link got a fabricated session on the real
+ * origin. Both operands are static, so a normal production build drops the
+ * dynamic import below and the module with it. Keep the expression inline:
+ * imported from another module, the bundler no longer folds it. */
 const MOCKS_ENABLED = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MOCKS === "1";
 
 async function bootstrap() {
