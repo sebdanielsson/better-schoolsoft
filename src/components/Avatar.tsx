@@ -4,7 +4,7 @@ import { colorFromName, initials } from "../lib/avatar-helpers.ts";
 
 interface AvatarProps {
   name: string;
-  /** Resource filename like "teacher9840.jpg" or "student115957.jpg". */
+  /** Resource filename like "teacher1234.jpg" or "student5678.jpg". */
   picture?: string | null;
   size?: number;
 }

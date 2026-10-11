@@ -7,9 +7,8 @@ import "./index.css";
 
 /** Whether the `?mock=1` preview mode is compiled into this build.
  *
- *  `dev-mocks.ts` is ~1.5k lines that monkey-patch `fetch`, seed a fake
- *  authenticated session into localStorage, and persist that choice across
- *  reloads. It used to be imported unconditionally, so all of it shipped to
+ *  `dev-mocks/` monkey-patches `fetch`, seeds a fake authenticated session
+ *  into localStorage, and persists that choice across reloads. It used to be imported unconditionally, so all of it shipped to
  *  production and any visitor following a `?mock=1` link got a fabricated
  *  session on the real origin.
  *
@@ -22,7 +21,7 @@ async function bootstrap() {
   /* Awaited before the first render so a mocked `fetch` is in place before any
    * component can issue a request. */
   if (MOCKS_ENABLED) {
-    const { shouldInstallMocks, installMocks } = await import("./dev-mocks.ts");
+    const { shouldInstallMocks, installMocks } = await import("./dev-mocks/index.ts");
     if (shouldInstallMocks()) installMocks();
   }
 

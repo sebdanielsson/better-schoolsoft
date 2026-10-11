@@ -127,11 +127,11 @@ const UP = "https://sms.schoolsoft.se";
 test("isAllowedUpstreamRequest allows every read the SPA makes", () => {
   for (const p of [
     "/internal/rest-api/login/schoollist",
-    "/engelska/eva/api/v1/parent",
-    "/engelska/eva/api/v2/parent/1/schools/2/news?studentId=3",
-    "/engelska/eva-apps/auth/login/parent",
-    "/engelska/rest-api/parent/calendar/lessons/week/40",
-    "/engelska/jsp/student/right_student_library_download.jsp?requestid=1",
+    "/exampleschool/eva/api/v1/parent",
+    "/exampleschool/eva/api/v2/parent/1/schools/2/news?studentId=3",
+    "/exampleschool/eva-apps/auth/login/parent",
+    "/exampleschool/rest-api/parent/calendar/lessons/week/40",
+    "/exampleschool/jsp/student/right_student_library_download.jsp?requestid=1",
     "/files/abc/report.pdf",
   ]) {
     assert.ok(isAllowedUpstreamRequest("GET", UP + p), p);
@@ -141,19 +141,19 @@ test("isAllowedUpstreamRequest allows every read the SPA makes", () => {
 
 test("isAllowedUpstreamRequest allows writes only to the Eva and rest-api namespaces", () => {
   for (const [m, p] of [
-    ["POST", "/engelska/rest-api/login/token?grant_type=refresh_token"],
-    ["POST", "/engelska/rest-api/parent/holistic_assessment/1/subject_warning/confirm"],
-    ["PUT", "/engelska/eva/api/v1/parent/1/profile/contact"],
-    ["DELETE", "/engelska/eva/api/v1/parent/1/schools/2/messages/3"],
+    ["POST", "/exampleschool/rest-api/login/token?grant_type=refresh_token"],
+    ["POST", "/exampleschool/rest-api/parent/holistic_assessment/1/subject_warning/confirm"],
+    ["PUT", "/exampleschool/eva/api/v1/parent/1/profile/contact"],
+    ["DELETE", "/exampleschool/eva/api/v1/parent/1/schools/2/messages/3"],
   ]) {
     assert.ok(isAllowedUpstreamRequest(m!, UP + p), `${m} ${p}`);
   }
   for (const [m, p] of [
-    ["POST", "/engelska/jsp/student/right_student_library.jsp"],
-    ["POST", "/engelska/eva-apps/auth/login/parent"],
+    ["POST", "/exampleschool/jsp/student/right_student_library.jsp"],
+    ["POST", "/exampleschool/eva-apps/auth/login/parent"],
     ["DELETE", "/files/abc/report.pdf"],
-    ["PATCH", "/engelska/eva/api/v1/parent"],
-    ["TRACE", "/engelska/eva/api/v1/parent"],
+    ["PATCH", "/exampleschool/eva/api/v1/parent"],
+    ["TRACE", "/exampleschool/eva/api/v1/parent"],
   ]) {
     assert.ok(!isAllowedUpstreamRequest(m!, UP + p), `${m} ${p}`);
   }
@@ -162,19 +162,22 @@ test("isAllowedUpstreamRequest allows writes only to the Eva and rest-api namesp
 test("isAllowedUpstreamRequest refuses everything outside the namespaces", () => {
   for (const p of [
     "/",
-    "/engelska",
-    "/engelska/react/",
-    "/engelska/jsp/admin/start.jsp",
-    "/engelska/rest/app/token",
-    "/engelska/api/lessons/student/1",
-    "/Engelska/eva/api/v1/parent",
+    "/exampleschool",
+    "/exampleschool/react/",
+    "/exampleschool/jsp/admin/start.jsp",
+    "/exampleschool/rest/app/token",
+    "/exampleschool/api/lessons/student/1",
+    "/Exampleschool/eva/api/v1/parent",
   ]) {
     assert.ok(!isAllowedUpstreamRequest("GET", UP + p), p);
   }
 });
 
 test("isAllowedUpstreamRequest sees the normalised path, so dot segments can't escape", () => {
-  for (const p of ["engelska/eva/api/../../react/", "engelska/eva/api/%2e%2e/%2e%2e/react/"]) {
+  for (const p of [
+    "exampleschool/eva/api/../../react/",
+    "exampleschool/eva/api/%2e%2e/%2e%2e/react/",
+  ]) {
     const out = upstreamUrlFor(
       `https://app.example/api/schoolsoft?__proxy_path=${encodeURIComponent(p)}`,
     );
@@ -205,18 +208,18 @@ test("isSameOriginRequest falls back to Origin, then lets header-less clients th
 });
 
 test("LOGOUT_PATH matches only the school-scoped logout route", () => {
-  assert.equal(LOGOUT_PATH.exec("/engelska/__logout")?.[1], "engelska");
-  assert.equal(LOGOUT_PATH.exec("/engelska/eva/__logout"), null);
+  assert.equal(LOGOUT_PATH.exec("/exampleschool/__logout")?.[1], "exampleschool");
+  assert.equal(LOGOUT_PATH.exec("/exampleschool/eva/__logout"), null);
   assert.equal(LOGOUT_PATH.exec("/__logout"), null);
 });
 
 test("logoutCookies expires each sent cookie on both upstream path shapes", () => {
-  assert.deepEqual(logoutCookies("JSESSIONID=abc; hash=x=y", "engelska"), [
-    "JSESSIONID=; Path=/schoolsoft/engelska; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
-    "JSESSIONID=; Path=/schoolsoft/engelska/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+  assert.deepEqual(logoutCookies("JSESSIONID=abc; hash=x=y", "exampleschool"), [
+    "JSESSIONID=; Path=/schoolsoft/exampleschool; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "JSESSIONID=; Path=/schoolsoft/exampleschool/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
     "JSESSIONID=; Path=/schoolsoft/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
-    "hash=; Path=/schoolsoft/engelska; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
-    "hash=; Path=/schoolsoft/engelska/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "hash=; Path=/schoolsoft/exampleschool; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
+    "hash=; Path=/schoolsoft/exampleschool/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
     "hash=; Path=/schoolsoft/; Max-Age=0; Secure; HttpOnly; SameSite=Lax",
   ]);
 });

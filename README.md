@@ -42,6 +42,11 @@ pnpm preview         # serve the production build
 
 Open the dev server with `?mock=1` to use built-in fake data instead of a SchoolSoft account; `?mock=0` turns it off again. Mock mode is compiled out of production builds unless `VITE_ENABLE_MOCKS=1` is set at build time.
 
+- Every section works, with an invented family (two children) at an invented school. Actions such as marking read, booking a time, reporting absence, answering news and sending messages change the mock data until the page reloads.
+- No request reaches SchoolSoft. Calls without a mock get a 404 and a console warning.
+- A real session on the same origin is set aside while mock mode is on and restored when you leave it.
+- The data lives in `src/dev-mocks/`. Keep it invented: never paste real API responses there, because the repository is public.
+
 ## How it reaches SchoolSoft
 
 The browser never calls `sms.schoolsoft.se` directly. Every request goes to `/schoolsoft/*` on the app's own origin:

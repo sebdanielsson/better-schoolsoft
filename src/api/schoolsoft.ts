@@ -70,7 +70,7 @@ export interface EvaLunchDay {
 export interface EvaNewsAuthor {
   id: number;
   name: string;
-  /** Resource filename like "teacher9840.jpg", or "" if no picture. */
+  /** Resource filename like "teacher1234.jpg", or "" if no picture. */
   picture: string;
 }
 
@@ -113,7 +113,7 @@ export interface EvaMessageSender {
   id: number;
   firstName: string;
   lastName: string;
-  /** Resource filename like "teacher9840.jpg", or "" for system messages. */
+  /** Resource filename like "teacher1234.jpg", or "" for system messages. */
   picture: string;
 }
 
@@ -1051,7 +1051,7 @@ export interface EvaStaffMember {
   teacherId: number;
   firstName: string;
   lastName: string;
-  /** Resource filename like "teacher10689.jpg", or empty string when no picture. */
+  /** Resource filename like "teacher1234.jpg", or empty string when no picture. */
   picture: string;
 }
 

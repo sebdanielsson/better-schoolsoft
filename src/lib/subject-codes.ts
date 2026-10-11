@@ -1,6 +1,6 @@
 /** Skolverket's standard subject codes used across Swedish compulsory schools.
  *  Keys are case-insensitive (lowercased before lookup). Only includes codes
- *  whose mapping is unambiguous regardless of school — IES-specific overlays
+ *  whose mapping is unambiguous regardless of school — school-specific overlays
  *  like "Sci", "PE", "Wd" intentionally omitted so we fall back to the raw
  *  short name rather than guess. */
 const SUBJECT_CODES: Record<string, string> = {
