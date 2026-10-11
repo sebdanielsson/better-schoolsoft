@@ -98,7 +98,7 @@ export default function SubjectRoomPage() {
     <div>
       <div className="mb-5 flex items-stretch gap-3">
         <span aria-hidden="true" className="w-1.5 rounded-full" style={{ background: color }} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {room.data ? (
             <SubjectPicker current={id} title={room.data.subject} rooms={rooms.data} />
           ) : (
