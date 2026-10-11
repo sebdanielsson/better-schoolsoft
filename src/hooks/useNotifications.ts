@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "./useSchoolsoftContext.tsx";
 import { useQuery } from "./useQuery.ts";
 import { useHeroData } from "./useHeroData.tsx";
+import { useMenu } from "./useMenu.ts";
+import { hasFeature, type Feature } from "../lib/menu.ts";
 import {
   fetchAllSubjectRoomAssignments,
   fetchAllSubjectRoomPlannings,
@@ -59,6 +61,16 @@ const SOURCE_OF: Record<NotificationItem["kind"], Source> = {
 };
 const SOURCES = Object.values(SOURCE_OF);
 
+/** The menu entry a source belongs to; messages are always there. */
+const SOURCE_FEATURE: Partial<Record<Source, Feature>> = {
+  news: "NEWS",
+  bookings: "BOOKINGS",
+  assignments: "SUBJECT_ROOMS",
+  results: "SUBJECT_ROOMS",
+  plannings: "SUBJECT_ROOMS",
+  assessments: "HOLISTIC_ASSESSMENT",
+};
+
 export interface Notifications {
   /** Unread items, newest first. Empty while loading. */
   items: NotificationItem[];
@@ -81,9 +93,16 @@ export function useNotifications(): Notifications {
   const ctx = useSchoolsoftContext();
   const { refreshCounts, loading: heroLoading } = useHeroData();
   const opts = { staleMs: STALE_MS };
+  /* Skip modules the child's menu doesn't list: their lists would be empty
+   * or fail, and their sections are hidden anyway. */
+  const menu = useMenu();
+  const keyFor = (source: Source) => {
+    const feature = SOURCE_FEATURE[source];
+    return ctx && (feature === undefined || hasFeature(menu, feature)) ? key(ctx, source) : null;
+  };
 
   const messages = useQuery(
-    ctx && key(ctx, "messages"),
+    keyFor("messages"),
     async () =>
       fromMessages(
         await fetchEvaMessages(
@@ -97,7 +116,7 @@ export function useNotifications(): Notifications {
     opts,
   );
   const news = useQuery(
-    ctx && key(ctx, "news"),
+    keyFor("news"),
     async () =>
       fromNews(
         await fetchEvaNewsFeed(
@@ -112,7 +131,7 @@ export function useNotifications(): Notifications {
     opts,
   );
   const bookings = useQuery(
-    ctx && key(ctx, "bookings"),
+    keyFor("bookings"),
     async () =>
       fromBookings(
         await fetchEvaTimebookings(
@@ -126,7 +145,7 @@ export function useNotifications(): Notifications {
     opts,
   );
   const assignments = useQuery(
-    ctx && key(ctx, "assignments"),
+    keyFor("assignments"),
     () =>
       ctx!.withCookies(async () =>
         fromAssignments(await fetchAllSubjectRoomAssignments(ctx!.school)),
@@ -134,18 +153,18 @@ export function useNotifications(): Notifications {
     opts,
   );
   const results = useQuery(
-    ctx && key(ctx, "results"),
+    keyFor("results"),
     () => ctx!.withCookies(async () => fromResults(await fetchAllSubjectRoomResults(ctx!.school))),
     opts,
   );
   const plannings = useQuery(
-    ctx && key(ctx, "plannings"),
+    keyFor("plannings"),
     () =>
       ctx!.withCookies(async () => fromPlannings(await fetchAllSubjectRoomPlannings(ctx!.school))),
     opts,
   );
   const assessments = useQuery(
-    ctx && key(ctx, "assessments"),
+    keyFor("assessments"),
     () =>
       ctx!.withCookies(async () => fromAssessments(await fetchHolisticAssessments(ctx!.school))),
     opts,
@@ -175,10 +194,10 @@ export function useNotifications(): Notifications {
     ],
   );
 
-  const loading = Object.values(sources).some((q) => q.loading);
-  const failed = (Object.keys(sources) as Source[]).filter(
-    (s) => sources[s].error && !sources[s].data,
-  );
+  /* A skipped source has no key and would read as loading forever. */
+  const active = (Object.keys(sources) as Source[]).filter((s) => keyFor(s) !== null);
+  const loading = active.some((s) => sources[s].loading);
+  const failed = active.filter((s) => sources[s].error && !sources[s].data);
 
   /* New things arrive while the tab sits in the background; refresh when the
    * guardian comes back to it. Only stale sources refetch, and not while a

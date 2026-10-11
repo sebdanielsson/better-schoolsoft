@@ -30,6 +30,7 @@ import {
 } from "./comms.ts";
 import {
   initialProfile,
+  KIM,
   parent,
   PARENT_ID,
   schoolList,
@@ -269,6 +270,31 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
       "GET",
       r("^/eva/api/v1/resource/(?!attachment/).+"),
       () => notFound() /* initials instead of photos */,
+    ],
+
+    /* The iOS app's per-child menu. Kim's school has no bookings or holistic
+     * assessments, so mock mode shows sections being hidden. */
+    [
+      "GET",
+      r(String.raw`^/eva/api/v4/schools/\d+/parents/\d+/menu`),
+      (_m, req) => {
+        const all = [
+          "SCHEDULE",
+          "ABSENCE",
+          "LUNCH",
+          "NEWS",
+          "STAFF_LIST",
+          "SUBJECT_ROOMS",
+          "HOLISTIC_ASSESSMENT",
+          "BOOKINGS",
+        ];
+        const kim = req.query.get("studentId") === String(KIM);
+        return json(
+          all
+            .filter((t) => !kim || (t !== "BOOKINGS" && t !== "HOLISTIC_ASSESSMENT"))
+            .map((type) => ({ type })),
+        );
+      },
     ],
 
     /* ---------- Lunch, lessons, staff ---------- */
