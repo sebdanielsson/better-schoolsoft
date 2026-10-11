@@ -6,7 +6,7 @@ How the app signs in and how it talks to SchoolSoft. Endpoint details live in [e
 
 Sign-in mirrors the official "Vårdnadshavare" app's OAuth flow (`clientId=vApp`, PKCE, S256):
 
-1. `LoginPage` sends the browser to SchoolSoft's own login SPA at `https://sms.schoolsoft.se/{school}/react/#/login/{usertype}?client_id=vApp&redirect_uri=…&state=…&code_challenge=…`. The PKCE verifier, state, school and user type wait in `localStorage` for up to 15 minutes and are cleared on use (`src/api/pkce.ts`). Not `sessionStorage`: an installed app can finish the round trip in another browsing context or be restarted during BankID.
+1. `LoginPage` sends the browser to SchoolSoft's own login SPA at `https://sms.schoolsoft.se/{school}/react/#/login/{usertype}?client_id=vApp&redirect_uri=…&state=…&code_challenge=…`. The PKCE verifier, state, school and user type wait in `localStorage`, one record per sign-in keyed by `state`, for up to 15 minutes; they are removed on use, on failure and on logout (`src/api/pkce.ts`). Not `sessionStorage`: an installed app can be restarted while the user is in BankID, which empties it. The callback finds its record by `state`, so a callback this browser didn't start is refused. Untested on a real device: whether an installed iOS app returns from SchoolSoft into itself or opens the callback in Safari, which has separate storage.
 2. SchoolSoft redirects back to `/oauth/callback?code=…&state=…`. `OAuthCallbackPage` checks the state and exchanges the code at `POST /{school}/rest-api/login/token` for a short-lived access token and a refresh token.
 3. The callback reads `/eva/api/v1/parent` for the guardian's name, children and schools, and stores the session in `localStorage` under `bss_session`.
 

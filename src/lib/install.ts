@@ -35,7 +35,13 @@ export function registerServiceWorker(): void {
   if (!import.meta.env.PROD) {
     void navigator.serviceWorker
       .getRegistrations()
-      .then((regs) => Promise.all(regs.map((r) => r.unregister())));
+      .then((regs) =>
+        Promise.all(
+          regs
+            .filter((r) => (r.active ?? r.waiting ?? r.installing)?.scriptURL.endsWith("/sw.js"))
+            .map((r) => r.unregister()),
+        ),
+      );
     return;
   }
   const register = () => {

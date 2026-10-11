@@ -44,13 +44,14 @@ function cacheable(response, wantHtml) {
   return html === wantHtml;
 }
 
-/** Cache writes are best effort: a full disk must not fail a response that
- *  already arrived. */
+/** Cache Storage is best effort throughout: a full disk or an unavailable
+ *  store must never fail a response that already arrived from the network. */
 async function tryPut(cache, key, response) {
   try {
     await cache.put(key, response);
+    return true;
   } catch {
-    /* quota or unsupported response; serve it uncached */
+    return false;
   }
 }
 
@@ -62,38 +63,47 @@ async function networkFirstShell(request) {
   try {
     response = await fetch(request);
   } catch (err) {
-    const cached = await caches.match("/", { cacheName: SHELL });
+    const cached = await caches.match("/", { cacheName: SHELL }).catch(() => undefined);
     if (cached) return cached;
     throw err;
   }
   if (cacheable(response, true)) {
-    const cache = await caches.open(SHELL);
-    const fresh = await response.clone().text();
-    const previous = await cache.match("/").then((r) => r?.text());
-    /* A new deploy references new hashed files: start the asset cache over,
-     * so it holds one deploy's files and nothing the shell no longer uses. */
-    if (previous !== undefined && previous !== fresh) await caches.delete(ASSETS);
-    await tryPut(cache, "/", new Response(fresh, { status: 200, headers: response.headers }));
+    try {
+      const cache = await caches.open(SHELL);
+      const fresh = await response.clone().text();
+      const previous = await cache.match("/").then((r) => r?.text());
+      const stored = await tryPut(
+        cache,
+        "/",
+        new Response(fresh, { status: 200, headers: response.headers }),
+      );
+      /* A new deploy references new hashed files: once its shell is stored,
+       * start the asset cache over, so it holds one deploy's files and
+       * nothing the cached shell can't load. */
+      if (stored && previous !== undefined && previous !== fresh) await caches.delete(ASSETS);
+    } catch {
+      /* keep serving; the cache is only an offline fallback */
+    }
   }
   return response;
 }
 
 /** Hashed bundles never change, so a cached copy is always right. */
 async function cacheFirst(request) {
-  const cache = await caches.open(ASSETS);
-  const cached = await cache.match(request);
+  const cache = await caches.open(ASSETS).catch(() => null);
+  const cached = await cache?.match(request).catch(() => undefined);
   if (cached) return cached;
   const response = await fetch(request);
-  if (cacheable(response, false)) await tryPut(cache, request, response.clone());
+  if (cache && cacheable(response, false)) await tryPut(cache, request, response.clone());
   return response;
 }
 
 /** Icons, manifest, favicon: serve the cached copy and refresh it. */
 async function staleWhileRevalidate(request) {
-  const cache = await caches.open(SHELL);
-  const cached = await cache.match(request);
+  const cache = await caches.open(SHELL).catch(() => null);
+  const cached = await cache?.match(request).catch(() => undefined);
   const refresh = fetch(request).then(async (response) => {
-    if (cacheable(response, false)) await tryPut(cache, request, response.clone());
+    if (cache && cacheable(response, false)) await tryPut(cache, request, response.clone());
     return response;
   });
   if (cached) {
