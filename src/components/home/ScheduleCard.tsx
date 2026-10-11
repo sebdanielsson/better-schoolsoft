@@ -102,8 +102,8 @@ export default function ScheduleCard({
   );
 
   /* Prefer the schedule-derived tile whenever the Eva endpoint comes back
-   * without a usable subject name (which happens on school and likely other
-   * schools that don't populate Eva's lesson catalog). The Eva tile alone
+   * without a usable subject name, which happens at schools that don't
+   * populate Eva's lesson catalog. The Eva tile alone
    * would render "Lesson" — the schedule has the real name (e.g. "Mentor
    * Time"). When both are populated, Eva still wins for its richer fields. */
   const { showCurrent, showNext } = useMemo(() => {

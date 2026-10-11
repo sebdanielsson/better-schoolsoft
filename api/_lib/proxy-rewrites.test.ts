@@ -174,7 +174,10 @@ test("isAllowedUpstreamRequest refuses everything outside the namespaces", () =>
 });
 
 test("isAllowedUpstreamRequest sees the normalised path, so dot segments can't escape", () => {
-  for (const p of ["exampleschool/eva/api/../../react/", "exampleschool/eva/api/%2e%2e/%2e%2e/react/"]) {
+  for (const p of [
+    "exampleschool/eva/api/../../react/",
+    "exampleschool/eva/api/%2e%2e/%2e%2e/react/",
+  ]) {
     const out = upstreamUrlFor(
       `https://app.example/api/schoolsoft?__proxy_path=${encodeURIComponent(p)}`,
     );
