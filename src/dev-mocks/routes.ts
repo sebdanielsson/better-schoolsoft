@@ -92,6 +92,19 @@ const html = (body: string) =>
     headers: { "Content-Type": "text/html; charset=UTF-8" },
   });
 
+function newAbsence() {
+  return {
+    /** `YYYY-MM-DD` of reported full days. */
+    fullDays: new Set<string>(),
+    /** Lesson id → guardian comment of reported lessons. */
+    lessons: new Map<number, string>(),
+    /** Days the school marked as explained absence (history). */
+    explained: new Set<string>([ymd(weekday(-1, 3))]),
+    weekComments: new Map<number, string>(),
+  };
+}
+type AbsenceState = ReturnType<typeof newAbsence>;
+
 /** Fresh mutable state; one per page load. */
 function createState() {
   return {
@@ -102,15 +115,8 @@ function createState() {
     assignments: createAssignments(),
     plannings: createPlannings(),
     assessments: createAssessments(),
-    absence: {
-      /** `YYYY-MM-DD` of reported full days. */
-      fullDays: new Set<string>(),
-      /** Lesson id → guardian comment of reported lessons. */
-      lessons: new Map<number, string>(),
-      /** Lessons the school marked as explained absence (history). */
-      explained: new Set<string>([ymd(weekday(-1, 3))]),
-      weekComments: new Map<number, string>(),
-    },
+    /** Absence reports per student id. */
+    absence: new Map<string, AbsenceState>(),
   };
 }
 
@@ -130,17 +136,24 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
   const booking = (id: number) => s.bookings.find((b) => b.id === id);
   const news = (id: number) => s.news.find((n) => n.item.id === id);
   const message = (id: number) => s.messages.find((m) => m.detail.id === id);
+  /* Absence paths carry `/student/{id}/`; each child has its own reports. */
+  const absenceOf = (req: MockRequest) => {
+    const id = /\/student\/(\d+)\//.exec(req.path)?.[1] ?? "";
+    let a = s.absence.get(id);
+    if (!a) s.absence.set(id, (a = newAbsence()));
+    return a;
+  };
 
-  function absenceWeek(week: number): AbsenceWeek {
+  function absenceWeek(a: AbsenceState, week: number): AbsenceWeek {
     const off = weekOffset(week);
     const today = ymd(new Date());
     return {
       studentAbsenceDays: [0, 1, 2, 3, 4].map((dayId) => {
         const date = ymd(weekday(off, dayId + 1));
         const lessons = lessonsOn(off, dayId);
-        const reported = lessons.filter((l) => s.absence.lessons.has(l.id)).length;
-        const full = s.absence.fullDays.has(date);
-        const explained = s.absence.explained.has(date);
+        const reported = lessons.filter((l) => a.lessons.has(l.id)).length;
+        const full = a.fullDays.has(date);
+        const explained = a.explained.has(date);
         const status = full
           ? ABSENCE_STATUS.PRE_REPORTED_ABSENCE
           : explained
@@ -157,15 +170,15 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
           nrOfLessonsAbsent: full || explained ? lessons.length : reported,
         };
       }),
-      parentComment: s.absence.weekComments.get(week) ?? "",
+      parentComment: a.weekComments.get(week) ?? "",
     };
   }
 
-  function absenceDay(week: number, dayId: number): AbsenceDay {
+  function absenceDay(a: AbsenceState, week: number, dayId: number): AbsenceDay {
     const off = weekOffset(week);
     const date = ymd(weekday(off, dayId + 1));
-    const full = s.absence.fullDays.has(date);
-    const explained = s.absence.explained.has(date);
+    const full = a.fullDays.has(date);
+    const explained = a.explained.has(date);
     const now = Date.now();
     return {
       dayId,
@@ -177,7 +190,7 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
           : ABSENCE_STATUS.NO_STATUS,
       lessons: lessonsOn(off, dayId).map((l) => {
         const ended = l.end.getTime() <= now;
-        const reported = s.absence.lessons.has(l.id);
+        const reported = a.lessons.has(l.id);
         const absent = full || explained || reported;
         return {
           lessonId: l.id,
@@ -193,7 +206,7 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
                 ? ABSENCE_STATUS.ATTENDANCE
                 : ABSENCE_STATUS.NO_STATUS,
           hasAbsenceReportForLesson: reported,
-          comment: s.absence.lessons.get(l.id) ?? "",
+          comment: a.lessons.get(l.id) ?? "",
           nrOfMinutesAbsent: absent
             ? Math.round((l.end.getTime() - l.start.getTime()) / 60_000)
             : 0,
@@ -507,37 +520,41 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
       () => json(true),
     ],
     ["GET", r(String.raw`^/eva/api/v1/student/\d+/school/\d+/is-pre-school`), () => json(false)],
-    ["GET", r(ABSENCE), (m) => json(absenceWeek(num(m[1])))],
-    ["GET", r(`${ABSENCE}/day/(\\d)`), (m) => json(absenceDay(num(m[1]), num(m[2])))],
+    ["GET", r(ABSENCE), (m, req) => json(absenceWeek(absenceOf(req), num(m[1])))],
+    [
+      "GET",
+      r(`${ABSENCE}/day/(\\d)`),
+      (m, req) => json(absenceDay(absenceOf(req), num(m[1]), num(m[2]))),
+    ],
     [
       "PUT",
       r(`${ABSENCE}/day/(\\d)/date/(\\d+)`),
-      (m) => {
-        s.absence.fullDays.add(ymd(weekday(weekOffset(num(m[1])), num(m[2]) + 1)));
+      (m, req) => {
+        absenceOf(req).fullDays.add(ymd(weekday(weekOffset(num(m[1])), num(m[2]) + 1)));
         return ok();
       },
     ],
     [
       "DELETE",
       r(`${ABSENCE}/day/(\\d)/date/(\\d+)`),
-      (m) => {
-        s.absence.fullDays.delete(ymd(weekday(weekOffset(num(m[1])), num(m[2]) + 1)));
+      (m, req) => {
+        absenceOf(req).fullDays.delete(ymd(weekday(weekOffset(num(m[1])), num(m[2]) + 1)));
         return ok();
       },
     ],
     [
       "POST",
       r(`${ABSENCE}/lesson/(\\d+)`),
-      (m) => {
-        s.absence.lessons.set(num(m[2]), s.absence.lessons.get(num(m[2])) ?? "");
+      (m, req) => {
+        absenceOf(req).lessons.set(num(m[2]), absenceOf(req).lessons.get(num(m[2])) ?? "");
         return ok();
       },
     ],
     [
       "DELETE",
       r(`${ABSENCE}/lesson/(\\d+)`),
-      (m) => {
-        s.absence.lessons.delete(num(m[2]));
+      (m, req) => {
+        absenceOf(req).lessons.delete(num(m[2]));
         return ok();
       },
     ],
@@ -545,7 +562,7 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
       "POST",
       r(`${ABSENCE}/comment`),
       (m, req) => {
-        s.absence.weekComments.set(
+        absenceOf(req).weekComments.set(
           num(m[1]),
           String(bodyOf<{ comment?: string }>(req).comment ?? ""),
         );
@@ -556,7 +573,10 @@ export function createRoutes(): [method: string, pattern: RegExp, handler: Handl
       "POST",
       r(`${ABSENCE}/lesson/(\\d+)/comment`),
       (m, req) => {
-        s.absence.lessons.set(num(m[2]), String(bodyOf<{ comment?: string }>(req).comment ?? ""));
+        absenceOf(req).lessons.set(
+          num(m[2]),
+          String(bodyOf<{ comment?: string }>(req).comment ?? ""),
+        );
         return ok();
       },
     ],

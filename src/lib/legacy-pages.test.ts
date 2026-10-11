@@ -21,8 +21,8 @@ const LIBRARY = `
   </td></tr><tr><td>
     <a href="javascript:alert(1)">Evil link</a>
   </td></tr><tr><td>
-    <div class="heading_bold">Locker Policy</div><div>Please find locker policy of school.</div>
-    <a href="right_student_library_download.jsp?requestid=16414" title = "Locker Policy.pdf"><img alt="" src="pdf.png"/>Locker P...pdf</a> (60&nbsp;KB)<br />
+    <div class="heading_bold">Fire drill plan</div><div>How we leave the building during a drill.</div>
+    <a href="right_student_library_download.jsp?requestid=900971" title = "Fire drill plan.pdf"><img alt="" src="pdf.png"/>Fire dril...pdf</a> (32&nbsp;KB)<br />
   </td></tr><tr><td>
     <div class="heading_bold">Broken</div>
     <a href="right_student_library_download.jsp?requestid=abc" title="x.pdf">x</a>
@@ -47,11 +47,11 @@ void test("parseLibrary reads categories, links and files", () => {
     },
     {
       kind: "file",
-      title: "Locker Policy",
-      description: "Please find locker policy of school.",
-      requestId: 16414,
-      fileName: "Locker Policy.pdf",
-      size: "60 KB",
+      title: "Fire drill plan",
+      description: "How we leave the building during a drill.",
+      requestId: 900971,
+      fileName: "Fire drill plan.pdf",
+      size: "32 KB",
     },
   ]);
   assert.equal(cats[1]?.category, "Policies");

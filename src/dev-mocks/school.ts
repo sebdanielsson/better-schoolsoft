@@ -1,7 +1,8 @@
 /** Subject rooms, the weekly timetable, assignments, plannings, results and
  *  holistic assessments for the mock school. Invented content only; see
- *  `people.ts`. Both children share this data: the mock is about exercising
- *  the UI, not modelling two timetables. */
+ *  `people.ts`. Both children share this data (and the bookings in
+ *  `comms.ts`): the mock is about exercising the UI, not modelling two
+ *  timetables. Absence reports are kept per child (`routes.ts`). */
 
 import type {
   AssignmentRow,
