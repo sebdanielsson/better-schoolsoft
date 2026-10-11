@@ -17,6 +17,9 @@ export default function OAuthCallbackPage() {
   const exchangeStarted = useRef(false);
 
   useEffect(() => {
+    /* Re-runs after the exchange started (the success path updates
+     * `session`) must not re-check the record it already consumed. */
+    if (exchangeStarted.current) return;
     const code = params.get("code");
     const state = params.get("state");
     const errParam = params.get("error");
@@ -38,7 +41,6 @@ export default function OAuthCallbackPage() {
       setError("This sign-in expired or wasn't started here. Please try again.");
       return;
     }
-    if (exchangeStarted.current) return;
     exchangeStarted.current = true;
 
     void (async () => {
