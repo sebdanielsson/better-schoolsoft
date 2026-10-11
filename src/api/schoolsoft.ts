@@ -1910,6 +1910,8 @@ export interface SubjectRoomTeacher {
 export type SubjectRoomRowStatus = "ONGOING" | "EXPIRED" | (string & {});
 
 export interface SubjectRoomAssignmentRow {
+  /** Subject name(s) and colour, as shown in the web app's grids. */
+  subjects?: { name: string; color?: string }[];
   assignmentId: number;
   activityId: number;
   title: string;
@@ -1928,6 +1930,8 @@ export interface SubjectRoomAssignmentRow {
 }
 
 export interface SubjectRoomResultRow {
+  /** Subject name(s) and colour, as shown in the web app's grids. */
+  subjects?: { name: string; color?: string }[];
   assignmentId: number;
   activityId: number;
   title: string;
@@ -1939,6 +1943,8 @@ export interface SubjectRoomResultRow {
 }
 
 export interface SubjectRoomPlanningRow {
+  /** Subject name(s) and colour, as shown in the web app's grids. */
+  subjects?: { name: string; color?: string }[];
   planningPartId: number;
   planningId: number;
   activityId: number;
@@ -2006,6 +2012,22 @@ export function fetchSubjectRoomPlannings(
   activityId: number,
 ): Promise<SubjectRoomPlanningRow[]> {
   return cookieGetList(`${subjectRoomBase(school)}/${activityId}/plannings/grid/rows`);
+}
+
+/** Rows across every subject room the child has, in one call each. Used by
+ *  the notification center to find unread items without a request per room. */
+export function fetchAllSubjectRoomAssignments(
+  school: string,
+): Promise<SubjectRoomAssignmentRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/assignments/grid/rows`);
+}
+
+export function fetchAllSubjectRoomResults(school: string): Promise<SubjectRoomResultRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/results/grid/rows`);
+}
+
+export function fetchAllSubjectRoomPlannings(school: string): Promise<SubjectRoomPlanningRow[]> {
+  return cookieGetList(`${subjectRoomBase(school)}/plannings/grid/rows`);
 }
 
 export function fetchSubjectRoomInformation(

@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useNotifications } from "../hooks/useNotifications.ts";
 import { cn } from "../lib/utils.ts";
 
 const SECTIONS: { to: string; label: string }[] = [
@@ -18,6 +19,8 @@ const SECTIONS: { to: string; label: string }[] = [
 /** One-row section switcher under the hero. Scrolls horizontally on narrow
  *  screens instead of wrapping, so it never pushes content down. */
 export default function SectionNav() {
+  /* Shares its cache with the hero's "New" pill: no extra requests. */
+  const { bySection } = useNotifications();
   return (
     <nav
       aria-label="Sections"
@@ -38,7 +41,27 @@ export default function SectionNav() {
                 )
               }
             >
-              {s.label}
+              {({ isActive }) => {
+                const n = bySection[s.to] ?? 0;
+                return (
+                  <>
+                    {s.label}
+                    {n > 0 && (
+                      <span
+                        className={cn(
+                          "ml-1.5 inline-flex h-[1.15rem] min-w-[1.15rem] items-center justify-center rounded-full px-[0.35em] text-[0.7rem] font-bold tabular-nums",
+                          isActive
+                            ? "bg-white text-blue-700"
+                            : "bg-[var(--color-error)] text-white",
+                        )}
+                      >
+                        {n}
+                        <span className="sr-only"> new</span>
+                      </span>
+                    )}
+                  </>
+                );
+              }}
             </NavLink>
           </li>
         ))}

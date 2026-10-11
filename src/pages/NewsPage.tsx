@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Archive, ArchiveRestore, HelpCircle, Paperclip } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
@@ -108,7 +109,34 @@ export default function NewsPage() {
   const ctx = useSchoolsoftContext();
   const [feed, setFeed] = useState<EvaNewsFeed>("current");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  /* `?item=<id>` (from the notification center) opens that item and scrolls
+   * to it once the feed has rendered. */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linked = Number(searchParams.get("item"));
+  const linkedId = Number.isInteger(linked) && linked > 0 ? linked : null;
+  const [expanded, setExpanded] = useState<Set<number>>(
+    () => new Set(linkedId !== null ? [linkedId] : []),
+  );
+  const [scrollTo, setScrollTo] = useState<number | null>(linkedId);
+
+  /* The link can also arrive while this page is open, possibly on another
+   * feed or category. Apply it, then drop the param so following the same
+   * link again still works. */
+  useEffect(() => {
+    if (linkedId === null) return;
+    setFeed("current");
+    setSelectedCategory(null);
+    setExpanded((prev) => new Set(prev).add(linkedId));
+    setScrollTo(linkedId);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("item");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [linkedId, setSearchParams]);
 
   const list = useQuery(ctx && newsKeys.feed(ctx.keyPrefix, feed), async () =>
     fetchEvaNewsFeed(
@@ -121,6 +149,14 @@ export default function NewsPage() {
     ),
   );
   const items = useMemo(() => list.data ?? [], [list.data]);
+
+  useEffect(() => {
+    if (scrollTo === null) return;
+    const el = document.getElementById(`news-${scrollTo}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+    setScrollTo(null);
+  }, [scrollTo, items]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -170,6 +206,7 @@ export default function NewsPage() {
               setFeed(f.id);
               setSelectedCategory(null);
               setExpanded(new Set());
+              setScrollTo(null);
             }}
             className={cn(
               "rounded-full border px-[0.85rem] py-[0.35rem] text-[0.82rem] font-medium transition-colors",
@@ -345,6 +382,7 @@ function NewsItem({
 
   return (
     <li
+      id={`news-${n.id}`}
       className={cn(
         "grid grid-cols-[auto_1fr] gap-4 rounded-lg border border-slate-200 bg-white px-[1.1rem] py-4 shadow-sm transition-shadow hover:shadow-md",
         "border-l-[3px]",

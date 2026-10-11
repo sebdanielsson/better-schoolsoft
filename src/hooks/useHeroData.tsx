@@ -5,17 +5,12 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useAuth } from "./useAuth.tsx";
-import {
-  fetchEvaBadgeCounts,
-  fetchEvaParent,
-  fetchEvaUnreadMessages,
-  type EvaBadgeCounts,
-  type EvaChild,
-} from "../api/schoolsoft.ts";
+import { invalidateQueries } from "../lib/query-cache.ts";
+import { NOTIFICATIONS_KEY } from "../lib/notifications.ts";
+import { fetchEvaParent, type EvaChild } from "../api/schoolsoft.ts";
 
 export interface HeroData {
   /** Parent's userId (resolved from the Eva /parent endpoint). */
@@ -26,12 +21,10 @@ export interface HeroData {
   children: EvaChild[];
   /** Switch the child in focus. Persisted per browser. */
   selectChild: (studentId: number) => void;
-  /** Re-fetch the unread count and badges, e.g. after a message or news
-   *  item was marked read or unread elsewhere in the app. */
+  /** Refresh the unread items (notification center, section badges) after
+   *  something was marked read or unread elsewhere in the app. */
   refreshCounts: () => void;
-  unread: number;
-  badges: EvaBadgeCounts;
-  /** True while the parent + unread + badges fetches are in flight. */
+  /** True while the parent/children fetch is in flight. */
   loading: boolean;
 }
 
@@ -41,8 +34,6 @@ const emptyState: LoadedState = {
   parentUserId: null,
   child: null,
   children: [],
-  unread: 0,
-  badges: {},
   loading: true,
 };
 
@@ -79,12 +70,12 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
     }
     setSelected(studentId);
     /* Switch immediately from the list we already have instead of showing the
-     * previous child until /parent comes back. Counts belong to the old child,
-     * so clear them; the effect below re-fetches everything for the new one. */
+     * previous child until /parent comes back. Everything child-scoped is
+     * keyed by studentId, so the new child's data loads on its own. */
     setState((prev) => {
       const next = prev.children.find((c) => c.studentId === studentId);
       if (!next || next.studentId === prev.child?.studentId) return prev;
-      return { ...prev, child: next, unread: 0, badges: {}, loading: true };
+      return { ...prev, child: next };
     });
   }, []);
 
@@ -108,30 +99,10 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         const child =
           parent.children.find((c) => c.studentId === selected) ?? parent.children[0] ?? null;
-        const studentId = child?.studentId;
-        const orgId = child?.schools[0]?.orgId ?? session.orgId;
-
-        /* Reveal the child as soon as we have it so the avatar + name render quickly. */
-        setState((prev) => ({
-          ...prev,
-          parentUserId: parent.userId,
-          child,
-          children: parent.children,
-        }));
-
-        const [unreadRes, badgesRes] = await Promise.allSettled([
-          fetchEvaUnreadMessages(session.school, token, parent.userId, orgId),
-          studentId
-            ? fetchEvaBadgeCounts(session.school, token, parent.userId, orgId, studentId)
-            : Promise.resolve<EvaBadgeCounts>({}),
-        ]);
-        if (cancelled) return;
         setState({
           parentUserId: parent.userId,
           child,
           children: parent.children,
-          unread: unreadRes.status === "fulfilled" ? (unreadRes.value ?? 0) : 0,
-          badges: badgesRes.status === "fulfilled" ? badgesRes.value : {},
           loading: false,
         });
       } catch {
@@ -144,37 +115,12 @@ export function HeroDataProvider({ children }: { children: ReactNode }) {
     };
   }, [session, getEvaToken, selected]);
 
-  /* Counts only — no loading flag, so the hero pills update in place. A
-   * refresh that lands after a child switch is dropped (studentId check). */
-  const { parentUserId, child } = state;
-  const refreshSeq = useRef(0);
+  /* Unread counts now come from the notification center's queries (one
+   * source for the hero pill, section badges and the panel), so a refresh is
+   * just an invalidation of those. */
   const refreshCounts = useCallback(() => {
-    if (!session || !parentUserId) return;
-    /* Overlapping refreshes (mark read, then quickly unread) may resolve out
-     * of order; only the latest one may commit. */
-    const seq = ++refreshSeq.current;
-    const studentId = child?.studentId;
-    const orgId = child?.schools[0]?.orgId ?? session.orgId;
-    void (async () => {
-      const token = await getEvaToken().catch(() => null);
-      if (!token) return;
-      const [unreadRes, badgesRes] = await Promise.allSettled([
-        fetchEvaUnreadMessages(session.school, token, parentUserId, orgId),
-        studentId
-          ? fetchEvaBadgeCounts(session.school, token, parentUserId, orgId, studentId)
-          : Promise.resolve<EvaBadgeCounts>({}),
-      ]);
-      if (seq !== refreshSeq.current) return;
-      setState((prev) => {
-        if (prev.child?.studentId !== studentId) return prev;
-        return {
-          ...prev,
-          unread: unreadRes.status === "fulfilled" ? (unreadRes.value ?? 0) : prev.unread,
-          badges: badgesRes.status === "fulfilled" ? badgesRes.value : prev.badges,
-        };
-      });
-    })();
-  }, [session, getEvaToken, parentUserId, child]);
+    invalidateQueries(NOTIFICATIONS_KEY);
+  }, []);
 
   const value = useMemo(
     () => ({ ...state, selectChild, refreshCounts }),
