@@ -285,7 +285,8 @@ export function createAssignments(): Assignment[] {
       submitted: true,
       result: {
         review: "9 of 10 correct",
-        comment: "Well done! Watch the double consonants.",
+        comment:
+          "<p><strong>Well done!</strong> 9 of 10 words spelled right.<br></p> <ul> <li> <p><strong>Keep practising:</strong> double consonants.<br></p> </li> </ul> <p></p>",
         published: at(-1, 15, 20),
       },
       materials: [],

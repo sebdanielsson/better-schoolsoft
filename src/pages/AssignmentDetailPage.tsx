@@ -298,7 +298,7 @@ function ResultPanel({ assessment }: { assessment: AssignmentAssessment }) {
           <p className="text-[0.7rem] font-semibold tracking-[0.08em] text-slate-500 uppercase">
             Teacher comment
           </p>
-          <p className="mt-0.5 text-[0.9rem] text-slate-800">{assessment.teacherComment}</p>
+          <StaffHtml html={assessment.teacherComment} className="mt-0.5 text-[0.9rem]" />
         </div>
       )}
     </section>
