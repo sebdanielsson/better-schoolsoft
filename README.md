@@ -18,6 +18,7 @@ A faster, friendlier frontend for [SchoolSoft](https://www.schoolsoft.se/)'s gua
 - **School**: school information and the files & links library
 - **Profile**: view and edit your contact details
 - **Multiple children**: switch between siblings
+- **Installable**: add it to the home screen on iOS and Android (Settings → Install app) and it opens full screen like a native app
 
 See [docs/PARITY.md](docs/PARITY.md) for parity with the official apps.
 
