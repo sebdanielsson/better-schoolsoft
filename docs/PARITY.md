@@ -17,6 +17,8 @@ Sources: web sidebar (`/rest-api/parent/sidebar/sectiongroups`), iOS menu (`/eva
 - [x] Holistic assessments: list, detail, confirm subject warnings
 - [x] Assignment detail, planning detail
 
+- [x] Notification center: every unread item for the child in focus (messages, news, bookings, assignments, results, plannings, assessments) in one panel, newest first. You can open an item, mark it read, or mark everything read after a confirmation. The section nav shows unread badges. How each kind is marked read is documented in `src/lib/notifications.ts`.
+
 ## Missing
 
 Ordered by priority. The first batch shipped together in PR #176. Each item lands as its own commit with `pnpm run check` and `pnpm test` green.

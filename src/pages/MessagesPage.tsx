@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MailOpen, Paperclip, PenSquare, RotateCcw, Search, Send, Trash2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
@@ -72,7 +73,12 @@ export default function MessagesPage() {
   const { refreshCounts } = useHeroData();
   const [folder, setFolder] = useState<EvaMessageFolder>("inbox");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  /* `?message=<id>` (from the notification center) opens that message. */
+  const [searchParams] = useSearchParams();
+  const linked = Number(searchParams.get("message"));
+  const [selectedId, setSelectedId] = useState<number | null>(
+    Number.isInteger(linked) && linked > 0 ? linked : null,
+  );
   const [compose, setCompose] = useState<ComposeTarget | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -106,7 +112,8 @@ export default function MessagesPage() {
    * on a phone that would skip straight past the list. Only once, so that
    * closing a message (e.g. after "Mark unread") doesn't reopen it. */
   const firstId = rows[0]?.id;
-  const autoSelected = useRef<EvaMessageFolder | null>(null);
+  /* A deep-linked message counts as the inbox's auto-selection. */
+  const autoSelected = useRef<EvaMessageFolder | null>(selectedId !== null ? "inbox" : null);
   useEffect(() => {
     if (autoSelected.current === folder || firstId === undefined) return;
     autoSelected.current = folder;

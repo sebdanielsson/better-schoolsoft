@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { FileText, Link2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useNoteOpened } from "../hooks/useNotifications.ts";
 import {
   acquireCookieFocus,
   assertCookieFocus,
@@ -99,6 +100,9 @@ export default function PlanningDetailPage() {
       cancelled = true;
     };
   }, [session, getEvaToken, parentUserId, child, planningId, activePartId]);
+
+  /* Loading the part's view marked it read in SchoolSoft. */
+  useNoteOpened([{ kind: "planning", id: activePartId }], !!state.partView);
 
   const description = state.partView?.description ?? "";
 

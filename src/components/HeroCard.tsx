@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
@@ -6,22 +5,12 @@ import { useEvaResourceBlob } from "../hooks/useEvaResourceBlob.tsx";
 
 import { colorFromName, initials } from "../lib/avatar-helpers.ts";
 import SettingsPill from "./SettingsPill.tsx";
+import NotificationCenter from "./NotificationCenter.tsx";
 import ChildSwitcher from "./ChildSwitcher.tsx";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar.tsx";
 import { Skeleton } from "./ui/skeleton.tsx";
 import { cn } from "../lib/utils.ts";
 import { isoWeek } from "../lib/dates.ts";
-
-const counterPillBase =
-  "flex items-center justify-center gap-1 rounded-full pl-[0.3rem] pr-[0.5rem] py-[0.15rem] text-[11px] font-medium text-inherit no-underline backdrop-blur-[4px] bg-white/15 " +
-  "basis-[calc(50%-0.2rem)] grow-0 shrink-0 sm:basis-auto " +
-  "sm:gap-1.5 sm:pl-[0.4rem] sm:pr-[0.6rem] sm:py-1 sm:text-xs";
-const counterPillActive = "!bg-white !text-[var(--color-primary)] font-semibold";
-const counterPillLoading = "!bg-white/10";
-const counterPillBadge =
-  "inline-flex items-center justify-center min-w-[1.2rem] h-[1.2rem] sm:min-w-[1.4rem] sm:h-[1.4rem] px-[0.4em] rounded-full font-bold";
-const counterPillBadgeSkeleton =
-  "min-w-[1.2rem] w-[1.2rem] h-[1.2rem] sm:min-w-[1.4rem] sm:w-[1.4rem] sm:h-[1.4rem] rounded-full !bg-white/55 shrink-0";
 
 /** Visual treatment shared by guardian + student avatars in the hero banner.
  * 40px on mobile, 48px from sm up; ring + soft shadow for presence. The
@@ -32,56 +21,9 @@ const heroAvatarClass =
 const heroAvatarFallbackClass =
   "text-[0.85rem] sm:text-[19px] font-bold tracking-wide text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.15)]";
 
-function CounterPill({
-  label,
-  value,
-  to,
-  loading = false,
-  tone = "default",
-}: {
-  label: string;
-  value: number;
-  to?: string;
-  loading?: boolean;
-  tone?: "default" | "alert";
-}) {
-  const isActive = !loading && value > 0;
-  const valueBg = isActive
-    ? tone === "alert"
-      ? "bg-[var(--color-error)] text-white"
-      : "bg-[var(--color-primary)] text-white"
-    : "bg-white/30 text-inherit";
-
-  const content = (
-    <>
-      {loading ? (
-        <Skeleton className={counterPillBadgeSkeleton} aria-hidden="true" />
-      ) : (
-        <span className={cn(counterPillBadge, valueBg)}>{value}</span>
-      )}
-      <span className={cn("whitespace-nowrap", loading && "text-white/70")}>{label}</span>
-    </>
-  );
-
-  const className = cn(
-    counterPillBase,
-    isActive && counterPillActive,
-    loading && counterPillLoading,
-  );
-
-  if (to && !loading) {
-    return (
-      <Link to={to} className={className}>
-        {content}
-      </Link>
-    );
-  }
-  return <div className={className}>{content}</div>;
-}
-
 export default function HeroCard() {
   const { session } = useAuth();
-  const { child, unread, badges, loading } = useHeroData();
+  const { child } = useHeroData();
   const childPictureSrc = useEvaResourceBlob(child?.picture);
 
   /* Ticks once a minute so the displayed date/week stay accurate across a long session. */
@@ -162,34 +104,10 @@ export default function HeroCard() {
         </div>
       )}
 
-      {/* Row 3: counter pills + settings span both columns, right-aligned. */}
+      {/* Row 3: what's-new + settings span both columns, right-aligned. */}
       {isGuardian && (
         <div className="relative z-[1] col-span-2 flex flex-wrap justify-end gap-[0.4rem]">
-          <CounterPill
-            label={`Unread ${unread === 1 ? "message" : "messages"}`}
-            value={unread}
-            to="/messages"
-            loading={loading}
-            tone="alert"
-          />
-          <CounterPill
-            label="Subject rooms"
-            value={badges.subjectrooms ?? 0}
-            to="/subjects"
-            loading={loading}
-          />
-          <CounterPill
-            label="Bookings"
-            value={badges.bookings ?? 0}
-            to="/bookings"
-            loading={loading}
-          />
-          <CounterPill
-            label="Assessments"
-            value={badges.holisticassessments ?? 0}
-            to="/assessments"
-            loading={loading}
-          />
+          <NotificationCenter />
           <SettingsPill />
         </div>
       )}

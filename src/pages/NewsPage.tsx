@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Archive, ArchiveRestore, HelpCircle, Paperclip } from "lucide-react";
 import { useSchoolsoftContext, type SchoolsoftContext } from "../hooks/useSchoolsoftContext.tsx";
 import { useQuery } from "../hooks/useQuery.ts";
@@ -108,7 +109,14 @@ export default function NewsPage() {
   const ctx = useSchoolsoftContext();
   const [feed, setFeed] = useState<EvaNewsFeed>("current");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  /* `?item=<id>` (from the notification center) opens that item and scrolls
+   * to it once the feed has rendered. */
+  const [searchParams] = useSearchParams();
+  const linked = Number(searchParams.get("item"));
+  const linkedId = Number.isInteger(linked) && linked > 0 ? linked : null;
+  const [expanded, setExpanded] = useState<Set<number>>(
+    () => new Set(linkedId !== null ? [linkedId] : []),
+  );
 
   const list = useQuery(ctx && newsKeys.feed(ctx.keyPrefix, feed), async () =>
     fetchEvaNewsFeed(
@@ -121,6 +129,14 @@ export default function NewsPage() {
     ),
   );
   const items = useMemo(() => list.data ?? [], [list.data]);
+
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    if (linkedId === null || !hasItems) return;
+    document
+      .getElementById(`news-${linkedId}`)
+      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [linkedId, hasItems]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -345,6 +361,7 @@ function NewsItem({
 
   return (
     <li
+      id={`news-${n.id}`}
       className={cn(
         "grid grid-cols-[auto_1fr] gap-4 rounded-lg border border-slate-200 bg-white px-[1.1rem] py-4 shadow-sm transition-shadow hover:shadow-md",
         "border-l-[3px]",
