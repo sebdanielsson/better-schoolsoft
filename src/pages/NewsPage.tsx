@@ -206,6 +206,7 @@ export default function NewsPage() {
               setFeed(f.id);
               setSelectedCategory(null);
               setExpanded(new Set());
+              setScrollTo(null);
             }}
             className={cn(
               "rounded-full border px-[0.85rem] py-[0.35rem] text-[0.82rem] font-medium transition-colors",

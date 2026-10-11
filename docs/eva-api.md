@@ -124,7 +124,7 @@ There is no comment field on the full-day report itself; the app's "comment" for
 | PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/confirm`     | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
 | PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/cancel`      | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
 | POST   | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark read                       | implemented | confirmed         |
-| DELETE | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark unread                     | implemented | confirmed         |
+| DELETE | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark unread                     | new         | confirmed         |
 | GET    | `v1/schools/{orgId}/parents/{parentId}/badge/bookings?studentId={studentId}`              | — → `number`                              | implemented | confirmed         |
 
 Body field names are all-lowercase `timebookingid` (unlike `timebookingId` in responses). The body is exactly the slot's `timebookingTimeKey` object. Reserve returns HTTP `409 CONFLICT` when another student took the slot. Confirm is used when the teacher has proposed a time (status `NEEDS_CONFIRMATION`).
@@ -240,7 +240,7 @@ There is no separate reply endpoint and no attachment upload in the guardian app
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news/{newsId}`                                       | — detail                                                     | new         | inferred   |
 | PUT    | `v1/parent/{parentId}/schools/{orgId}/news/read/{newsId}`                                  | no body — sent when the detail opens                         | implemented | confirmed  |
 | POST   | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark read (list action)                            | new         | inferred   |
-| DELETE | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark unread                                        | implemented | confirmed  |
+| DELETE | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark unread                                        | new         | confirmed  |
 | POST   | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — archive                                            | new         | inferred   |
 | DELETE | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — unarchive                                          | new         | inferred   |
 | GET    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | — question/answer state                                      | new         | inferred   |

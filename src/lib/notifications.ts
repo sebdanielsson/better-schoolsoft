@@ -215,12 +215,13 @@ export function relativeTime(time: number, now: number): string {
   if (min < 1) return "Just now";
   if (min < 60) return `${min} min ago`;
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h ago`;
   /* Calendar days, so 23:59 two days ago isn't "Yesterday". Rounding absorbs
-   * the 23 and 25 hour days around DST changes. */
+   * the 23 and 25 hour days around DST changes; on the 25 hour day an item
+   * can be 24 h old and still from today. */
   const d = Math.round(
     (new Date(now).setHours(0, 0, 0, 0) - new Date(time).setHours(0, 0, 0, 0)) / 86_400_000,
   );
+  if (h < 24 || d === 0) return `${h} h ago`;
   if (d === 1) return "Yesterday";
   if (d < 7) return `${d} days ago`;
   return new Date(time).toLocaleDateString(undefined, { day: "numeric", month: "short" });

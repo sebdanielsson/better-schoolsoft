@@ -228,4 +228,9 @@ void test("relativeTime", () => {
     "2 days ago",
   );
   assert.equal(relativeTime(new Date(2026, 9, 10, 0, 0).getTime(), justAfterMidnight), "Yesterday");
+  /* The 25-hour day when DST ends (in zones that have it): still today. */
+  assert.match(
+    relativeTime(new Date(2026, 9, 25, 0, 30).getTime(), new Date(2026, 9, 25, 23, 45).getTime()),
+    /^2[34] h ago$/,
+  );
 });
