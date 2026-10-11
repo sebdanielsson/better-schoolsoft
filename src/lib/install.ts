@@ -28,9 +28,16 @@ if (typeof window !== "undefined") {
 }
 
 /** Register `/sw.js` in production builds. In dev it would cache Vite's
- *  modules and fight hot reload. */
+ *  modules and fight hot reload, so dev removes one a production build on
+ *  the same origin left behind. */
 export function registerServiceWorker(): void {
-  if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
+  if (!("serviceWorker" in navigator)) return;
+  if (!import.meta.env.PROD) {
+    void navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => Promise.all(regs.map((r) => r.unregister())));
+    return;
+  }
   const register = () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {
       /* Installability is a nicety; the app works without it. */
@@ -73,9 +80,11 @@ export function useInstall(): { kind: "prompt" | "ios" | null; prompt: () => Pro
     prompt: async () => {
       const e = deferred;
       if (!e) return;
+      /* An event can prompt only once; the browser fires a new one later if
+       * installing is still possible. */
       deferred = null;
       notify();
-      await e.prompt();
+      await e.prompt().catch(() => {});
     },
   };
 }

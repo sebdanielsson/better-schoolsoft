@@ -86,8 +86,9 @@ export default function SettingsPill() {
             Add to your Home Screen
           </DialogTitle>
           <DialogDescription className="mt-2 text-sm text-slate-600">
-            Tap the Share button in Safari, then <strong>Add to Home Screen</strong>. The app then
-            opens full screen from its own icon.
+            Tap the Share button, then <strong>Add to Home Screen</strong>. The app then opens full
+            screen from its own icon. Inside another app (a link from mail or social media), open
+            the page in Safari first.
           </DialogDescription>
           <div className="mt-6 flex justify-end">
             <button type="button" className={btnPrimaryClass} onClick={() => setIosHelp(false)}>

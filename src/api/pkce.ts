@@ -48,22 +48,36 @@ interface StoredPkce extends PkcePair {
   ts: number;
 }
 
+/** How long a sign-in may take between leaving for SchoolSoft and coming
+ *  back (BankID included). */
+const PKCE_TTL_MS = 15 * 60_000;
+
+/* localStorage rather than sessionStorage: an installed app (iOS above all)
+ * can finish the SchoolSoft round trip in a different browsing context, or
+ * be restarted while the user switches to BankID, and sessionStorage would
+ * be gone. The record expires and is cleared on use; the callback still
+ * checks `state`. */
 export function savePkce(p: StoredPkce): void {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
 }
 
 export function loadPkce(): StoredPkce | null {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as StoredPkce;
+    const p = JSON.parse(raw) as StoredPkce;
+    if (!(Date.now() - p.ts < PKCE_TTL_MS)) {
+      clearPkce();
+      return null;
+    }
+    return p;
   } catch {
     return null;
   }
 }
 
 export function clearPkce(): void {
-  sessionStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 /** Build the SchoolSoft React-SPA authorize URL.

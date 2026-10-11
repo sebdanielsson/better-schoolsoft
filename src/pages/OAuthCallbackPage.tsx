@@ -31,7 +31,7 @@ export default function OAuthCallbackPage() {
     }
     const stored = loadPkce();
     if (!stored) {
-      setError("Lost the PKCE handshake (sessionStorage was cleared). Please try again.");
+      setError("This sign-in expired or was started elsewhere. Please try again.");
       return;
     }
     if (stored.state !== state) {
