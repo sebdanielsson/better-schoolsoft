@@ -46,4 +46,6 @@ test("route prefixes match whole segments", () => {
   assert.equal(featureForPath("/news"), "NEWS");
   assert.equal(featureForPath("/subjects/123"), "SUBJECT_ROOMS");
   assert.equal(featureForPath("/Bookings/12"), "BOOKINGS");
+  assert.equal(featureForPath("/%62ookings"), "BOOKINGS");
+  assert.equal(featureForPath("/%E0%A4%A"), null);
 });

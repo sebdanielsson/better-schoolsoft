@@ -56,8 +56,15 @@ const ROUTE_FEATURE: [prefix: string, feature: Feature][] = [
 ];
 
 export function featureForPath(pathname: string): Feature | null {
-  /* React Router matches routes case-insensitively, so must this. */
-  const path = pathname.toLowerCase();
+  /* React Router decodes the path and matches case-insensitively, so must
+   * this, or `/%62ookings` and `/Bookings` would slip past. */
+  let decoded = pathname;
+  try {
+    decoded = decodeURI(pathname);
+  } catch {
+    /* malformed escapes: React Router can't match those either */
+  }
+  const path = decoded.toLowerCase();
   for (const [prefix, feature] of ROUTE_FEATURE) {
     if (path === prefix || path.startsWith(`${prefix}/`)) return feature;
   }
