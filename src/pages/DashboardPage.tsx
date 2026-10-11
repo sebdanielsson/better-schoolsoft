@@ -1,9 +1,11 @@
 import { Fragment, lazy, Suspense, type ReactNode } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import HomePage from "./HomePage.tsx";
 import HeroCard from "../components/HeroCard.tsx";
 import SectionNav from "../components/SectionNav.tsx";
 import { HeroDataProvider, useHeroData } from "../hooks/useHeroData.tsx";
+import { useMenu } from "../hooks/useMenu.ts";
+import { pathAllowed } from "../lib/menu.ts";
 
 /* HomePage stays eager — it is the landing route, so lazy-loading it would only
  * add a round trip. The rest are reached by navigation and cost nothing until
@@ -34,33 +36,44 @@ export default function DashboardPage() {
           <HeroCard />
           <SectionNav />
           <ChildScope>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/schedule" element={<SchedulePage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/news" element={<NewsPage />} />
-                <Route path="/messages" element={<MessagesPage />} />
-                <Route path="/staff" element={<StaffPage />} />
-                <Route path="/assessments" element={<AssessmentsPage />} />
-                <Route path="/assessments/:id" element={<AssessmentDetailPage />} />
-                <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
-                <Route path="/plannings/:planningId/:partId" element={<PlanningDetailPage />} />
-                <Route path="/subjects" element={<SubjectsPage />} />
-                <Route path="/subjects/:activityId" element={<SubjectRoomPage />} />
-                <Route path="/bookings" element={<BookingsPage />} />
-                <Route path="/bookings/:id" element={<BookingDetailPage />} />
-                <Route path="/absence" element={<AbsencePage />} />
-                <Route path="/school" element={<SchoolPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
+            <MenuGate>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/schedule" element={<SchedulePage />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/news" element={<NewsPage />} />
+                  <Route path="/messages" element={<MessagesPage />} />
+                  <Route path="/staff" element={<StaffPage />} />
+                  <Route path="/assessments" element={<AssessmentsPage />} />
+                  <Route path="/assessments/:id" element={<AssessmentDetailPage />} />
+                  <Route path="/assignments/:id" element={<AssignmentDetailPage />} />
+                  <Route path="/plannings/:planningId/:partId" element={<PlanningDetailPage />} />
+                  <Route path="/subjects" element={<SubjectsPage />} />
+                  <Route path="/subjects/:activityId" element={<SubjectRoomPage />} />
+                  <Route path="/bookings" element={<BookingsPage />} />
+                  <Route path="/bookings/:id" element={<BookingDetailPage />} />
+                  <Route path="/absence" element={<AbsencePage />} />
+                  <Route path="/school" element={<SchoolPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </MenuGate>
           </ChildScope>
         </main>
       </div>
     </HeroDataProvider>
   );
+}
+
+/** Sends a section the child's menu doesn't list (a bookmark, or a sibling
+ *  without it after a switch) back home, as the official app hides it. */
+function MenuGate({ children }: { children: ReactNode }) {
+  const menu = useMenu();
+  const { pathname } = useLocation();
+  if (!pathAllowed(menu, pathname)) return <Navigate to="/" replace />;
+  return children;
 }
 
 /** Shown while a lazily-loaded route chunk is in flight. Deliberately quiet —

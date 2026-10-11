@@ -287,12 +287,12 @@ Badges — `GET v1/schools/{orgId}/parents/{parentId}/badge/{kind}?studentId={st
 
 Other menu/flag endpoints:
 
-| Method | Path                                                                     | Response                                             | Status | Confidence |
-| ------ | ------------------------------------------------------------------------ | ---------------------------------------------------- | ------ | ---------- |
-| GET    | `v4/schools/{orgId}/parents/{parentId}/menu?studentId={studentId}`       | `[{ "type": "SCHEDULE" }, { "type": "ABSENCE" }, …]` | new    | confirmed  |
-| GET    | `v1/schools/{orgId}/parameters/students/{studentId}/holistic-assessment` | `boolean`                                            | new    | confirmed  |
+| Method | Path                                                                     | Response                                             | Status      | Confidence |
+| ------ | ------------------------------------------------------------------------ | ---------------------------------------------------- | ----------- | ---------- |
+| GET    | `v4/schools/{orgId}/parents/{parentId}/menu?studentId={studentId}`       | `[{ "type": "SCHEDULE" }, { "type": "ABSENCE" }, …]` | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/parameters/students/{studentId}/holistic-assessment` | `boolean`                                            | new         | confirmed  |
 
-Menu `type` values seen: `SCHEDULE`, `ABSENCE`, `LUNCH`, `NEWS`, `STAFF_LIST`, `SUBJECT_ROOMS`, `HOLISTIC_ASSESSMENT`, `BOOKINGS`. This is the authoritative per-child feature list and could replace several individual parameter checks.
+Menu `type` values seen: `SCHEDULE`, `ABSENCE`, `LUNCH`, `NEWS`, `STAFF_LIST`, `SUBJECT_ROOMS`, `HOLISTIC_ASSESSMENT`, `BOOKINGS`. This is the authoritative per-child feature list. The app shows a section, home card or notification source only when the menu lists its module (`src/lib/menu.ts`); while the menu loads, or if it fails or comes back empty, everything is shown.
 
 ## 6. Student leave (Ledighetsansökan)
 

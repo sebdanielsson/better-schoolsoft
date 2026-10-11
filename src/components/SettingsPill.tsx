@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useMenu } from "../hooks/useMenu.ts";
+import { hasFeature } from "../lib/menu.ts";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useInstall } from "../lib/install.ts";
@@ -14,6 +16,7 @@ import {
 export default function SettingsPill() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const menu = useMenu();
   const install = useInstall();
   const [iosHelp, setIosHelp] = useState(false);
 
@@ -38,12 +41,14 @@ export default function SettingsPill() {
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[200px] rounded-lg">
-          <DropdownMenuItem render={<Link to="/staff" className="cursor-pointer" />}>
-            <span aria-hidden="true" className="text-muted-foreground">
-              ✱
-            </span>
-            Staff directory
-          </DropdownMenuItem>
+          {hasFeature(menu, "STAFF_LIST") && (
+            <DropdownMenuItem render={<Link to="/staff" className="cursor-pointer" />}>
+              <span aria-hidden="true" className="text-muted-foreground">
+                ✱
+              </span>
+              Staff directory
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem render={<Link to="/profile" className="cursor-pointer" />}>
             <span aria-hidden="true" className="text-muted-foreground">
               ⚙

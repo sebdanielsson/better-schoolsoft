@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { useMenu } from "../../hooks/useMenu.ts";
+import { pathAllowed } from "../../lib/menu.ts";
 import { Link } from "react-router-dom";
 import { useNow } from "../../hooks/useNow.ts";
 import { useCalendarAgenda } from "../../hooks/useCalendarAgenda.ts";
@@ -61,12 +63,15 @@ export default function EventsCard() {
 
 function EventRow({ item }: { item: WeekItem }) {
   const { icon: Icon, className } = ITEM_STYLE[item.kind];
-  const href =
+  const menu = useMenu();
+  const target =
     item.kind === "test" && item.activityId
       ? `/subjects/${item.activityId}`
       : item.kind === "booking"
         ? "/bookings"
         : null;
+  /* Link only into sections the child's menu lists. */
+  const href = target && pathAllowed(menu, target) ? target : null;
   const meta = [KIND_LABEL[item.kind], item.subject ?? item.detail].filter(Boolean).join(" · ");
   const body = (
     <>

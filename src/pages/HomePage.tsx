@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useNow } from "../hooks/useNow.ts";
 import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useMenu } from "../hooks/useMenu.ts";
+import { hasFeature, type Feature } from "../lib/menu.ts";
 import {
   acquireCookieFocus,
   assertCookieFocus,
@@ -49,6 +51,9 @@ export default function HomePage() {
 
   const today = useNow();
   const todayDayIdx = isoDay(today);
+  /* Cards for modules the child's menu doesn't list stay hidden. */
+  const menu = useMenu();
+  const has = (f: Feature) => hasFeature(menu, f);
 
   /* Eva tiles (current/next lesson) and news. News lands on its
    * own so its card can swap from skeleton to list without waiting on the
@@ -147,21 +152,23 @@ export default function HomePage() {
 
   return (
     <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-12">
-      <NextBookingCard />
-      <ScheduleCard
-        loading={loading}
-        scheduleLessons={
-          schedule && schedule.child === child?.studentId ? schedule.lessons : NO_LESSONS
-        }
-        currentTile={tiles.currentLesson}
-        nextTile={tiles.nextLesson}
-        today={today}
-      />
-      <LunchCard />
-      <AssignmentsCard />
-      <PlanningsCard />
-      <EventsCard />
-      <NewsCard loading={newsLoading} news={news} />
+      {has("BOOKINGS") && <NextBookingCard />}
+      {has("SCHEDULE") && (
+        <ScheduleCard
+          loading={loading}
+          scheduleLessons={
+            schedule && schedule.child === child?.studentId ? schedule.lessons : NO_LESSONS
+          }
+          currentTile={tiles.currentLesson}
+          nextTile={tiles.nextLesson}
+          today={today}
+        />
+      )}
+      {has("LUNCH") && <LunchCard />}
+      {has("SUBJECT_ROOMS") && <AssignmentsCard />}
+      {has("SUBJECT_ROOMS") && <PlanningsCard />}
+      {has("SCHEDULE") && <EventsCard />}
+      {has("NEWS") && <NewsCard loading={newsLoading} news={news} />}
     </div>
   );
 }

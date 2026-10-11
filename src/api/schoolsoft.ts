@@ -428,6 +428,21 @@ export function fetchEvaMessage(
   );
 }
 
+/** The iOS app's per-child menu: `[{ type: "SCHEDULE" }, …]`, one entry per
+ *  module the child has. See `lib/menu.ts`. */
+export function fetchEvaMenu(
+  school: string,
+  accessToken: string,
+  userId: number,
+  orgId: number,
+  studentId: number,
+): Promise<unknown> {
+  return evaGet(
+    `${BASE}/${school}/eva/api/v4/schools/${orgId}/parents/${userId}/menu?studentId=${studentId}`,
+    accessToken,
+  );
+}
+
 /** Fetch which profile fields the school lets the parent edit. */
 export async function fetchEvaProfilePermissions(
   school: string,

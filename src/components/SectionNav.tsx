@@ -1,5 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useNotifications } from "../hooks/useNotifications.ts";
+import { useMenu } from "../hooks/useMenu.ts";
+import { pathAllowed } from "../lib/menu.ts";
 import { cn } from "../lib/utils.ts";
 
 const SECTIONS: { to: string; label: string }[] = [
@@ -21,13 +23,16 @@ const SECTIONS: { to: string; label: string }[] = [
 export default function SectionNav() {
   /* Shares its cache with the hero's "New" pill: no extra requests. */
   const { bySection } = useNotifications();
+  /* Only the sections the child's menu lists, as in the official app. */
+  const menu = useMenu();
+  const sections = SECTIONS.filter((s) => pathAllowed(menu, s.to));
   return (
     <nav
       aria-label="Sections"
       className="-mx-4 mb-5 overflow-x-auto px-4 md:mx-0 md:px-0 pointer-coarse:[scrollbar-width:none] pointer-coarse:[&::-webkit-scrollbar]:hidden"
     >
       <ul className="flex w-max gap-1.5">
-        {SECTIONS.map((s) => (
+        {sections.map((s) => (
           <li key={s.to}>
             <NavLink
               to={s.to}
