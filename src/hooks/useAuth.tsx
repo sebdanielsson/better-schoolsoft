@@ -14,7 +14,7 @@ import {
   setEvaTokenSupplier,
   type UserType,
 } from "../api/schoolsoft.ts";
-import { clearPkce } from "../api/pkce.ts";
+import { clearAllPkce } from "../api/pkce.ts";
 import { clearSessionCaches } from "../lib/session-caches.ts";
 
 interface EvaSession {
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     /* Leaving these behind would expose the previous account's cached staff
      * details and avatars to the next person who signs in on this device. */
     clearSessionCaches();
-    clearPkce();
+    clearAllPkce();
   }, [school]);
 
   /* Coalesce concurrent Eva-token refreshes into one network call. */

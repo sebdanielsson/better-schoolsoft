@@ -2,7 +2,7 @@
 // promise the runner owns; awaiting it at the call site would serialize the suite.
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { clearPkce, loadPkce, savePkce } from "./pkce.ts";
+import { clearAllPkce, clearPkce, loadPkce, savePkce } from "./pkce.ts";
 
 /* A Map-backed localStorage, enough for pkce.ts. */
 const store = new Map<string, string>();
@@ -50,6 +50,13 @@ test("clearing one state keeps the others; clearing all removes every record", (
   clearPkce("a");
   assert.equal(loadPkce("a"), null);
   assert.ok(loadPkce("b"));
-  clearPkce();
+  clearAllPkce();
   assert.deepEqual([...store.keys()], ["unrelated"]);
+});
+
+test("a callback without a state clears nothing", () => {
+  savePkce(record("a"));
+  clearPkce(null);
+  clearPkce("");
+  assert.ok(loadPkce("a"));
 });

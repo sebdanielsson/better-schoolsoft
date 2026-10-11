@@ -92,12 +92,14 @@ export function loadPkce(state: string | null): StoredPkce | null {
   }
 }
 
-/** Drop one sign-in's record, or all of them (logout). */
-export function clearPkce(state?: string | null): void {
-  if (state) {
-    localStorage.removeItem(PREFIX + state);
-    return;
-  }
+/** Drop one sign-in's record. Without a state there is nothing to drop:
+ *  a callback missing its state must not touch other sign-ins in flight. */
+export function clearPkce(state: string | null): void {
+  if (state) localStorage.removeItem(PREFIX + state);
+}
+
+/** Drop every sign-in record (logout). */
+export function clearAllPkce(): void {
   localStorage.removeItem(LEGACY_KEY);
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const key = localStorage.key(i);
