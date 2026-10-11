@@ -40,7 +40,8 @@ export async function generatePkce(): Promise<PkcePair> {
   return { codeVerifier, codeChallenge, state };
 }
 
-const STORAGE_KEY = "bss_pkce";
+const PREFIX = "bss_pkce:";
+const LEGACY_KEY = "bss_pkce";
 
 interface StoredPkce extends PkcePair {
   school: string;
@@ -48,22 +49,62 @@ interface StoredPkce extends PkcePair {
   ts: number;
 }
 
-export function savePkce(p: StoredPkce): void {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+/** How long a sign-in may take between leaving for SchoolSoft and coming
+ *  back (BankID included). */
+const PKCE_TTL_MS = 15 * 60_000;
+
+/* One record per sign-in, keyed by its `state`, in localStorage rather than
+ * sessionStorage: an installed app can be restarted while the user switches
+ * to BankID, which empties sessionStorage. Keying by state keeps two tabs'
+ * sign-ins apart, and a callback whose state has no record is refused.
+ * Records expire and are removed on use, on failure and on logout. */
+function prune(now = Date.now()): void {
+  localStorage.removeItem(LEGACY_KEY);
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (!key?.startsWith(PREFIX)) continue;
+    try {
+      const p = JSON.parse(localStorage.getItem(key) ?? "") as StoredPkce;
+      if (now - p.ts < PKCE_TTL_MS) continue;
+    } catch {
+      /* unreadable: drop it */
+    }
+    localStorage.removeItem(key);
+  }
 }
 
-export function loadPkce(): StoredPkce | null {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
+export function savePkce(p: StoredPkce): void {
+  prune();
+  localStorage.setItem(PREFIX + p.state, JSON.stringify(p));
+}
+
+/** The record for the sign-in that `state` belongs to, if it is still valid. */
+export function loadPkce(state: string | null): StoredPkce | null {
+  prune();
+  if (!state) return null;
+  const raw = localStorage.getItem(PREFIX + state);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as StoredPkce;
+    const p = JSON.parse(raw) as StoredPkce;
+    return p.state === state ? p : null;
   } catch {
     return null;
   }
 }
 
-export function clearPkce(): void {
-  sessionStorage.removeItem(STORAGE_KEY);
+/** Drop one sign-in's record. Without a state there is nothing to drop:
+ *  a callback missing its state must not touch other sign-ins in flight. */
+export function clearPkce(state: string | null): void {
+  if (state) localStorage.removeItem(PREFIX + state);
+}
+
+/** Drop every sign-in record (logout). */
+export function clearAllPkce(): void {
+  localStorage.removeItem(LEGACY_KEY);
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(PREFIX)) localStorage.removeItem(key);
+  }
 }
 
 /** Build the SchoolSoft React-SPA authorize URL.

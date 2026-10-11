@@ -1,0 +1,114 @@
+/* Service worker: makes the app installable and quick to open, and lets the
+ * app shell load offline. It caches only our own static files. SchoolSoft
+ * data (/schoolsoft/*) and the proxy (/api/*) always go to the network and
+ * are never stored, so no personal data ends up in the cache. */
+
+const SHELL = "shell-v1";
+const ASSETS = "assets-v1";
+const KEEP = new Set([SHELL, ASSETS]);
+
+self.addEventListener("install", () => {
+  void self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) => Promise.all(names.filter((n) => !KEEP.has(n)).map((n) => caches.delete(n))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/schoolsoft/") || url.pathname.startsWith("/api/")) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirstShell(request));
+  } else if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(cacheFirst(request));
+  } else {
+    event.respondWith(staleWhileRevalidate(request));
+  }
+});
+
+/** A plain 200 of the expected kind. The SPA rewrite answers unknown paths
+ *  with index.html, so a missing file looks like a 200 HTML page. */
+function cacheable(response, wantHtml) {
+  if (response.status !== 200 || response.type !== "basic") return false;
+  const html = (response.headers.get("content-type") ?? "").includes("text/html");
+  return html === wantHtml;
+}
+
+/** Cache Storage is best effort throughout: a full disk or an unavailable
+ *  store must never fail a response that already arrived from the network. */
+async function tryPut(cache, key, response) {
+  try {
+    await cache.put(key, response);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Pages: always try the network, so a deploy shows up straight away; fall
+ *  back to the last app shell when offline. Every route is the same SPA
+ *  shell, so one cached copy serves them all. */
+async function networkFirstShell(request) {
+  let response;
+  try {
+    response = await fetch(request);
+  } catch (err) {
+    const cached = await caches.match("/", { cacheName: SHELL }).catch(() => undefined);
+    if (cached) return cached;
+    throw err;
+  }
+  if (cacheable(response, true)) {
+    try {
+      const cache = await caches.open(SHELL);
+      const fresh = await response.clone().text();
+      const previous = await cache.match("/").then((r) => r?.text());
+      const stored = await tryPut(
+        cache,
+        "/",
+        new Response(fresh, { status: 200, headers: response.headers }),
+      );
+      /* A new deploy references new hashed files: once its shell is stored,
+       * start the asset cache over, so it holds one deploy's files and
+       * nothing the cached shell can't load. */
+      if (stored && previous !== undefined && previous !== fresh) await caches.delete(ASSETS);
+    } catch {
+      /* keep serving; the cache is only an offline fallback */
+    }
+  }
+  return response;
+}
+
+/** Hashed bundles never change, so a cached copy is always right. */
+async function cacheFirst(request) {
+  const cache = await caches.open(ASSETS).catch(() => null);
+  const cached = await cache?.match(request).catch(() => undefined);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (cache && cacheable(response, false)) await tryPut(cache, request, response.clone());
+  return response;
+}
+
+/** Icons, manifest, favicon: serve the cached copy and refresh it. */
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(SHELL).catch(() => null);
+  const cached = await cache?.match(request).catch(() => undefined);
+  const refresh = fetch(request).then(async (response) => {
+    if (cache && cacheable(response, false)) await tryPut(cache, request, response.clone());
+    return response;
+  });
+  if (cached) {
+    refresh.catch(() => {});
+    return cached;
+  }
+  return refresh;
+}

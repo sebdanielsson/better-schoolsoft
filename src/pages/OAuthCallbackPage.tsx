@@ -17,28 +17,30 @@ export default function OAuthCallbackPage() {
   const exchangeStarted = useRef(false);
 
   useEffect(() => {
+    /* Re-runs after the exchange started (the success path updates
+     * `session`) must not re-check the record it already consumed. */
+    if (exchangeStarted.current) return;
     const code = params.get("code");
     const state = params.get("state");
     const errParam = params.get("error");
 
     if (errParam) {
+      clearPkce(state);
       setError(`SchoolSoft rejected the sign-in: ${params.get("error_description") ?? errParam}`);
       return;
     }
     if (!code) {
+      clearPkce(state);
       setError("No code returned from SchoolSoft.");
       return;
     }
-    const stored = loadPkce();
+    /* Looked up by `state`: a callback this browser didn't start (CSRF) or
+     * one that expired has no record. */
+    const stored = loadPkce(state);
     if (!stored) {
-      setError("Lost the PKCE handshake (sessionStorage was cleared). Please try again.");
+      setError("This sign-in expired or wasn't started here. Please try again.");
       return;
     }
-    if (stored.state !== state) {
-      setError("State mismatch — possible CSRF. Please try signing in again.");
-      return;
-    }
-    if (exchangeStarted.current) return;
     exchangeStarted.current = true;
 
     void (async () => {
@@ -48,7 +50,7 @@ export default function OAuthCallbackPage() {
         const parent = await fetchEvaParent(stored.school, tokens.access_token);
         const firstSchool = parent.children[0]?.schools[0];
         if (!firstSchool) throw new Error("No school found on this account");
-        clearPkce();
+        clearPkce(stored.state);
 
         if (!session) {
           localStorage.setItem(
@@ -75,6 +77,8 @@ export default function OAuthCallbackPage() {
         setEvaTokens(tokens.refresh_token, tokens.access_token, tokens.expires);
         void navigate("/");
       } catch (e) {
+        /* The code is single-use, so this sign-in can't be retried. */
+        clearPkce(stored.state);
         setError(e instanceof Error ? e.message : "Token exchange failed");
       }
     })();

@@ -21,6 +21,7 @@ Sources: web sidebar (`/rest-api/parent/sidebar/sectiongroups`), iOS menu (`/eva
 - [x] **Staff directory**: searchable, with a role filter (web "Kontaktlistor", iOS `STAFF_LIST`).
 - [x] **School information** and **files & links** (web `right_student_school.jsp` and `right_student_library.jsp`), both on `/school`. The JSP is parsed with `DOMParser` and only vetted text and links are kept.
 - [x] **Profile**: view and edit contact details.
+- [x] **Installable app**: web app manifest, home-screen icons and a service worker, so it installs on iOS (Share → Add to Home Screen) and Android and opens full screen. The service worker caches only the app shell and its hashed assets; SchoolSoft data is never cached. Settings offers "Install app" where the browser supports it.
 - [x] **Multiple children**: child switcher for guardians with more than one child. Untested live because the account has one child; mock mode has two. The cookie session re-bootstraps when the child in focus changes.
 
 ## Planned
