@@ -6,7 +6,8 @@ A faster, friendlier frontend for [SchoolSoft](https://www.schoolsoft.se/)'s gua
 
 - **Home dashboard**: today's lessons with a "now / next up" banner, lunch menu, this week's assignments and plannings, the next calendar event, the latest news and your next booking
 - **Schedule**: week view with week navigation
-- **Calendar**: the next upcoming event
+- **Calendar**: upcoming events, bookings, tests and homework
+- **Notification center**: every unread item in one place, with unread badges on the section tabs
 - **Subjects**: subject rooms with teachers, assignments, plannings and results
 - **Absence**: report a full day or single lessons, with comments
 - **Messages**: inbox, sent and trash, compose and reply, attachments

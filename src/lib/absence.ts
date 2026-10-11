@@ -132,7 +132,7 @@ export const absenceKeys = {
 };
 
 /** Monday of ISO week `week` in ISO week-year `year`. */
-export function mondayOfIsoWeek(year: number, week: number): Date {
+function mondayOfIsoWeek(year: number, week: number): Date {
   /* ISO week 1 is the week containing 4 January. */
   return addDays(mondayOf(new Date(year, 0, 4)), (week - 1) * 7);
 }

@@ -54,7 +54,7 @@ export interface NotificationItem {
 }
 
 /** Section of the app each kind belongs to, for the nav-pill badges. */
-export const SECTION_OF: Record<NotificationKind, string> = {
+const SECTION_OF: Record<NotificationKind, string> = {
   message: "/messages",
   news: "/news",
   booking: "/bookings",

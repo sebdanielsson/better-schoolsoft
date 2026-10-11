@@ -243,15 +243,6 @@ export function installMocks() {
       const week = Number(evaLunchMatch[1]);
       return Promise.resolve(json(evaLunchByWeek[week] ?? []));
     }
-    /* Eva lunch by week/day */
-    if (/\/eva\/api\/v1\/schools\/\d+\/lunchmenu\/week\/\d+\/day\/\d+/.exec(url)) {
-      return Promise.resolve(
-        json([
-          { mealType: "Veckans lunch", description: "Fiskpinnar med remouladsås" },
-          { mealType: "Veckans vegetariska", description: "Quornbiffar med sallad" },
-        ]),
-      );
-    }
     /* Eva: parent profile */
     if (/\/eva\/api\/v1\/parent\/\d+\/profile$/.exec(url)) {
       return Promise.resolve(
@@ -279,7 +270,7 @@ export function installMocks() {
       return Promise.resolve(json(true));
     }
     /* Eva: profile updates */
-    if (/\/eva\/api\/v1\/parent\/\d+\/profile\/(address|name|contact|notPublish)$/.exec(url)) {
+    if (/\/eva\/api\/v1\/parent\/\d+\/profile\/(address|personal|contact|notPublish)$/.exec(url)) {
       return Promise.resolve(new Response("", { status: 200 }));
     }
     /* Eva parent root */
@@ -387,18 +378,6 @@ export function installMocks() {
       return Promise.resolve(json(news));
     }
 
-    /* Eva: latest news */
-    if (url.includes("/news/latest")) {
-      return Promise.resolve(
-        json({
-          newsId: 329806,
-          title: "Pollensäsongen närmar sig ",
-          description:
-            "Våren är på väg och med den kommer ljusare dagar, spirande natur och mer tid utomhus. Samtidigt inne...",
-          fromDate: new Date(Date.now() - 86_400_000).toISOString(),
-        }),
-      );
-    }
     /* Eva: next calendar event */
     if (url.includes("/news/calendarevent/next")) {
       return Promise.resolve(
@@ -408,10 +387,6 @@ export function installMocks() {
           eventTypeInfo: "Whole school",
         }),
       );
-    }
-    /* Eva: messages/unread */
-    if (url.endsWith("/messages/unread")) {
-      return Promise.resolve(json(2));
     }
     /* Eva: messages/inbox */
     if (/\/messages\/inbox$/.exec(url)) {
@@ -498,18 +473,6 @@ export function installMocks() {
         },
       };
       return Promise.resolve(json(samples[id] ?? samples[4181968]));
-    }
-    /* Eva: badges */
-    if (/\/badge\/(news|bookings|subjectrooms|holisticassessments)/.exec(url)) {
-      const matched =
-        /\/badge\/(news|bookings|subjectrooms|holisticassessments)/.exec(url)?.[1] ?? "";
-      const fakeCounts: Record<string, number> = {
-        news: 0,
-        bookings: 0,
-        subjectrooms: 85,
-        holisticassessments: 2,
-      };
-      return Promise.resolve(json(fakeCounts[matched] ?? 0));
     }
 
     /* School list (used by the login combobox) */

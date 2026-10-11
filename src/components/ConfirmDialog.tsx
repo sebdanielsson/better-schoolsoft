@@ -7,7 +7,7 @@ export const btnPrimaryClass =
   "bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer border-0";
 export const btnSecondaryClass =
   "bg-white border border-slate-200 text-slate-900 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-slate-50 hover:border-slate-300 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer";
-export const btnDangerClass =
+const btnDangerClass =
   "bg-red-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer border-0";
 
 /** Asks before an action that reaches the school (booking a time, reporting
