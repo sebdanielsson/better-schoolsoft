@@ -123,8 +123,8 @@ There is no comment field on the full-day report itself; the app's "comment" for
 | PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/reserve`     | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
 | PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/confirm`     | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
 | PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/cancel`      | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
-| POST   | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark read                       | new         | inferred          |
-| DELETE | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark unread                     | new         | inferred          |
+| POST   | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark read                       | implemented | confirmed         |
+| DELETE | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark unread                     | implemented | confirmed         |
 | GET    | `v1/schools/{orgId}/parents/{parentId}/badge/bookings?studentId={studentId}`              | — → `number`                              | implemented | confirmed         |
 
 Body field names are all-lowercase `timebookingid` (unlike `timebookingId` in responses). The body is exactly the slot's `timebookingTimeKey` object. Reserve returns HTTP `409 CONFLICT` when another student took the slot. Confirm is used when the teacher has proposed a time (status `NEEDS_CONFIRMATION`).
@@ -161,8 +161,8 @@ All message endpoints use `v1/parent/{parentId}/schools/{orgId}/…`.
 | GET    | `…/messages/bin`                                              | — (trash)                                    | new         | inferred   |
 | GET    | `…/messages/{messageId}`                                      | —                                            | implemented | inferred   |
 | POST   | `…/messages`                                                  | new message or reply, see below              | new         | inferred   |
-| PUT    | `…/message-recipient/read-date`                               | `{ "messageId": 123 }` — mark read           | new         | inferred   |
-| PUT    | `…/message-recipient/un-read`                                 | `{ "messageId": 123 }` — mark unread         | new         | inferred   |
+| PUT    | `…/message-recipient/read-date`                               | `{ "messageId": 123 }` — mark read           | implemented | confirmed  |
+| PUT    | `…/message-recipient/un-read`                                 | `{ "messageId": 123 }` — mark unread         | implemented | confirmed  |
 | PUT    | `…/messages/remove-inbox`                                     | `[123, 456]` — move inbox messages to bin    | new         | inferred   |
 | PUT    | `…/messages/remove-sent`                                      | `[123, 456]` — move sent messages to bin     | new         | inferred   |
 | PUT    | `…/messages/delete`                                           | `[123, 456]` — delete permanently from bin   | new         | inferred   |
@@ -238,9 +238,9 @@ There is no separate reply endpoint and no attachment upload in the guardian app
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news/old?studentId={studentId}&langId={langId}`      | — expired items                                              | new         | inferred   |
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news/archived?studentId={studentId}&langId={langId}` | — items the guardian archived                                | new         | inferred   |
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news/{newsId}`                                       | — detail                                                     | new         | inferred   |
-| PUT    | `v1/parent/{parentId}/schools/{orgId}/news/read/{newsId}`                                  | no body — sent when the detail opens                         | new         | inferred   |
+| PUT    | `v1/parent/{parentId}/schools/{orgId}/news/read/{newsId}`                                  | no body — sent when the detail opens                         | implemented | confirmed  |
 | POST   | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark read (list action)                            | new         | inferred   |
-| DELETE | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark unread                                        | new         | inferred   |
+| DELETE | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark unread                                        | implemented | confirmed  |
 | POST   | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — archive                                            | new         | inferred   |
 | DELETE | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — unarchive                                          | new         | inferred   |
 | GET    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | — question/answer state                                      | new         | inferred   |
@@ -262,6 +262,21 @@ Subject rooms are not native in the app. It opens a WebView on the web client af
 2. `redirectUrl` is one of `react/#/parent/subjectrooms`, `react/#/parent/subjectrooms/{activityId}/assignment/{assignmentId}`, or `react/#/student/subjectrooms/{activityId}/planning/{planningId}/part/{partId}`; tabs append `/assignments`, `/plannings`, `/results`.
 
 The data endpoints behind it are the cookie-authenticated `rest-api/parent/ps/...` calls already implemented in `schoolsoft.ts` (assignments, plannings, planning parts, submissions, assessments, materials). Holistic assessment is likewise `rest-api/parent/holistic_assessment/...` (implemented). The calendar/schedule screen is also a WebView (`react/#/parent/calendar`).
+
+Unread items across all subject rooms, used by the notification center (cookie session, base `rest-api/parent/ps/subjectroom`). Rows carry `read`, `publishDate` (`YYYY-MM-DD HH:mm`, school-local) and `subjects[{ name, color }]`. Per-room variants live under `subjectroom/{activityId}/…`.
+
+| Method | Path                                | Response                  | Status      | Confidence |
+| ------ | ----------------------------------- | ------------------------- | ----------- | ---------- |
+| GET    | `subjectroom/assignments/grid/rows` | assignments in every room | implemented | confirmed  |
+| GET    | `subjectroom/results/grid/rows`     | published results         | implemented | confirmed  |
+| GET    | `subjectroom/plannings/grid/rows`   | planning parts            | implemented | confirmed  |
+
+There is no explicit mark-read call for these. Fetching the detail marks the item read, as the web client does:
+
+- assignment: `GET rest-api/parent/ps/assignments/{assignmentId}/view` (confirmed)
+- result: `GET rest-api/parent/ps/assignment/{assignmentId}/assessment` (confirmed)
+- planning part: `GET rest-api/parent/ps/planning_parts/{partId}/view` (inferred from the web bundle)
+- holistic assessment: `GET rest-api/parent/holistic_assessment/{id}` (inferred)
 
 Badges — `GET v1/schools/{orgId}/parents/{parentId}/badge/{kind}?studentId={studentId}` → `number`:
 

@@ -74,11 +74,10 @@ export default function MessagesPage() {
   const [folder, setFolder] = useState<EvaMessageFolder>("inbox");
   const [query, setQuery] = useState("");
   /* `?message=<id>` (from the notification center) opens that message. */
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const linked = Number(searchParams.get("message"));
-  const [selectedId, setSelectedId] = useState<number | null>(
-    Number.isInteger(linked) && linked > 0 ? linked : null,
-  );
+  const linkedId = Number.isInteger(linked) && linked > 0 ? linked : null;
+  const [selectedId, setSelectedId] = useState<number | null>(linkedId);
   const [compose, setCompose] = useState<ComposeTarget | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -114,6 +113,24 @@ export default function MessagesPage() {
   const firstId = rows[0]?.id;
   /* A deep-linked message counts as the inbox's auto-selection. */
   const autoSelected = useRef<EvaMessageFolder | null>(selectedId !== null ? "inbox" : null);
+  /* The link can also arrive while this page is open. Apply it, then drop the
+   * param so following the same link again still works. */
+  useEffect(() => {
+    if (linkedId === null) return;
+    autoSelected.current = "inbox";
+    setFolder("inbox");
+    setQuery("");
+    setActionError(null);
+    setSelectedId(linkedId);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("message");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [linkedId, setSearchParams]);
   useEffect(() => {
     if (autoSelected.current === folder || firstId === undefined) return;
     autoSelected.current = folder;

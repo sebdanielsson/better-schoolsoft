@@ -221,4 +221,11 @@ void test("relativeTime", () => {
   assert.equal(relativeTime(now - 3 * 3_600_000, now), "3 h ago");
   assert.equal(relativeTime(now - 26 * 3_600_000, now), "Yesterday");
   assert.equal(relativeTime(now - 4 * 86_400_000, now), "4 days ago");
+  /* Calendar days, not 24-hour blocks. */
+  const justAfterMidnight = new Date(2026, 9, 11, 0, 1).getTime();
+  assert.equal(
+    relativeTime(new Date(2026, 9, 9, 23, 59).getTime(), justAfterMidnight),
+    "2 days ago",
+  );
+  assert.equal(relativeTime(new Date(2026, 9, 10, 0, 0).getTime(), justAfterMidnight), "Yesterday");
 });

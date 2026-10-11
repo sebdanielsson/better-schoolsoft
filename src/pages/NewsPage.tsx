@@ -111,12 +111,32 @@ export default function NewsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   /* `?item=<id>` (from the notification center) opens that item and scrolls
    * to it once the feed has rendered. */
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const linked = Number(searchParams.get("item"));
   const linkedId = Number.isInteger(linked) && linked > 0 ? linked : null;
   const [expanded, setExpanded] = useState<Set<number>>(
     () => new Set(linkedId !== null ? [linkedId] : []),
   );
+  const [scrollTo, setScrollTo] = useState<number | null>(linkedId);
+
+  /* The link can also arrive while this page is open, possibly on another
+   * feed or category. Apply it, then drop the param so following the same
+   * link again still works. */
+  useEffect(() => {
+    if (linkedId === null) return;
+    setFeed("current");
+    setSelectedCategory(null);
+    setExpanded((prev) => new Set(prev).add(linkedId));
+    setScrollTo(linkedId);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("item");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [linkedId, setSearchParams]);
 
   const list = useQuery(ctx && newsKeys.feed(ctx.keyPrefix, feed), async () =>
     fetchEvaNewsFeed(
@@ -130,13 +150,13 @@ export default function NewsPage() {
   );
   const items = useMemo(() => list.data ?? [], [list.data]);
 
-  const hasItems = items.length > 0;
   useEffect(() => {
-    if (linkedId === null || !hasItems) return;
-    document
-      .getElementById(`news-${linkedId}`)
-      ?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, [linkedId, hasItems]);
+    if (scrollTo === null) return;
+    const el = document.getElementById(`news-${scrollTo}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+    setScrollTo(null);
+  }, [scrollTo, items]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();

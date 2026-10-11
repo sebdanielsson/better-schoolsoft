@@ -31,7 +31,7 @@ import {
   sortNotifications,
   type NotificationItem,
 } from "../lib/notifications.ts";
-import { getQueryEntry, invalidateQueries, setQueryData } from "../lib/query-cache.ts";
+import { getQueryEntry, invalidateQueries, isStale, setQueryData } from "../lib/query-cache.ts";
 
 type Source =
   | "messages"
@@ -57,6 +57,7 @@ const SOURCE_OF: Record<NotificationItem["kind"], Source> = {
   planning: "plannings",
   assessment: "assessments",
 };
+const SOURCES = Object.values(SOURCE_OF);
 
 export interface Notifications {
   /** Unread items, newest first. Empty while loading. */
@@ -78,7 +79,7 @@ export interface Notifications {
  *  so the hero pill, the section badges and the panel share one fetch. */
 export function useNotifications(): Notifications {
   const ctx = useSchoolsoftContext();
-  const { refreshCounts } = useHeroData();
+  const { refreshCounts, loading: heroLoading } = useHeroData();
   const opts = { staleMs: STALE_MS };
 
   const messages = useQuery(
@@ -180,10 +181,18 @@ export function useNotifications(): Notifications {
   );
 
   /* New things arrive while the tab sits in the background; refresh when the
-   * guardian comes back to it. Stale entries refetch, fresh ones are kept. */
+   * guardian comes back to it. Only stale sources refetch, and not while a
+   * fetch is in flight: `focus` and `visibilitychange` usually fire together,
+   * and every mounted instance of this hook listens. */
   useEffect(() => {
+    if (!ctx) return;
     const onFocus = () => {
-      if (document.visibilityState === "visible") invalidateQueries(NOTIFICATIONS_KEY);
+      if (document.visibilityState !== "visible") return;
+      for (const source of SOURCES) {
+        const k = key(ctx, source);
+        const entry = getQueryEntry(k);
+        if (!entry.promise && isStale(entry, STALE_MS)) invalidateQueries(k);
+      }
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
@@ -191,7 +200,7 @@ export function useNotifications(): Notifications {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
-  }, []);
+  }, [ctx]);
 
   const markRead = useCallback(
     async (item: NotificationItem) => {
@@ -234,7 +243,8 @@ export function useNotifications(): Notifications {
 
   return {
     items,
-    loading: !ctx || loading,
+    /* No context (no child, or /parent failed): nothing to load. */
+    loading: ctx ? loading : heroLoading,
     failed,
     bySection: countBySection(items),
     markRead,
