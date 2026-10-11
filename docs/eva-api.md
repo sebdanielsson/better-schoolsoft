@@ -30,16 +30,16 @@ Legend:
 
 ### Feature flags and parameters
 
-| Method | Path                                                                         | Response                                                                  | Status | Confidence |
-| ------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------ | ---------- |
-| GET    | `v1/schools/{orgId}/parameters/report-absence-parent`                        | `true` / `false` — absence reporting enabled                              | new    | confirmed  |
-| GET    | `v1/schools/{orgId}/parameters/student-absence-allow-parent-change-absence`  | `boolean` — guardian may remove/undo a report                             | new    | confirmed  |
-| GET    | `v1/schools/{orgId}/parameters/student-absence-allow-parent-comment-absence` | `boolean` — guardian may add comments                                     | new    | confirmed  |
-| GET    | `v1/student/{studentId}/school/{orgId}/is-pre-school`                        | `boolean` — if `true` the app uses the preschool flow (section 7) instead | new    | confirmed  |
+| Method | Path                                                                         | Response                                                                  | Status      | Confidence |
+| ------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------- | ---------- |
+| GET    | `v1/schools/{orgId}/parameters/report-absence-parent`                        | `true` / `false` — absence reporting enabled                              | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/parameters/student-absence-allow-parent-change-absence`  | `boolean` — guardian may remove/undo a report                             | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/parameters/student-absence-allow-parent-comment-absence` | `boolean` — guardian may add comments                                     | implemented | confirmed  |
+| GET    | `v1/student/{studentId}/school/{orgId}/is-pre-school`                        | `boolean` — if `true` the app uses the preschool flow (section 7) instead | implemented | confirmed  |
 
 ### GET week overview
 
-`GET v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}` — new, confirmed.
+`GET v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}` — implemented, confirmed.
 
 ```json
 {
@@ -53,7 +53,7 @@ Legend:
 
 ### GET day with lessons
 
-`GET v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/day/{day}` — new, confirmed.
+`GET v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/day/{day}` — implemented, confirmed.
 
 ```json
 {
@@ -87,28 +87,28 @@ The app enables "report full day" only while no lesson of the day has started ye
 
 ### Report / remove full-day absence
 
-| Method | Path                                                                                                         | Body    | Status | Confidence |
-| ------ | ------------------------------------------------------------------------------------------------------------ | ------- | ------ | ---------- |
-| PUT    | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/day/{day}/date/{date}` | no body | new    | inferred   |
-| DELETE | same path                                                                                                    | no body | new    | inferred   |
+| Method | Path                                                                                                         | Body    | Status      | Confidence |
+| ------ | ------------------------------------------------------------------------------------------------------------ | ------- | ----------- | ---------- |
+| PUT    | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/day/{day}/date/{date}` | no body | implemented | inferred   |
+| DELETE | same path                                                                                                    | no body | implemented | inferred   |
 
 `{date}` is `Number(dayDate)` where `dayDate` comes from `eachDayOfInterval(startOfWeek, +4 days)` — i.e. epoch milliseconds of local midnight (Europe/Stockholm) for that weekday, e.g. `1759183200000`. Likely, not verified against the server.
 
 ### Report / remove absence for one lesson
 
-| Method | Path                                                                                                     | Body    | Status | Confidence |
-| ------ | -------------------------------------------------------------------------------------------------------- | ------- | ------ | ---------- |
-| POST   | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/lesson/{lessonId}` | no body | new    | inferred   |
-| DELETE | same path                                                                                                | no body | new    | inferred   |
+| Method | Path                                                                                                     | Body    | Status      | Confidence |
+| ------ | -------------------------------------------------------------------------------------------------------- | ------- | ----------- | ---------- |
+| POST   | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/lesson/{lessonId}` | no body | implemented | inferred   |
+| DELETE | same path                                                                                                | no body | implemented | inferred   |
 
 Note the asymmetry: full day uses PUT, a single lesson uses POST. `{lessonId}` is `lessons[].lessonId` from the day endpoint.
 
 ### Comments
 
-| Method | Path                                                                                                             | Body                                                                         | Status | Confidence |
-| ------ | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------ | ---------- |
-| POST   | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/comment`                   | `{ "comment": "string" }` — week-level comment, read back as `parentComment` | new    | inferred   |
-| POST   | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/lesson/{lessonId}/comment` | `{ "comment": "string" }` — read back as `lessons[].comment`                 | new    | inferred   |
+| Method | Path                                                                                                             | Body                                                                         | Status      | Confidence |
+| ------ | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------- | ---------- |
+| POST   | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/comment`                   | `{ "comment": "string" }` — week-level comment, read back as `parentComment` | implemented | inferred   |
+| POST   | `v1/schools/{orgId}/student/{studentId}/parent/{parentId}/student-absence/week/{week}/lesson/{lessonId}/comment` | `{ "comment": "string" }` — read back as `lessons[].comment`                 | implemented | inferred   |
 
 There is no comment field on the full-day report itself; the app's "comment" for a day is the week comment plus per-lesson comments.
 
@@ -116,13 +116,13 @@ There is no comment field on the full-day report itself; the app's "comment" for
 
 | Method | Path                                                                                      | Body                                      | Status      | Confidence        |
 | ------ | ----------------------------------------------------------------------------------------- | ----------------------------------------- | ----------- | ----------------- |
-| GET    | `v1/schools/{orgId}/parameters/time-bookings`                                             | — → `boolean`                             | new         | confirmed         |
-| GET    | `v1/parents/{parentId}/students/{studentId}/schools/{orgId}/timebookings`                 | —                                         | new         | inferred          |
-| GET    | `v1/parents/{parentId}/students/{studentId}/schools/{orgId}/timebookings/startpage`       | — (empty body when nothing upcoming)      | new         | confirmed (empty) |
-| GET    | `v1/parents/{parentId}/students/{studentId}/schools/{orgId}/timebookings/{timebookingId}` | —                                         | new         | inferred          |
-| PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/reserve`     | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
-| PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/confirm`     | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
-| PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/cancel`      | `{ "timebookingid": 123, "sequence": 2 }` | new         | inferred          |
+| GET    | `v1/schools/{orgId}/parameters/time-bookings`                                             | — → `boolean`                             | implemented | confirmed         |
+| GET    | `v1/parents/{parentId}/students/{studentId}/schools/{orgId}/timebookings`                 | —                                         | implemented | inferred          |
+| GET    | `v1/parents/{parentId}/students/{studentId}/schools/{orgId}/timebookings/startpage`       | — (empty body when nothing upcoming)      | implemented | confirmed (empty) |
+| GET    | `v1/parents/{parentId}/students/{studentId}/schools/{orgId}/timebookings/{timebookingId}` | —                                         | implemented | inferred          |
+| PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/reserve`     | `{ "timebookingid": 123, "sequence": 2 }` | implemented | inferred          |
+| PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/confirm`     | `{ "timebookingid": 123, "sequence": 2 }` | implemented | inferred          |
+| PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/cancel`      | `{ "timebookingid": 123, "sequence": 2 }` | implemented | inferred          |
 | POST   | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark read                       | implemented | confirmed         |
 | DELETE | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark unread                     | new         | confirmed         |
 | GET    | `v1/schools/{orgId}/parents/{parentId}/badge/bookings?studentId={studentId}`              | — → `number`                              | implemented | confirmed         |
@@ -157,21 +157,21 @@ All message endpoints use `v1/parent/{parentId}/schools/{orgId}/…`.
 | ------ | ------------------------------------------------------------- | -------------------------------------------- | ----------- | ---------- |
 | GET    | `…/messages/unread`                                           | — → `number`                                 | implemented | confirmed  |
 | GET    | `…/messages/inbox`                                            | —                                            | implemented | inferred   |
-| GET    | `…/messages/sent`                                             | —                                            | new         | inferred   |
-| GET    | `…/messages/bin`                                              | — (trash)                                    | new         | inferred   |
+| GET    | `…/messages/sent`                                             | —                                            | implemented | inferred   |
+| GET    | `…/messages/bin`                                              | — (trash)                                    | implemented | inferred   |
 | GET    | `…/messages/{messageId}`                                      | —                                            | implemented | inferred   |
-| POST   | `…/messages`                                                  | new message or reply, see below              | new         | inferred   |
+| POST   | `…/messages`                                                  | new message or reply, see below              | implemented | inferred   |
 | PUT    | `…/message-recipient/read-date`                               | `{ "messageId": 123 }` — mark read           | implemented | confirmed  |
 | PUT    | `…/message-recipient/un-read`                                 | `{ "messageId": 123 }` — mark unread         | implemented | confirmed  |
-| PUT    | `…/messages/remove-inbox`                                     | `[123, 456]` — move inbox messages to bin    | new         | inferred   |
-| PUT    | `…/messages/remove-sent`                                      | `[123, 456]` — move sent messages to bin     | new         | inferred   |
-| PUT    | `…/messages/delete`                                           | `[123, 456]` — delete permanently from bin   | new         | inferred   |
-| PUT    | `…/messages/restore`                                          | `[123, 456]` — restore from bin              | new         | inferred   |
+| PUT    | `…/messages/remove-inbox`                                     | `[123, 456]` — move inbox messages to bin    | implemented | inferred   |
+| PUT    | `…/messages/remove-sent`                                      | `[123, 456]` — move sent messages to bin     | implemented | inferred   |
+| PUT    | `…/messages/delete`                                           | `[123, 456]` — delete permanently from bin   | implemented | inferred   |
+| PUT    | `…/messages/restore`                                          | `[123, 456]` — restore from bin              | implemented | inferred   |
 | PUT    | `…/messages/remove-inbox-swipe`                               | `{ "messageId": 123 }` — single-item variant | new         | inferred   |
 | PUT    | `…/messages/remove-sent-swipe`                                | `{ "messageId": 123 }`                       | new         | inferred   |
 | PUT    | `…/messages/delete-swipe`                                     | `{ "messageId": 123 }`                       | new         | inferred   |
 | PUT    | `…/messages/restore-swipe`                                    | `{ "messageId": 123 }`                       | new         | inferred   |
-| GET    | `v1/schools/{orgId}/parameters/message-usage-level-allow-all` | — → `boolean`                                | new         | inferred   |
+| GET    | `v1/schools/{orgId}/parameters/message-usage-level-allow-all` | — → `boolean`                                | implemented | inferred   |
 
 The folder segment comes from the app's route enum (`inbox`, `sent`, `bin`). Bulk actions send a bare JSON array of message ids. The app picks `remove-*` in inbox/sent and `delete`/`restore` in the bin.
 
@@ -201,10 +201,10 @@ Detail shape (fields read by the detail screen):
 
 ### Recipients (teachers)
 
-| Method | Path                                      | Response                                                                                   | Status | Confidence |
-| ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------ | ------ | ---------- |
-| GET    | `v1/schools/{orgId}/teachers`             | `[{ "teacherId": 1, "fname": "…", "lname": "…", "picture": "teacher1.jpg", "type": "…" }]` | new    | inferred   |
-| GET    | `v1/schools/{orgId}/teachers/{teacherId}` | single teacher, same shape                                                                 | new    | inferred   |
+| Method | Path                                      | Response                                                                                   | Status      | Confidence |
+| ------ | ----------------------------------------- | ------------------------------------------------------------------------------------------ | ----------- | ---------- |
+| GET    | `v1/schools/{orgId}/teachers`             | `[{ "teacherId": 1, "fname": "…", "lname": "…", "picture": "teacher1.jpg", "type": "…" }]` | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/teachers/{teacherId}` | single teacher, same shape                                                                 | implemented | inferred   |
 
 Guardians can only message staff in this app; the recipient picker is fed by `/teachers`. Class list and parents (section 7) are not used as message recipients.
 
@@ -235,16 +235,16 @@ There is no separate reply endpoint and no attachment upload in the guardian app
 | ------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ----------- | ---------- |
 | GET    | `v1/parent/{parentId}/schools/{orgId}/news/latest?studentId={studentId}`                   | —                                                            | implemented | confirmed  |
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news?studentId={studentId}&langId={langId}`          | — current feed                                               | implemented | inferred   |
-| GET    | `v2/parent/{parentId}/schools/{orgId}/news/old?studentId={studentId}&langId={langId}`      | — expired items                                              | new         | inferred   |
-| GET    | `v2/parent/{parentId}/schools/{orgId}/news/archived?studentId={studentId}&langId={langId}` | — items the guardian archived                                | new         | inferred   |
-| GET    | `v2/parent/{parentId}/schools/{orgId}/news/{newsId}`                                       | — detail                                                     | new         | inferred   |
+| GET    | `v2/parent/{parentId}/schools/{orgId}/news/old?studentId={studentId}&langId={langId}`      | — expired items                                              | implemented | inferred   |
+| GET    | `v2/parent/{parentId}/schools/{orgId}/news/archived?studentId={studentId}&langId={langId}` | — items the guardian archived                                | implemented | inferred   |
+| GET    | `v2/parent/{parentId}/schools/{orgId}/news/{newsId}`                                       | — detail                                                     | implemented | inferred   |
 | PUT    | `v1/parent/{parentId}/schools/{orgId}/news/read/{newsId}`                                  | no body — sent when the detail opens                         | implemented | confirmed  |
 | POST   | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark read (list action)                            | new         | inferred   |
 | DELETE | `v1/parent/{parentId}/news-read/{newsId}`                                                  | no body — mark unread                                        | new         | confirmed  |
-| POST   | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — archive                                            | new         | inferred   |
-| DELETE | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — unarchive                                          | new         | inferred   |
+| POST   | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — archive                                            | implemented | inferred   |
+| DELETE | `v1/parent/{parentId}/news-hidden/{newsId}`                                                | no body — unarchive                                          | implemented | inferred   |
 | GET    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | — question/answer state                                      | new         | inferred   |
-| PUT    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | `{ "responseText": "string" }` — answer or update the answer | new         | inferred   |
+| PUT    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | `{ "responseText": "string" }` — answer or update the answer | implemented | inferred   |
 | GET    | `v1/parent/{parentId}/schools/{orgId}/news/calendarevent/next?studentId={studentId}`       | —                                                            | implemented | confirmed  |
 | GET    | `v1/schools/{orgId}/parents/{parentId}/badge/news?studentId={studentId}`                   | — → `number`                                                 | implemented | confirmed  |
 
@@ -373,37 +373,37 @@ The `/history` and `/history/read` literals belong to student leave (section 6);
 
 ## 8. Other endpoints
 
-| Method | Path                                                                                                   | Body / response                                                                   | Status         | Confidence |
-| ------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | -------------- | ---------- |
-| GET    | `v1/parent`                                                                                            | current guardian                                                                  | implemented    | confirmed  |
-| GET    | `v1/parent/{parentId}/children`                                                                        | children                                                                          | implemented    | confirmed  |
-| GET    | `v1/parent/{parentId}/profile`                                                                         | profile                                                                           | implemented    | inferred   |
-| PUT    | `v1/parent/{parentId}/profile/address`                                                                 | `{ address1, address2, poCode, city }`                                            | implemented    | inferred   |
-| PUT    | `v1/parent/{parentId}/profile/contact`                                                                 | `{ email, mobile, homePhone, workPhone, contactInfo, orgId }`                     | implemented    | inferred   |
-| PUT    | `v1/parent/{parentId}/profile/personal`                                                                | `{ fName, lName }`                                                                | new (see note) | inferred   |
-| PUT    | `v1/parent/{parentId}/profile/notPublish`                                                              | `{ active: boolean }`                                                             | implemented    | inferred   |
-| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-name-change`                                       | `boolean`                                                                         | implemented    | inferred   |
-| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-address-and-po-code-change`                        | `boolean`                                                                         | implemented    | inferred   |
-| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-email-change`                                      | `boolean`                                                                         | new            | inferred   |
-| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-phone-number-change`                               | `boolean`                                                                         | new            | inferred   |
-| GET    | `v1/schools/{orgId}/parameters/lunch-menu`                                                             | `boolean`                                                                         | new            | confirmed  |
-| GET    | `v1/schools/{orgId}/lunchmenu/{week}`                                                                  | week menu                                                                         | implemented    | inferred   |
-| GET    | `v1/schools/{orgId}/lunchmenu/week/{week}/day/{day}`                                                   | day menu                                                                          | implemented    | confirmed  |
-| GET    | `v1/schools/{orgId}/student/{studentId}/lessons/week/{week}/day/{day}/{current\|next}?langId={langId}` | lesson tile                                                                       | implemented    | confirmed  |
-| GET    | `v1/schools/{orgId}/staff?langId={langId}`                                                             | staff groups                                                                      | implemented    | inferred   |
-| GET    | `v1/schools/{orgId}/staff/{teacherId}?langId={langId}`                                                 | staff detail                                                                      | implemented    | inferred   |
-| GET    | `v1/schools/{orgId}/logo`                                                                              | image (school logo)                                                               | new            | confirmed  |
-| GET    | `v1/resource/{filename}`                                                                               | image (avatars, `student123.jpg`, `teacher456.jpg`)                               | implemented    | confirmed  |
-| GET    | `v1/resource/image/{fileId}`                                                                           | inline image; `fileId` parsed from `fileid=(\d+)&` in HTML `src`                  | new            | inferred   |
-| GET    | `v1/resource/attachment/{fileId}`                                                                      | binary attachment (messages, news), Bearer auth                                   | new            | inferred   |
-| POST   | `v1/parent/push-tokens`                                                                                | `{ "playerId": "{onesignal-uuid}" }`                                              | new            | confirmed  |
-| GET    | `v1/push-tokens/{playerId}`                                                                            | `{ playerId, message, news, blog, assignments, results, leavepickup }` (booleans) | new            | confirmed  |
-| PUT    | `v1/push-tokens`                                                                                       | same shape as GET — update notification prefs                                     | new            | inferred   |
-| DELETE | `v1/parent/push-tokens/players/{playerId}`                                                             | no body                                                                           | new            | inferred   |
-| GET    | `/{school}/eva-apps/auth/login/parent/code`                                                            | header `token`; returns a one-time code                                           | new            | inferred   |
-| GET    | `/{school}/eva-apps/auth/login/parent/code/exchange?code=&orgId=&childId=&language=&redirectUrl=`      | opened in the system browser to deep-link into the web client                     | new            | inferred   |
+| Method | Path                                                                                                   | Body / response                                                                   | Status      | Confidence |
+| ------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ----------- | ---------- |
+| GET    | `v1/parent`                                                                                            | current guardian                                                                  | implemented | confirmed  |
+| GET    | `v1/parent/{parentId}/children`                                                                        | children                                                                          | implemented | confirmed  |
+| GET    | `v1/parent/{parentId}/profile`                                                                         | profile                                                                           | implemented | inferred   |
+| PUT    | `v1/parent/{parentId}/profile/address`                                                                 | `{ address1, address2, poCode, city }`                                            | implemented | inferred   |
+| PUT    | `v1/parent/{parentId}/profile/contact`                                                                 | `{ email, mobile, homePhone, workPhone, contactInfo, orgId }`                     | implemented | inferred   |
+| PUT    | `v1/parent/{parentId}/profile/personal`                                                                | `{ fName, lName }`                                                                | implemented | confirmed  |
+| PUT    | `v1/parent/{parentId}/profile/notPublish`                                                              | `{ active: boolean }`                                                             | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-name-change`                                       | `boolean`                                                                         | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-address-and-po-code-change`                        | `boolean`                                                                         | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-email-change`                                      | `boolean`                                                                         | new         | inferred   |
+| GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-phone-number-change`                               | `boolean`                                                                         | new         | inferred   |
+| GET    | `v1/schools/{orgId}/parameters/lunch-menu`                                                             | `boolean`                                                                         | new         | confirmed  |
+| GET    | `v1/schools/{orgId}/lunchmenu/{week}`                                                                  | week menu                                                                         | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/lunchmenu/week/{week}/day/{day}`                                                   | day menu                                                                          | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/student/{studentId}/lessons/week/{week}/day/{day}/{current\|next}?langId={langId}` | lesson tile                                                                       | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/staff?langId={langId}`                                                             | staff groups                                                                      | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/staff/{teacherId}?langId={langId}`                                                 | staff detail                                                                      | implemented | inferred   |
+| GET    | `v1/schools/{orgId}/logo`                                                                              | image (school logo)                                                               | new         | confirmed  |
+| GET    | `v1/resource/{filename}`                                                                               | image (avatars, `student123.jpg`, `teacher456.jpg`)                               | implemented | confirmed  |
+| GET    | `v1/resource/image/{fileId}`                                                                           | inline image; `fileId` parsed from `fileid=(\d+)&` in HTML `src`                  | new         | inferred   |
+| GET    | `v1/resource/attachment/{fileId}`                                                                      | binary attachment (messages, news), Bearer auth                                   | implemented | inferred   |
+| POST   | `v1/parent/push-tokens`                                                                                | `{ "playerId": "{onesignal-uuid}" }`                                              | new         | confirmed  |
+| GET    | `v1/push-tokens/{playerId}`                                                                            | `{ playerId, message, news, blog, assignments, results, leavepickup }` (booleans) | new         | confirmed  |
+| PUT    | `v1/push-tokens`                                                                                       | same shape as GET — update notification prefs                                     | new         | inferred   |
+| DELETE | `v1/parent/push-tokens/players/{playerId}`                                                             | no body                                                                           | new         | inferred   |
+| GET    | `/{school}/eva-apps/auth/login/parent/code`                                                            | header `token`; returns a one-time code                                           | new         | inferred   |
+| GET    | `/{school}/eva-apps/auth/login/parent/code/exchange?code=&orgId=&childId=&language=&redirectUrl=`      | opened in the system browser to deep-link into the web client                     | new         | inferred   |
 
-Profile name: the app uses `PUT …/profile/personal` with `{ fName, lName }`. `schoolsoft.ts` currently calls `…/profile/name`, which does not occur anywhere in the app bundle — verify that it works or switch to `/profile/personal`.
+Profile name: the app uses `PUT …/profile/personal` with `{ fName, lName }`, and so does `schoolsoft.ts`. The older `…/profile/name` returns 404.
 
 Push tokens are OneSignal-specific and not useful for a web client, except that `GET`/`PUT v1/push-tokens/{playerId}` exposes the per-category notification preferences.
 
