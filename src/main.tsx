@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import { AuthProvider } from "./hooks/useAuth.tsx";
 import "./index.css";
 import { registerServiceWorker } from "./lib/install.ts";
+import { watchForUpdates } from "./lib/app-update.ts";
 
 /* `dev-mocks/` monkey-patches `fetch` and seeds a fake session, so it must
  * never ship by accident: it used to be imported unconditionally, and any
@@ -23,6 +24,7 @@ async function bootstrap() {
   }
 
   registerServiceWorker();
+  watchForUpdates();
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <BrowserRouter>

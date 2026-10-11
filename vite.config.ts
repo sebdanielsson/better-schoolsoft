@@ -43,8 +43,29 @@ function schoolsoftProxyGuard(): Plugin {
   };
 }
 
+/** Stamps each build with an id, in a `<meta name="app-version">` tag and in
+ *  `/version.json`. A running app compares the two to notice a newer deploy
+ *  (`src/lib/app-update.ts`). Build only: in dev, hot reload covers it. */
+function appVersion(): Plugin {
+  const version = Date.now().toString(36);
+  return {
+    name: "app-version",
+    apply: "build",
+    transformIndexHtml: () => [
+      { tag: "meta", attrs: { name: "app-version", content: version }, injectTo: "head" },
+    ],
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "version.json",
+        source: JSON.stringify({ version }),
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react({ compiler: true }), tailwindcss(), schoolsoftProxyGuard()],
+  plugins: [react({ compiler: true }), tailwindcss(), schoolsoftProxyGuard(), appVersion()],
   resolve: {
     alias: {
       "@": path.resolve(here, "src"),

@@ -26,6 +26,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/schoolsoft/") || url.pathname.startsWith("/api/")) return;
+  /* The running app polls this to notice a new deploy; a cached copy would
+   * hide it. */
+  if (url.pathname === "/version.json") return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirstShell(request));
