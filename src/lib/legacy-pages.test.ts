@@ -2,11 +2,11 @@
 // promise the runner owns; awaiting it at the call site would serialize the suite.
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { Window } from "happy-dom";
+import { JSDOM } from "jsdom";
 import { decodeLegacyBody, parseLibrary, parseSchoolInfo } from "./legacy-pages.ts";
 
 before(() => {
-  const window = new Window();
+  const { window } = new JSDOM();
   (globalThis as { DOMParser?: unknown }).DOMParser = window.DOMParser;
 });
 

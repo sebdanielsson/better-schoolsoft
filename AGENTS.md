@@ -21,11 +21,11 @@ Each tool is a direct devDependency and is invoked through the `package.json` sc
 pnpm install         # install dependencies
 pnpm dev             # dev server, proxies /schoolsoft/* to sms.schoolsoft.se
 pnpm run check       # format check + lint + type check (CI runs the three as separate steps)
-pnpm run fmt        # rewrite files with oxfmt
+pnpm run fmt         # rewrite files with oxfmt
 pnpm run lint        # oxlint, type-aware, warnings are errors
 pnpm run typecheck   # tsc --noEmit
 pnpm test            # node --test over src/ and api/
-pnpm build           # tsc && vite build
+pnpm build           # vite build
 pnpm preview         # serve the production build
 ```
 

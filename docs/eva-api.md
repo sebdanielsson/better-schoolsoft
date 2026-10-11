@@ -125,7 +125,7 @@ There is no comment field on the full-day report itself; the app's "comment" for
 | PUT    | `v1/schools/{orgId}/parents/{parentId}/students/{studentId}/timebookingtimes/cancel`      | `{ "timebookingid": 123, "sequence": 2 }` | implemented | inferred          |
 | POST   | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark read                       | implemented | confirmed         |
 | DELETE | `v1/parent/{parentId}/timebooking-read/{timebookingId}`                                   | no body — mark unread                     | new         | confirmed         |
-| GET    | `v1/schools/{orgId}/parents/{parentId}/badge/bookings?studentId={studentId}`              | — → `number`                              | implemented | confirmed         |
+| GET    | `v1/schools/{orgId}/parents/{parentId}/badge/bookings?studentId={studentId}`              | — → `number`                              | new         | confirmed         |
 
 Body field names are all-lowercase `timebookingid` (unlike `timebookingId` in responses). The body is exactly the slot's `timebookingTimeKey` object. Reserve returns HTTP `409 CONFLICT` when another student took the slot. Confirm is used when the teacher has proposed a time (status `NEEDS_CONFIRMATION`).
 
@@ -155,7 +155,7 @@ All message endpoints use `v1/parent/{parentId}/schools/{orgId}/…`.
 
 | Method | Path                                                          | Body                                         | Status      | Confidence |
 | ------ | ------------------------------------------------------------- | -------------------------------------------- | ----------- | ---------- |
-| GET    | `…/messages/unread`                                           | — → `number`                                 | implemented | confirmed  |
+| GET    | `…/messages/unread`                                           | — → `number`                                 | new         | confirmed  |
 | GET    | `…/messages/inbox`                                            | —                                            | implemented | inferred   |
 | GET    | `…/messages/sent`                                             | —                                            | implemented | inferred   |
 | GET    | `…/messages/bin`                                              | — (trash)                                    | implemented | inferred   |
@@ -233,7 +233,7 @@ There is no separate reply endpoint and no attachment upload in the guardian app
 
 | Method | Path                                                                                       | Body                                                         | Status      | Confidence |
 | ------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ----------- | ---------- |
-| GET    | `v1/parent/{parentId}/schools/{orgId}/news/latest?studentId={studentId}`                   | —                                                            | implemented | confirmed  |
+| GET    | `v1/parent/{parentId}/schools/{orgId}/news/latest?studentId={studentId}`                   | —                                                            | new         | confirmed  |
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news?studentId={studentId}&langId={langId}`          | — current feed                                               | implemented | inferred   |
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news/old?studentId={studentId}&langId={langId}`      | — expired items                                              | implemented | inferred   |
 | GET    | `v2/parent/{parentId}/schools/{orgId}/news/archived?studentId={studentId}&langId={langId}` | — items the guardian archived                                | implemented | inferred   |
@@ -246,7 +246,7 @@ There is no separate reply endpoint and no attachment upload in the guardian app
 | GET    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | — question/answer state                                      | new         | inferred   |
 | PUT    | `v1/parent/{parentId}/newsconfirm/{newsId}`                                                | `{ "responseText": "string" }` — answer or update the answer | implemented | inferred   |
 | GET    | `v1/parent/{parentId}/schools/{orgId}/news/calendarevent/next?studentId={studentId}`       | —                                                            | implemented | confirmed  |
-| GET    | `v1/schools/{orgId}/parents/{parentId}/badge/news?studentId={studentId}`                   | — → `number`                                                 | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/parents/{parentId}/badge/news?studentId={studentId}`                   | — → `number`                                                 | new         | confirmed  |
 
 List item fields (confirmed from live responses): `id`, `title`, `description`, `category` (may be an empty string), `creDate`, `toDate`, `read`, `response`, `hasAttachment`, `author { id, name, picture }`, `newsConfirm`. `response: true` means the item asks guardians a question. `newsConfirm` is `null` until the guardian has answered, then `{ responseText, confirmDate }`. `toDate` is a full ISO timestamp at local midnight (e.g. `2026-10-04T22:00:00.000+00:00`), and the app treats the question as answerable until the end of that day.
 
@@ -278,12 +278,12 @@ There is no explicit mark-read call for these. Fetching the detail marks the ite
 - planning part: `GET rest-api/parent/ps/planning_parts/{partId}/view` (inferred from the web bundle)
 - holistic assessment: `GET rest-api/parent/holistic_assessment/{id}` (inferred)
 
-Badges — `GET v1/schools/{orgId}/parents/{parentId}/badge/{kind}?studentId={studentId}` → `number`:
+Badges — `GET v1/schools/{orgId}/parents/{parentId}/badge/{kind}?studentId={studentId}` → `number`. The app doesn't use them: the notification center counts the unread lists above, which also tell it what is unread.
 
-| Kind                                                      | Status      | Confidence |
-| --------------------------------------------------------- | ----------- | ---------- |
-| `news`, `bookings`, `subjectrooms`, `holisticassessments` | implemented | confirmed  |
-| `blogposts`, `student-leave`                              | new         | inferred   |
+| Kind                                                      | Status | Confidence |
+| --------------------------------------------------------- | ------ | ---------- |
+| `news`, `bookings`, `subjectrooms`, `holisticassessments` | new    | confirmed  |
+| `blogposts`, `student-leave`                              | new    | inferred   |
 
 Other menu/flag endpoints:
 
@@ -376,7 +376,7 @@ The `/history` and `/history/read` literals belong to student leave (section 6);
 | Method | Path                                                                                                   | Body / response                                                                   | Status      | Confidence |
 | ------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ----------- | ---------- |
 | GET    | `v1/parent`                                                                                            | current guardian                                                                  | implemented | confirmed  |
-| GET    | `v1/parent/{parentId}/children`                                                                        | children                                                                          | implemented | confirmed  |
+| GET    | `v1/parent/{parentId}/children`                                                                        | children                                                                          | new         | confirmed  |
 | GET    | `v1/parent/{parentId}/profile`                                                                         | profile                                                                           | implemented | inferred   |
 | PUT    | `v1/parent/{parentId}/profile/address`                                                                 | `{ address1, address2, poCode, city }`                                            | implemented | inferred   |
 | PUT    | `v1/parent/{parentId}/profile/contact`                                                                 | `{ email, mobile, homePhone, workPhone, contactInfo, orgId }`                     | implemented | inferred   |
@@ -388,7 +388,7 @@ The `/history` and `/history/read` literals belong to student leave (section 6);
 | GET    | `v1/schools/{orgId}/parameters/parent/profile/allow-phone-number-change`                               | `boolean`                                                                         | new         | inferred   |
 | GET    | `v1/schools/{orgId}/parameters/lunch-menu`                                                             | `boolean`                                                                         | new         | confirmed  |
 | GET    | `v1/schools/{orgId}/lunchmenu/{week}`                                                                  | week menu                                                                         | implemented | inferred   |
-| GET    | `v1/schools/{orgId}/lunchmenu/week/{week}/day/{day}`                                                   | day menu                                                                          | implemented | confirmed  |
+| GET    | `v1/schools/{orgId}/lunchmenu/week/{week}/day/{day}`                                                   | day menu                                                                          | new         | confirmed  |
 | GET    | `v1/schools/{orgId}/student/{studentId}/lessons/week/{week}/day/{day}/{current\|next}?langId={langId}` | lesson tile                                                                       | implemented | confirmed  |
 | GET    | `v1/schools/{orgId}/staff?langId={langId}`                                                             | staff groups                                                                      | implemented | inferred   |
 | GET    | `v1/schools/{orgId}/staff/{teacherId}?langId={langId}`                                                 | staff detail                                                                      | implemented | inferred   |

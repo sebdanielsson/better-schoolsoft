@@ -5,7 +5,7 @@
  *  don't run and nothing is fetched. Only plain text and vetted values leave
  *  this module — links must be http(s), downloads must be a numeric request
  *  id — so no upstream markup reaches the page. `DOMParser` is read at call
- *  time so tests can install happy-dom's. */
+ *  time so tests can install jsdom's. */
 
 import { safeHttpUrl } from "./safe-url.ts";
 
