@@ -13,12 +13,13 @@
 
 import { MOCK_FLAG } from "../lib/mock-mode.ts";
 import { createRoutes, type MockRequest } from "./routes.ts";
-import { ROBIN, SCHOOL, SCHOOL_NAME, ORG_ID } from "./people.ts";
+import { KIM, ROBIN, SCHOOL, SCHOOL_NAME, ORG_ID } from "./people.ts";
 
 const SESSION = "bss_session";
 const CHILD = "bss_child";
 const REAL_SESSION = "bss_real_session";
 const REAL_CHILD = "bss_real_child";
+const MOCK_CHILDREN = new Set([String(ROBIN), String(KIM)]);
 
 /** A session mock mode made: the mock school, or mock tokens (a sign-in
  *  callback that completed while mock mode was on gets those from the mocked
@@ -58,9 +59,11 @@ function enterMockSession() {
    * its tokens since the stash was made), so it replaces the stash. */
   if (current) {
     localStorage.setItem(REAL_SESSION, current);
+    /* The selected child may still be a mock one if a real tab wrote the
+     * session while mock mode was on; keep the stashed choice then. */
     const child = localStorage.getItem(CHILD);
-    if (child) localStorage.setItem(REAL_CHILD, child);
-    else localStorage.removeItem(REAL_CHILD);
+    if (child && !MOCK_CHILDREN.has(child)) localStorage.setItem(REAL_CHILD, child);
+    else if (!child) localStorage.removeItem(REAL_CHILD);
   }
   localStorage.setItem(
     SESSION,
