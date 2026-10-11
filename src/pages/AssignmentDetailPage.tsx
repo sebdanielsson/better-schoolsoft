@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, FileText, HandCoins, Link2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useNoteOpened } from "../hooks/useNotifications.ts";
 import {
   acquireCookieFocus,
   assertCookieFocus,
@@ -121,6 +122,15 @@ export default function AssignmentDetailPage() {
       cancelled = true;
     };
   }, [session, getEvaToken, parentUserId, child, id]);
+
+  /* Loading the view (and assessment) marked it read in SchoolSoft. */
+  useNoteOpened(
+    [
+      { kind: "assignment", id },
+      { kind: "result", id },
+    ],
+    !!state.view,
+  );
 
   const description = state.view?.description ?? "";
 

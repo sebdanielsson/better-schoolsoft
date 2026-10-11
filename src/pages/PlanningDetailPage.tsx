@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { FileText, Link2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useNoteOpened } from "../hooks/useNotifications.ts";
 import {
   acquireCookieFocus,
   assertCookieFocus,
@@ -23,6 +24,8 @@ interface State {
   view: PlanningView | null;
   tabs: PlanningPartTab[];
   partView: PlanningPartView | null;
+  /** The part `partView` belongs to; lags `activePartId` while a tab loads. */
+  partId: number | null;
   assignments: ConnectedAssignment[];
 }
 
@@ -30,10 +33,18 @@ const emptyState: State = {
   view: null,
   tabs: [],
   partView: null,
+  partId: null,
   assignments: [],
 };
 
+/** Keyed on the URL so a link to another planning or part (e.g. from the
+ *  notification center) starts fresh instead of keeping the old part. */
 export default function PlanningDetailPage() {
+  const { planningId, partId } = useParams<{ planningId: string; partId: string }>();
+  return <PlanningDetail key={`${planningId}/${partId}`} />;
+}
+
+function PlanningDetail() {
   const { planningId: planningIdParam, partId: partIdParam } = useParams<{
     planningId: string;
     partId: string;
@@ -84,6 +95,7 @@ export default function PlanningDetailPage() {
           view: viewRes.status === "fulfilled" ? viewRes.value : null,
           tabs: tabsRes.status === "fulfilled" ? tabsRes.value : [],
           partView: partRes.status === "fulfilled" ? partRes.value : null,
+          partId: activePartId,
           assignments: assignmentsRes.status === "fulfilled" ? assignmentsRes.value : [],
         });
       } catch (e: unknown) {
@@ -99,6 +111,12 @@ export default function PlanningDetailPage() {
       cancelled = true;
     };
   }, [session, getEvaToken, parentUserId, child, planningId, activePartId]);
+
+  /* Loading the part's view marked it read in SchoolSoft. */
+  useNoteOpened(
+    [{ kind: "planning", id: activePartId }],
+    !!state.partView && state.partId === activePartId,
+  );
 
   const description = state.partView?.description ?? "";
 

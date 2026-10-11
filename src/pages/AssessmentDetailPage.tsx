@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth.tsx";
 import { useHeroData } from "../hooks/useHeroData.tsx";
+import { useNoteOpened } from "../hooks/useNotifications.ts";
 import {
   acquireCookieFocus,
   assertCookieFocus,
@@ -48,6 +49,8 @@ export default function AssessmentDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  /* Loading the detail marked it read in SchoolSoft. */
+  useNoteOpened([{ kind: "assessment", id }], !loading && !error);
 
   useEffect(() => {
     if (!session || !parentUserId || !child) return;
