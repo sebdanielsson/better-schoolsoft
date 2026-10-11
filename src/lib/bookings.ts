@@ -25,7 +25,7 @@ export function toDate(value: string | number | null | undefined): Date | null {
 
 export type StatusTone = "action" | "done" | "info" | "muted";
 
-export const STATUS_META: Record<string, { label: string; tone: StatusTone; order: number }> = {
+const STATUS_META: Record<string, { label: string; tone: StatusTone; order: number }> = {
   NEEDS_CONFIRMATION: { label: "Confirm proposed time", tone: "action", order: 0 },
   AVAILABLE: { label: "Times available", tone: "action", order: 1 },
   BOOKED: { label: "Booked", tone: "done", order: 2 },

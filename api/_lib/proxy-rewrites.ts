@@ -54,7 +54,7 @@ export const PROXY_SECURITY_HEADERS: Readonly<Record<string, string>> = {
  *  function (vercel.json: /schoolsoft/:path* -> /api/schoolsoft?…=:path*).
  *  A plain file-system route can't do it: outside Next.js, Vercel treats
  *  `api/x/[...path].ts` as a single-segment route. */
-export const PROXY_PATH_PARAM = "__proxy_path";
+const PROXY_PATH_PARAM = "__proxy_path";
 
 /** Map an incoming request URL to the upstream URL, or null if the result
  *  would not be on the upstream origin. Accepts both shapes: the rewritten

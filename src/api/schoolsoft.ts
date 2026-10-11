@@ -4,15 +4,6 @@ import { registerSessionCache } from "../lib/session-caches.ts";
 const BASE = "/schoolsoft";
 
 export type UserType = "0" | "1" | "2";
-const USER_LABEL: Record<UserType, string> = {
-  "0": "Staff",
-  "1": "Student",
-  "2": "Guardian",
-};
-
-export function userTypeLabel(t: UserType): string {
-  return USER_LABEL[t];
-}
 
 /* ---------- Data types ---------- */
 
@@ -74,13 +65,6 @@ export interface EvaLunchDay {
   week: number;
   dayId: number;
   dishes: EvaLunchMeal[];
-}
-
-export interface EvaNewsLatest {
-  newsId: number;
-  title: string;
-  description: string;
-  fromDate: string;
 }
 
 export interface EvaNewsAuthor {
@@ -294,42 +278,6 @@ export function fetchEvaParentProfile(
   return evaGet(`${BASE}/${school}/eva/api/v1/parent/${userId}/profile`, accessToken);
 }
 
-export function fetchEvaChildren(
-  school: string,
-  accessToken: string,
-  userId: number,
-): Promise<EvaChild[]> {
-  return evaGetList(`${BASE}/${school}/eva/api/v1/parent/${userId}/children`, accessToken);
-}
-
-/** Single-day lunch (per-meal-type). Matches `/lunchmenu/week/{week}/day/{day}` in the iOS app. */
-export function fetchEvaLunchDay(
-  school: string,
-  accessToken: string,
-  orgId: number,
-  week: number,
-  day: number,
-): Promise<EvaLunchMeal[]> {
-  return evaGetList(
-    `${BASE}/${school}/eva/api/v1/schools/${orgId}/lunchmenu/week/${week}/day/${day}`,
-    accessToken,
-  );
-}
-
-/** Latest news headline for the student. Returns null body (204) when none. */
-export function fetchEvaLatestNews(
-  school: string,
-  accessToken: string,
-  userId: number,
-  orgId: number,
-  studentId: number,
-): Promise<EvaNewsLatest | null> {
-  return evaGet(
-    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/news/latest?studentId=${studentId}`,
-    accessToken,
-  );
-}
-
 /** Full news list (the iOS app's News page uses this). */
 export function fetchEvaNews(
   school: string,
@@ -452,32 +400,6 @@ export function fetchEvaNextLesson(
   );
 }
 
-/** Unread message count. */
-export function fetchEvaUnreadMessages(
-  school: string,
-  accessToken: string,
-  userId: number,
-  orgId: number,
-): Promise<number> {
-  return evaGet(
-    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/messages/unread`,
-    accessToken,
-  );
-}
-
-/** Inbox listing — newest first. */
-export function fetchEvaInbox(
-  school: string,
-  accessToken: string,
-  userId: number,
-  orgId: number,
-): Promise<EvaMessageInbox[]> {
-  return evaGetList(
-    `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/messages/inbox`,
-    accessToken,
-  );
-}
-
 /** Inbox, sent or bin listing. */
 export function fetchEvaMessages(
   school: string,
@@ -504,40 +426,6 @@ export function fetchEvaMessage(
     `${BASE}/${school}/eva/api/v1/parent/${userId}/schools/${orgId}/messages/${messageId}`,
     accessToken,
   );
-}
-
-export interface EvaBadgeCounts {
-  news?: number;
-  bookings?: number;
-  subjectrooms?: number;
-  holisticassessments?: number;
-}
-
-/** Fetch the four badge counts shown beside the iOS app's menu items. */
-export async function fetchEvaBadgeCounts(
-  school: string,
-  accessToken: string,
-  userId: number,
-  orgId: number,
-  studentId: number,
-): Promise<EvaBadgeCounts> {
-  const base = `${BASE}/${school}/eva/api/v1/schools/${orgId}/parents/${userId}/badge`;
-  const qs = `?studentId=${studentId}`;
-  const kinds = ["news", "bookings", "subjectrooms", "holisticassessments"] as const;
-  const results = await Promise.allSettled(
-    kinds.map((k) => evaGet<number>(`${base}/${k}${qs}`, accessToken)),
-  );
-  const out: EvaBadgeCounts = {};
-  kinds.forEach((k, i) => {
-    const r = results[i];
-    if (r && r.status === "fulfilled") out[k] = r.value ?? 0;
-  });
-  return out;
-}
-
-/** Resolve a student picture URL via the Eva resource endpoint. */
-export function evaResourceUrl(school: string, filename: string): string {
-  return `${BASE}/${school}/eva/api/v1/resource/${encodeURIComponent(filename)}`;
 }
 
 /** Fetch which profile fields the school lets the parent edit. */
@@ -1265,12 +1153,7 @@ export function cookieSessionFocus(): object | null {
   return sessionFocus;
 }
 
-export function cookieFocusKey(
-  school: string,
-  userId: number,
-  orgId: number,
-  studentId: number,
-): string {
+function cookieFocusKey(school: string, userId: number, orgId: number, studentId: number): string {
   return `${school}:${userId}:${orgId}:${studentId}`;
 }
 registerSessionCache(() => {
@@ -2129,7 +2012,7 @@ export interface SchoolOption {
 /** Extract the tenant slug ("myschool") from an evaUrl like
  *  `https://sms.schoolsoft.se/myschool/eva`. Returns null if the URL is missing
  *  or doesn't match the expected shape. */
-export function slugFromEvaUrl(url: string | undefined): string | null {
+function slugFromEvaUrl(url: string | undefined): string | null {
   if (!url) return null;
   const match = /\/([^/]+)\/eva(?:\/|$)/.exec(url);
   return match ? (match[1] ?? null) : null;
@@ -2200,4 +2083,3 @@ export const DAY_NAMES_FULL = [
   "Saturday",
   "Sunday",
 ] as const;
-export const DAY_NAMES_SHORT = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
