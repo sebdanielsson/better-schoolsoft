@@ -167,7 +167,7 @@ export default function HomePage() {
       {has("LUNCH") && <LunchCard />}
       {has("SUBJECT_ROOMS") && <AssignmentsCard />}
       {has("SUBJECT_ROOMS") && <PlanningsCard />}
-      <EventsCard />
+      {has("SCHEDULE") && <EventsCard />}
       {has("NEWS") && <NewsCard loading={newsLoading} news={news} />}
     </div>
   );

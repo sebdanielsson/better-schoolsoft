@@ -56,8 +56,10 @@ const ROUTE_FEATURE: [prefix: string, feature: Feature][] = [
 ];
 
 export function featureForPath(pathname: string): Feature | null {
+  /* React Router matches routes case-insensitively, so must this. */
+  const path = pathname.toLowerCase();
   for (const [prefix, feature] of ROUTE_FEATURE) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return feature;
+    if (path === prefix || path.startsWith(`${prefix}/`)) return feature;
   }
   return null;
 }

@@ -292,7 +292,7 @@ Other menu/flag endpoints:
 | GET    | `v4/schools/{orgId}/parents/{parentId}/menu?studentId={studentId}`       | `[{ "type": "SCHEDULE" }, { "type": "ABSENCE" }, …]` | implemented | confirmed  |
 | GET    | `v1/schools/{orgId}/parameters/students/{studentId}/holistic-assessment` | `boolean`                                            | new         | confirmed  |
 
-Menu `type` values seen: `SCHEDULE`, `ABSENCE`, `LUNCH`, `NEWS`, `STAFF_LIST`, `SUBJECT_ROOMS`, `HOLISTIC_ASSESSMENT`, `BOOKINGS`. This is the authoritative per-child feature list. The app shows a section, home card or notification source only when the menu lists its module (`src/lib/menu.ts`); while the menu loads, or if it fails, everything is shown.
+Menu `type` values seen: `SCHEDULE`, `ABSENCE`, `LUNCH`, `NEWS`, `STAFF_LIST`, `SUBJECT_ROOMS`, `HOLISTIC_ASSESSMENT`, `BOOKINGS`. This is the authoritative per-child feature list. The app shows a section, home card or notification source only when the menu lists its module (`src/lib/menu.ts`); while the menu loads, or if it fails or comes back empty, everything is shown.
 
 ## 6. Student leave (Ledighetsansökan)
 

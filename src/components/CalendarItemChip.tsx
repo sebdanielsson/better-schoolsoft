@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useMenu } from "../hooks/useMenu.ts";
+import { pathAllowed } from "../lib/menu.ts";
 import { CalendarClock, ClipboardCheck, Star } from "lucide-react";
 import { formatDate, formatTime, sameLocalDate } from "../lib/dates.ts";
 import { lastIncludedMs, type WeekItem } from "../lib/schedule.ts";
@@ -45,18 +47,20 @@ export default function CalendarItemChip({
       </span>
     </>
   );
+  const menu = useMenu();
   const chipClass = cn(
     "flex items-start gap-1.5 rounded-md border px-2.5 py-1.5 text-inherit no-underline",
     className,
   );
-  if (item.kind === "test" && item.activityId) {
+  /* Link only into sections the child's menu lists. */
+  if (item.kind === "test" && item.activityId && pathAllowed(menu, "/subjects")) {
     return (
       <Link to={`/subjects/${item.activityId}`} className={cn(chipClass, "hover:brightness-95")}>
         {body}
       </Link>
     );
   }
-  if (item.kind === "booking") {
+  if (item.kind === "booking" && pathAllowed(menu, "/bookings")) {
     return (
       <Link to="/bookings" className={cn(chipClass, "hover:brightness-95")}>
         {body}
