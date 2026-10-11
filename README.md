@@ -44,7 +44,7 @@ Open the dev server with `?mock=1` to use built-in fake data instead of a School
 
 - Every section works, with an invented family (two children) at an invented school. Actions such as marking read, booking a time, reporting absence, answering news and sending messages change the mock data until the page reloads.
 - No request reaches SchoolSoft. Calls without a mock get a 404 and a console warning.
-- A real session on the same origin is set aside while mock mode is on and restored when you leave it.
+- A real session on the same origin is set aside while mock mode is on and restored when you leave it. Mock mode applies to every tab on that origin, so use a separate dev server port (for example `pnpm dev --port 5174`) to keep a real session open next to it.
 - The data lives in `src/dev-mocks/`. Keep it invented: never paste real API responses there, because the repository is public.
 
 ## How it reaches SchoolSoft

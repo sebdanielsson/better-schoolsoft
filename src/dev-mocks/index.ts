@@ -20,10 +20,17 @@ const CHILD = "bss_child";
 const REAL_SESSION = "bss_real_session";
 const REAL_CHILD = "bss_real_child";
 
+/** A session mock mode made: the mock school, or mock tokens (a sign-in
+ *  callback that completed while mock mode was on gets those from the mocked
+ *  token endpoint). Anything else is a real session to keep. */
 const isMockSession = (raw: string | null) => {
   if (!raw) return false;
   try {
-    return (JSON.parse(raw) as { school?: unknown }).school === SCHOOL;
+    const s = JSON.parse(raw) as { school?: unknown; eva?: { accessToken?: unknown } };
+    return (
+      s.school === SCHOOL ||
+      (typeof s.eva?.accessToken === "string" && s.eva.accessToken.startsWith("mock-"))
+    );
   } catch {
     return false;
   }
@@ -47,9 +54,9 @@ export function shouldInstallMocks(): boolean {
 function enterMockSession() {
   const current = localStorage.getItem(SESSION);
   if (isMockSession(current)) return;
-  /* Never replace a stash: it holds the session from before mock mode, and
-   * anything non-mock that shows up since can't be a better one. */
-  if (current && !localStorage.getItem(REAL_SESSION)) {
+  /* A real session here is the newest one (another tab may have refreshed
+   * its tokens since the stash was made), so it replaces the stash. */
+  if (current) {
     localStorage.setItem(REAL_SESSION, current);
     const child = localStorage.getItem(CHILD);
     if (child) localStorage.setItem(REAL_CHILD, child);
