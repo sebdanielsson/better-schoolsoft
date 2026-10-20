@@ -185,7 +185,7 @@ importers:
         specifier: ^3.4.17
         version: 3.4.17
       lucide-react:
-        specifier: ^1.58.0
+        specifier: ^1.59.0
         version: 1.59.0(@types/react@19.3.0)(react@19.3.1)
       react:
         specifier: ^19.3.1
@@ -197,7 +197,7 @@ importers:
         specifier: ^7.18.4
         version: 7.18.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       shadcn:
-        specifier: ^4.21.5
+        specifier: ^4.22.0
         version: 4.22.0
       tw-animate-css:
         specifier: ^1.4.0
