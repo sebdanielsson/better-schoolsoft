@@ -204,7 +204,7 @@ importers:
         version: 1.4.0
     devDependencies:
       '@tailwindcss/vite':
-        specifier: ^4.3.4
+        specifier: ^4.3.5
         version: 4.3.5(vite@8.3.6(@types/node@26.6.6)(jiti@2.7.0))
       '@types/jsdom':
         specifier: ^30.0.0
@@ -240,7 +240,7 @@ importers:
         specifier: ^7.0.2006
         version: 7.0.2006
       tailwindcss:
-        specifier: ^4.3.4
+        specifier: ^4.3.5
         version: 4.3.5
       typescript:
         specifier: ~6.0.3
