@@ -185,7 +185,7 @@ importers:
         specifier: ^3.4.17
         version: 3.4.17
       lucide-react:
-        specifier: ^1.71.0
+        specifier: ^1.72.0
         version: 1.72.0(@types/react@19.3.0)(react@19.3.1)
       react:
         specifier: ^19.3.1
@@ -246,7 +246,7 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
       vite:
-        specifier: ^8.3.7
+        specifier: ^8.3.8
         version: 8.3.8(@types/node@26.6.6)(jiti@2.7.0)
 
 packages:
