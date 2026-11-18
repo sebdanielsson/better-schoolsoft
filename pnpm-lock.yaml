@@ -191,7 +191,7 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       dompurify:
-        specifier: ^3.4.17
+        specifier: ^3.4.18
         version: 3.4.18
       lucide-react:
         specifier: ^1.73.0
