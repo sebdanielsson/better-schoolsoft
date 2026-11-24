@@ -246,7 +246,7 @@ importers:
         specifier: ^1.94.0
         version: 1.94.0(oxlint-tsgolint@7.0.2008)
       oxlint-tsgolint:
-        specifier: ^7.0.2007
+        specifier: ^7.0.2008
         version: 7.0.2008
       tailwindcss:
         specifier: ^4.3.5
