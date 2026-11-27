@@ -21,7 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "dompurify": "^3.5.0",
-    "lucide-react": "^1.78.0",
+    "lucide-react": "^1.79.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.6",
