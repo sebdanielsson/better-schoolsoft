@@ -32,7 +32,7 @@
     "@tailwindcss/vite": "^4.3.5",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.10",
-    "@types/react": "^19.3.1",
+    "@types/react": "^19.3.2",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "jsdom": "^31.0.1",
